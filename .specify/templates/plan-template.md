@@ -31,7 +31,20 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Verify compliance with Evolve Framework Constitution principles:
+
+- [ ] **Model-Agnostic Architecture**: No hard dependencies on PyTorch, JAX, TensorFlow, or RL libraries in core modules
+- [ ] **Separation of Concerns**: Evolutionary logic, representation, evaluation, and execution are decoupled
+- [ ] **Optional Acceleration**: GPU/JIT features are opt-in with CPU reference implementations
+- [ ] **Determinism**: All stochastic processes use explicit seeds; experiments are reproducible
+- [ ] **Extensibility**: Clear extension points defined; optimization justified with profiling data
+- [ ] **Multi-Domain Support**: Design accommodates classical EA, neuroevolution, multi-objective, causal discovery, RL
+- [ ] **Observability**: Structured logging, metrics, and experiment tracking are integrated
+- [ ] **Clear Abstractions**: Type annotations, explicit interfaces, documented contracts
+- [ ] **Composability**: No global state; components are independently testable
+- [ ] **Test-First**: Tests written before implementation; reference implementations provided
+
+**Violations requiring justification** (if any): [Document in Complexity Tracking section]
 
 ## Project Structure
 
