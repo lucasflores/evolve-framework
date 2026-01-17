@@ -1,0 +1,168 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "evolve-framework"
+version = "0.1.0"
+description = "A research-grade evolutionary algorithms experimentation framework"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "Evolve Framework Team" }
+]
+keywords = [
+    "evolutionary-algorithms",
+    "genetic-algorithms",
+    "neuroevolution",
+    "optimization",
+    "multi-objective",
+    "NSGA-II",
+    "reinforcement-learning"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed"
+]
+
+dependencies = [
+    "numpy>=1.24.0",
+    "typing_extensions>=4.0.0;python_version<'3.11'",
+]
+
+[project.optional-dependencies]
+pytorch = [
+    "torch>=2.0.0",
+]
+jax = [
+    "jax>=0.4.0",
+    "jaxlib>=0.4.0",
+]
+mlflow = [
+    "mlflow>=2.0.0",
+]
+wandb = [
+    "wandb>=0.15.0",
+]
+ray = [
+    "ray>=2.0.0",
+]
+rl = [
+    "gymnasium>=0.29.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "hypothesis>=6.0.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0",
+]
+all = [
+    "evolve-framework[pytorch,jax,mlflow,wandb,ray,rl,dev]",
+]
+
+[project.urls]
+Homepage = "https://github.com/evolve-framework/evolve"
+Documentation = "https://github.com/evolve-framework/evolve#readme"
+Repository = "https://github.com/evolve-framework/evolve"
+
+[tool.hatch.build.targets.wheel]
+packages = ["evolve"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = [
+    "-ra",
+    "-q",
+    "--strict-markers",
+    "--strict-config",
+]
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks integration tests",
+    "property: marks property-based tests",
+    "benchmark: marks benchmark tests",
+    "gpu: marks tests requiring GPU",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["evolve"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/benchmarks/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "@abstractmethod",
+    "\\.\\.\\.",
+]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+strict_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+show_error_codes = true
+namespace_packages = true
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = [
+    "torch.*",
+    "jax.*",
+    "mlflow.*",
+    "wandb.*",
+    "ray.*",
+    "gymnasium.*",
+]
+ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # Pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+    "ARG",  # flake8-unused-arguments
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # do not perform function calls in argument defaults
+    "B905",   # zip without strict= (Python 3.10 compatibility)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["evolve"]
