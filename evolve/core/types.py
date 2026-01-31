@@ -237,6 +237,7 @@ class Individual(Generic[G]):
     - A genome (genetic representation)
     - Optional fitness (computed by evaluator)
     - Metadata for tracking lineage and age
+    - Optional reproduction protocol (ERP feature)
     
     Attributes:
         id: Unique identifier
@@ -244,6 +245,7 @@ class Individual(Generic[G]):
         fitness: Evaluated fitness (None until evaluated)
         metadata: Tracking information (age, parents, species)
         created_at: Generation when this individual was created
+        protocol: Optional reproduction protocol (matchability, intent, crossover)
         
     Example:
         >>> from evolve.representation.vector import VectorGenome
@@ -254,12 +256,15 @@ class Individual(Generic[G]):
         >>> ind.fitness.values
         array([0.5])
     """
+    # Import here to avoid circular dependency
+    from evolve.reproduction.protocol import ReproductionProtocol as _RP
 
     genome: G
     id: UUID = field(default_factory=uuid4)
     fitness: Fitness | None = None
     metadata: IndividualMetadata = field(default_factory=IndividualMetadata)
     created_at: int = 0
+    protocol: "_RP | None" = None
 
     def with_fitness(self, fitness: Fitness) -> Individual[G]:
         """
@@ -277,6 +282,7 @@ class Individual(Generic[G]):
             fitness=fitness,
             metadata=self.metadata,
             created_at=self.created_at,
+            protocol=self.protocol,
         )
 
     def with_metadata(self, **updates: Any) -> Individual[G]:
@@ -303,6 +309,26 @@ class Individual(Generic[G]):
             fitness=self.fitness,
             metadata=new_metadata,
             created_at=self.created_at,
+            protocol=self.protocol,
+        )
+
+    def with_protocol(self, protocol: "_RP | None") -> "Individual[G]":
+        """
+        Return a copy with protocol set.
+        
+        Args:
+            protocol: The reproduction protocol (or None)
+            
+        Returns:
+            New Individual with protocol assigned
+        """
+        return Individual(
+            id=self.id,
+            genome=self.genome,
+            fitness=self.fitness,
+            metadata=self.metadata,
+            created_at=self.created_at,
+            protocol=protocol,
         )
 
     def increment_age(self) -> Individual[G]:

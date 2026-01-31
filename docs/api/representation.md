@@ -172,3 +172,106 @@ class Genome(Protocol):
 ```
 
 Custom genomes only need to implement `copy()` to be compatible with the framework.
+
+---
+
+## SCM Genome (Structural Causal Model)
+
+For causal discovery - evolving structural causal models from observational data.
+
+```python
+from random import Random
+from evolve.representation.scm import SCMConfig, SCMGenome, SCMAlphabet
+from evolve.representation.scm_decoder import SCMDecoder, to_string
+
+# Configure for your observed variables
+config = SCMConfig(
+    observed_variables=("A", "B", "C"),
+    max_latent_variables=2,  # Allow hidden confounders
+)
+
+# Create random genome
+rng = Random(42)
+genome = SCMGenome.random(config, length=50, rng=rng)
+
+# Decode to causal model
+decoder = SCMDecoder(config)
+scm = decoder.decode(genome)
+
+# Inspect discovered structure
+print(f"Equations: {len(scm.equations)}")
+print(f"Graph edges: {scm.edge_count}")
+print(f"Is acyclic: {not scm.is_cyclic}")
+
+for var, expr in scm.equations.items():
+    print(f"  {var} = {to_string(expr)}")
+```
+
+**SCMConfig Attributes:**
+- `observed_variables: tuple[str, ...]` - Variable names from data
+- `max_latent_variables: int` - Maximum hidden confounders (H1, H2, ...)
+- `conflict_resolution: ConflictResolution` - How to handle duplicate equations
+- `acyclicity_mode: AcyclicityMode` - How to handle cyclic graphs
+
+**SCMGenome Attributes:**
+- `inner: SequenceGenome` - Underlying gene sequence
+- `config: SCMConfig` - Configuration used
+- `erc_values: tuple[tuple[int, float], ...]` - Ephemeral random constants
+
+**SCMGenome Methods:**
+- `copy()` - Deep copy
+- `random(config, length, rng)` - Factory for random genome
+- `mutate_erc(rng, slot)` - Perturb ERC values
+- `to_dict() / from_dict(data)` - Serialization
+
+**DecodedSCM Attributes:**
+- `equations: dict[str, Expression]` - Variable -> equation mapping
+- `graph: nx.DiGraph` - Causal graph (NetworkX directed graph)
+- `metadata: SCMMetadata` - Decoding info (conflicts, junk genes, cycles)
+- `edge_count: int` - Number of causal edges
+- `is_cyclic: bool` - Whether graph contains cycles
+
+### Fitness Evaluation
+
+```python
+from evolve.evaluation.scm_evaluator import SCMEvaluator, SCMFitnessConfig
+import numpy as np
+
+# Your observational data
+data = np.column_stack([A, B, C])  # shape: (n_samples, n_vars)
+
+# Configure fitness objectives
+fitness_config = SCMFitnessConfig(
+    objectives=("data_fit", "sparsity", "simplicity"),
+)
+
+evaluator = SCMEvaluator(
+    data=data,
+    variable_names=["A", "B", "C"],
+    config=fitness_config,
+    decoder=decoder,
+)
+
+# Evaluate individuals
+fitness_results = evaluator.evaluate(individuals)
+```
+
+**Available Objectives:**
+- `"data_fit"` - Negative MSE (higher = better fit)
+- `"sparsity"` - Negative edge count (higher = simpler)
+- `"simplicity"` - Negative AST complexity (higher = simpler expressions)
+- `"coverage"` - Fraction of observed variables with equations
+- `"latent_parsimony"` - Negative latent variable count
+
+### Distance Functions for ERP Integration
+
+```python
+from evolve.representation.scm import scm_distance
+
+# Compute distance between two SCM genomes
+# Combines sequence similarity and structural similarity
+distance = scm_distance(
+    genome_a, genome_b, decoder,
+    structural_weight=0.5  # 0=sequence only, 1=structure only
+)
+```

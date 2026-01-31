@@ -20,6 +20,11 @@ from evolve.evaluation.testing import (
     EvaluatorEquivalenceError,
     EvaluatorTester,
 )
+from evolve.evaluation.scm_evaluator import (
+    SCMFitnessConfig,
+    SCMEvaluationResult,
+    SCMEvaluator,
+)
 
 __all__ = [
     # Evaluator types
@@ -35,4 +40,8 @@ __all__ = [
     "assert_fitness_batch_close",
     "EvaluatorEquivalenceError",
     "EvaluatorTester",
+    # SCM evaluator
+    "SCMFitnessConfig",
+    "SCMEvaluationResult",
+    "SCMEvaluator",
 ]

@@ -56,8 +56,32 @@ from evolve.core.operators import (
 # Representation
 from evolve.representation.vector import VectorGenome
 
+# SCM (Structural Causal Model) Representation
+from evolve.representation.scm import (
+    SCMConfig,
+    SCMGenome,
+    SCMAlphabet,
+    ConflictResolution,
+    AcyclicityMode,
+    scm_distance,
+    scm_sequence_distance,
+    scm_structural_distance,
+)
+from evolve.representation.scm_decoder import (
+    SCMDecoder,
+    DecodedSCM,
+    SCMMetadata,
+    to_string,
+)
+
 # Evaluation
 from evolve.evaluation.evaluator import FunctionEvaluator, EvaluatorCapabilities
+from evolve.evaluation.scm_evaluator import SCMEvaluator, SCMFitnessConfig
+
+# Reproduction (import submodule for ERP support)
+# Note: ERPEngine must be imported separately to avoid circular imports:
+#   from evolve.reproduction.engine import ERPConfig, ERPEngine
+# Or use: import evolve.reproduction as erp
 
 __all__ = [
     # Version
@@ -87,7 +111,22 @@ __all__ = [
     "PolynomialMutation",
     # Representation
     "VectorGenome",
+    # SCM Representation
+    "SCMConfig",
+    "SCMGenome",
+    "SCMAlphabet",
+    "ConflictResolution",
+    "AcyclicityMode",
+    "scm_distance",
+    "scm_sequence_distance",
+    "scm_structural_distance",
+    "SCMDecoder",
+    "DecodedSCM",
+    "SCMMetadata",
+    "to_string",
     # Evaluation
     "FunctionEvaluator",
     "EvaluatorCapabilities",
+    "SCMEvaluator",
+    "SCMFitnessConfig",
 ]

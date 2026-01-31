@@ -35,6 +35,33 @@ from evolve.representation.decoder import (
     GraphToNetworkDecoder,
     GraphToMLPDecoder,
 )
+from evolve.representation.scm import (
+    ConflictResolution,
+    AcyclicityMode,
+    AcyclicityStrategy,
+    SCMConfig,
+    SCMAlphabet,
+    SCMGenome,
+    # Distance functions for ERP integration
+    scm_sequence_distance,
+    scm_structural_distance,
+    scm_distance,
+)
+from evolve.representation.scm_decoder import (
+    Var,
+    Const,
+    BinOp,
+    Expression,
+    complexity,
+    variables,
+    evaluate,
+    to_string,
+    expr_to_dict,
+    expr_from_dict,
+    SCMMetadata,
+    DecodedSCM,
+    SCMDecoder,
+)
 
 __all__ = [
     # Core protocols
@@ -60,4 +87,29 @@ __all__ = [
     # Decoders
     "GraphToNetworkDecoder",
     "GraphToMLPDecoder",
+    # SCM representation
+    "ConflictResolution",
+    "AcyclicityMode",
+    "AcyclicityStrategy",
+    "SCMConfig",
+    "SCMAlphabet",
+    "SCMGenome",
+    # SCM decoder
+    "Var",
+    "Const",
+    "BinOp",
+    "Expression",
+    "complexity",
+    "variables",
+    "evaluate",
+    "to_string",
+    "expr_to_dict",
+    "expr_from_dict",
+    "SCMMetadata",
+    "DecodedSCM",
+    "SCMDecoder",
+    # SCM distance functions
+    "scm_sequence_distance",
+    "scm_structural_distance",
+    "scm_distance",
 ]

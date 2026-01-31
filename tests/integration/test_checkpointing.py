@@ -417,3 +417,120 @@ class TestExperimentConfig:
             assert loaded.population_size == config.population_size
             assert loaded.n_generations == config.n_generations
             assert loaded.mutation_rate == config.mutation_rate
+
+
+class TestSCMGenomeCheckpointing:
+    """T091: Verify SCMGenome checkpoint compatibility."""
+    
+    def test_scm_genome_checkpoint_roundtrip(self) -> None:
+        """SCMGenome checkpoints save and load correctly."""
+        from uuid import uuid4
+        from evolve.representation.scm import SCMConfig, SCMGenome
+        
+        rng = Random(42)
+        
+        # Create SCM config (only observed_variables is required)
+        scm_config = SCMConfig(observed_variables=("X", "Y", "Z"))
+        
+        # Create individuals with SCM genomes
+        individuals = [
+            Individual(
+                id=uuid4(),
+                genome=SCMGenome.random(scm_config, length=50, rng=Random(i)),
+                fitness=Fitness.scalar(float(i)),
+                metadata=IndividualMetadata(),
+                created_at=0,
+            )
+            for i in range(10)
+        ]
+        
+        # Create checkpoint
+        checkpoint = Checkpoint(
+            experiment_name="scm_test",
+            config_hash="scm123",
+            generation=5,
+            population=individuals,
+            best_individual=individuals[0],
+            rng_state=rng.getstate(),
+            fitness_history=[{"gen": i, "best": float(i)} for i in range(5)],
+        )
+        
+        # Save and load
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "scm_checkpoint.pkl"
+            checkpoint.save(path)
+            
+            loaded = Checkpoint.load(path)
+            
+            # Verify checkpoint metadata
+            assert loaded.experiment_name == "scm_test"
+            assert loaded.generation == 5
+            assert len(loaded.population) == 10
+            
+            # Verify SCMGenome data preserved
+            for orig, restored in zip(individuals, loaded.population):
+                assert isinstance(restored.genome, SCMGenome)
+                assert list(restored.genome.genes) == list(orig.genome.genes)
+                assert restored.genome.config.observed_variables == scm_config.observed_variables
+    
+    def test_scm_genome_pickle_directly(self) -> None:
+        """SCMGenome can be pickled directly."""
+        from evolve.representation.scm import SCMConfig, SCMGenome
+        
+        scm_config = SCMConfig(observed_variables=("A", "B", "C", "D"))
+        
+        genome = SCMGenome.random(scm_config, length=80, rng=Random(42))
+        
+        # Pickle round-trip
+        pickled = pickle.dumps(genome)
+        restored = pickle.loads(pickled)
+        
+        assert isinstance(restored, SCMGenome)
+        assert list(restored.genes) == list(genome.genes)
+        assert restored.config == genome.config
+    
+    def test_checkpoint_manager_with_scm_population(self) -> None:
+        """CheckpointManager handles SCM populations correctly."""
+        from uuid import uuid4
+        from evolve.representation.scm import SCMConfig, SCMGenome
+        
+        scm_config = SCMConfig(observed_variables=("X", "Y"))
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            manager = CheckpointManager(
+                output_dir=Path(tmpdir),
+                checkpoint_interval=1,
+            )
+            
+            # Create population with SCM genomes
+            individuals = [
+                Individual(
+                    id=uuid4(),
+                    genome=SCMGenome.random(scm_config, length=30, rng=Random(i)),
+                    fitness=Fitness.scalar(float(i)),
+                    metadata=IndividualMetadata(),
+                    created_at=0,
+                )
+                for i in range(5)
+            ]
+            
+            # Save checkpoint
+            checkpoint = Checkpoint(
+                experiment_name="scm_manager_test",
+                config_hash="mgr123",
+                generation=10,
+                population=individuals,
+                best_individual=individuals[-1],
+                rng_state=Random(99).getstate(),
+            )
+            manager.save(checkpoint)
+            
+            # Load latest
+            loaded = manager.load_latest()
+            assert loaded is not None
+            assert loaded.generation == 10
+            assert len(loaded.population) == 5
+            
+            # Verify genome types preserved
+            for ind in loaded.population:
+                assert isinstance(ind.genome, SCMGenome)
