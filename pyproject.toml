@@ -59,6 +59,15 @@ ray = [
 rl = [
     "gymnasium>=0.29.0",
 ]
+tutorials = [
+    "matplotlib>=3.7.0",
+    "plotly>=5.15.0",
+    "beautiful-mermaid>=0.1.0",
+    "gymnasium>=0.29.0",
+    "papermill>=2.4.0",
+    "pandas>=2.0.0",
+    "scikit-learn>=1.3.0",
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
@@ -67,7 +76,7 @@ dev = [
     "ruff>=0.1.0",
 ]
 all = [
-    "evolve-framework[pytorch,jax,mlflow,wandb,ray,rl,dev]",
+    "evolve-framework[pytorch,jax,mlflow,wandb,ray,rl,tutorials,dev]",
 ]
 
 [project.urls]

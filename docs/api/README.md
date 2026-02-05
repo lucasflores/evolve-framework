@@ -44,6 +44,17 @@ Population diversity mechanisms.
 - Novelty search
 - Fitness sharing
 
+### [`reproduction`](reproduction.md)
+Evolvable reproduction protocols (ERP).
+- `ReproductionProtocol` - Individual mating strategies
+- `ERPEngine` - Evolution with protocol-based mating
+- Intent policies (willingness to reproduce)
+- Matchability functions (mate selection criteria)
+- Protocol mutation and evolution
+- Recovery mechanisms for population stability
+
+**See also**: [Tutorial 6: Evolvable Reproduction Protocols](../tutorials/06_evolvable_reproduction_protocols.ipynb)
+
 ### [`rl`](rl.md)
 Reinforcement learning integration.
 - `GymAdapter` - OpenAI Gym/Gymnasium compatibility
