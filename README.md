@@ -9,6 +9,7 @@ A research-grade evolutionary algorithms experimentation framework.
 - **Optional GPU Acceleration**: PyTorch/JAX backends available as optional extras
 - **Multi-Objective Optimization**: NSGA-II with Pareto ranking and crowding distance
 - **Neuroevolution Support**: NEAT-style topology evolution
+- **Evolvable Reproduction Protocols (ERP)**: Individual-level mating strategies with sexual selection
 - **Experiment Tracking**: MLflow and Weights & Biases integrations
 
 ## Installation
@@ -81,7 +82,13 @@ The framework is organized into independent layers:
 2. **Representation** (`evolve.representation`): Genome/phenotype abstractions
 3. **Evaluation** (`evolve.evaluation`): Fitness computation interfaces
 4. **Backends** (`evolve.backends`): Parallel/GPU/JIT execution
-5. **Observability** (`evolve.experiment`): Tracking and reproducibility
+5. **Reproduction** (`evolve.reproduction`): Evolvable reproduction protocols (ERP) for sexual selection
+6. **Observability** (`evolve.experiment`): Tracking and reproducibility
+
+## Tutorials
+
+See [docs/tutorials/](docs/tutorials/) for interactive Jupyter notebooks, including:
+- Tutorial 6: [Evolvable Reproduction Protocols](docs/tutorials/06_evolvable_reproduction_protocols.ipynb) - Sexual selection and speciation
 
 ## Testing
 

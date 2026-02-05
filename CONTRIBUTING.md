@@ -154,7 +154,33 @@ pytest tests/integration/ -m integration
 
 # Skip slow tests
 pytest -m "not slow"
+
+# Test tutorials (requires Jupyter)
+pytest tests/integration/test_tutorials.py
 ```
+
+### Testing Tutorials
+
+When adding or modifying tutorial notebooks:
+
+1. **Ensure all cells execute without errors**
+2. **Test visualizations render correctly**
+3. **Verify example code is up-to-date with API**
+4. **Check estimated completion times are accurate**
+
+```bash
+# Test a specific tutorial
+python -m pytest tests/integration/test_tutorials.py::test_tutorial_06_erp
+
+# Test standalone examples
+python -m pytest tests/integration/test_erp_examples.py
+```
+
+**Tutorial conventions:**
+- Keep tutorials under 90 minutes completion time
+- Include progress indicators and section headers
+- Use consistent variable naming across tutorials
+- Add summary sections at the end
 
 ### Writing Tests
 
