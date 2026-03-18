@@ -10,6 +10,8 @@ Auto-generated from all feature plans. Last updated: 2026-01-13
 - N/A (in-memory, checkpoint via existing infrastructure) (003-scm-representation)
 - Python 3.10+ + evolve (core framework), numpy, matplotlib, plotly, beautiful-mermaid, gymnasium (RL notebook) (004-tutorial-notebooks)
 - N/A (notebooks are self-contained, synthetic data generated at runtime) (004-tutorial-notebooks)
+- Python 3.10+ (supports 3.10, 3.11, 3.12) + numpy>=1.24.0, networkx>=3.0, typing_extensions (for <3.11) (005-unified-config-meta-evolution)
+- JSON file serialization; no database required (005-unified-config-meta-evolution)
 
 - Python 3.10+ + NumPy (core); Optional: PyTorch, JAX, MLflow, Ray (001-core-framework-architecture)
 
@@ -29,9 +31,9 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.10+: Follow standard conventions
 
 ## Recent Changes
+- 005-unified-config-meta-evolution: Added Python 3.10+ (supports 3.10, 3.11, 3.12) + numpy>=1.24.0, networkx>=3.0, typing_extensions (for <3.11)
 - 004-tutorial-notebooks: Added Python 3.10+ + evolve (core framework), numpy, matplotlib, plotly, beautiful-mermaid, gymnasium (RL notebook)
 - 003-scm-representation: Added Python 3.11+ + NumPy (array ops), NetworkX (graph representation, cycle detection)
-- 002-evolvable-reproduction: Added Python 3.11+ + NumPy (existing), dataclasses (stdlib)
 
 
 <!-- MANUAL ADDITIONS START -->

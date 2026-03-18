@@ -253,3 +253,166 @@ class HistoryCallback:
         """Convert history to pandas DataFrame."""
         import pandas as pd
         return pd.DataFrame(self.history)
+
+
+@dataclass
+class LoggingCallback:
+    """
+    Callback that logs evolution progress using Python's logging module.
+    
+    Supports configurable log levels and destinations.
+    
+    Attributes:
+        log_level: Logging level ('DEBUG', 'INFO', 'WARNING', 'ERROR')
+        log_destination: Where to log - 'console', 'file', or path to log file
+        logger: The configured logger instance
+    """
+    
+    log_level: str = "INFO"
+    log_destination: str = "console"
+    
+    def __post_init__(self) -> None:
+        import logging
+        
+        self.logger = logging.getLogger("evolve.evolution")
+        level = getattr(logging, self.log_level.upper(), logging.INFO)
+        self.logger.setLevel(level)
+        
+        # Clear existing handlers
+        self.logger.handlers.clear()
+        
+        # Configure handler based on destination
+        if self.log_destination == "console":
+            handler: logging.Handler = logging.StreamHandler()
+        else:
+            # Treat as file path
+            import os
+            log_dir = os.path.dirname(self.log_destination)
+            if log_dir:
+                os.makedirs(log_dir, exist_ok=True)
+            handler = logging.FileHandler(self.log_destination)
+        
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        handler.setFormatter(formatter)
+        handler.setLevel(level)
+        self.logger.addHandler(handler)
+    
+    def on_generation_start(
+        self,
+        generation: int,
+        population: Population[Any],
+    ) -> None:
+        """Log generation start."""
+        self.logger.debug(f"Generation {generation} starting with {len(population)} individuals")
+    
+    def on_generation_end(
+        self,
+        generation: int,
+        population: Population[Any],
+        metrics: dict[str, Any],
+    ) -> None:
+        """Log generation metrics."""
+        best = metrics.get("best_fitness", "N/A")
+        mean = metrics.get("mean_fitness", "N/A")
+        self.logger.info(
+            f"Generation {generation} | Best: {best} | Mean: {mean}"
+        )
+    
+    def on_run_start(self, config: Any) -> None:
+        """Log evolution start."""
+        self.logger.info("Evolution run started")
+    
+    def on_run_end(
+        self,
+        population: Population[Any],
+        reason: str,
+    ) -> None:
+        """Log evolution termination."""
+        self.logger.info(f"Evolution terminated: {reason}")
+        stats = population.statistics
+        if stats.best_fitness is not None:
+            self.logger.info(f"Final best fitness: {stats.best_fitness.values[0]}")
+
+
+@dataclass
+class CheckpointCallback:
+    """
+    Callback that saves periodic checkpoints during evolution.
+    
+    Checkpoints include population state and metrics, allowing
+    evolution to be resumed from intermediate states.
+    
+    Attributes:
+        checkpoint_dir: Directory to save checkpoints
+        checkpoint_frequency: Save every N generations
+    """
+    
+    checkpoint_dir: str = "./checkpoints"
+    checkpoint_frequency: int = 10
+    
+    def __post_init__(self) -> None:
+        import os
+        os.makedirs(self.checkpoint_dir, exist_ok=True)
+        self._run_id: str | None = None
+    
+    def on_generation_start(
+        self,
+        generation: int,
+        population: Population[Any],
+    ) -> None:
+        """No-op."""
+        pass
+    
+    def on_generation_end(
+        self,
+        generation: int,
+        population: Population[Any],
+        metrics: dict[str, Any],
+    ) -> None:
+        """Save checkpoint if frequency matches."""
+        if self.checkpoint_frequency <= 0:
+            return
+            
+        if generation > 0 and generation % self.checkpoint_frequency == 0:
+            self._save_checkpoint(generation, population, metrics)
+    
+    def on_run_start(self, config: Any) -> None:
+        """Initialize run ID for checkpoint naming."""
+        import time
+        self._run_id = f"run_{int(time.time())}"
+    
+    def on_run_end(
+        self,
+        population: Population[Any],
+        reason: str,
+    ) -> None:
+        """Save final checkpoint."""
+        self._save_checkpoint("final", population, {"termination_reason": reason})
+    
+    def _save_checkpoint(
+        self,
+        generation: int | str,
+        population: Population[Any],
+        metrics: dict[str, Any],
+    ) -> None:
+        """Save checkpoint to file."""
+        import json
+        import os
+        
+        checkpoint_data = {
+            "generation": generation,
+            "population_size": len(population),
+            "metrics": {
+                k: float(v) if isinstance(v, (int, float)) else str(v)
+                for k, v in metrics.items()
+            },
+            "run_id": self._run_id,
+        }
+        
+        filename = f"checkpoint_{self._run_id}_gen{generation}.json"
+        filepath = os.path.join(self.checkpoint_dir, filename)
+        
+        with open(filepath, "w") as f:
+            json.dump(checkpoint_data, f, indent=2)

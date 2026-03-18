@@ -78,6 +78,40 @@ from evolve.representation.scm_decoder import (
 from evolve.evaluation.evaluator import FunctionEvaluator, EvaluatorCapabilities
 from evolve.evaluation.scm_evaluator import SCMEvaluator, SCMFitnessConfig
 
+# Unified Configuration (new config system)
+from evolve.config import (
+    UnifiedConfig,
+    StoppingConfig,
+    CallbackConfig,
+    ERPSettings,
+    ObjectiveSpec,
+    ConstraintSpec,
+    MultiObjectiveConfig,
+    ParameterSpec,
+    MetaEvolutionConfig,
+)
+
+# Factory (one-line engine creation)
+from evolve.factory import (
+    create_engine,
+    create_initial_population as create_population_from_config,
+    OperatorCompatibilityError,
+)
+
+# Registry (operator and genome lookup)
+from evolve.registry import (
+    get_operator_registry,
+    get_genome_registry,
+)
+
+# Meta-Evolution
+from evolve.meta import (
+    ConfigCodec,
+    MetaEvaluator,
+    MetaEvolutionResult,
+    run_meta_evolution,
+)
+
 # Reproduction (import submodule for ERP support)
 # Note: ERPEngine must be imported separately to avoid circular imports:
 #   from evolve.reproduction.engine import ERPConfig, ERPEngine
@@ -129,4 +163,26 @@ __all__ = [
     "EvaluatorCapabilities",
     "SCMEvaluator",
     "SCMFitnessConfig",
+    # Unified Configuration
+    "UnifiedConfig",
+    "StoppingConfig",
+    "CallbackConfig",
+    "ERPSettings",
+    "ObjectiveSpec",
+    "ConstraintSpec",
+    "MultiObjectiveConfig",
+    "ParameterSpec",
+    "MetaEvolutionConfig",
+    # Factory
+    "create_engine",
+    "create_population_from_config",
+    "OperatorCompatibilityError",
+    # Registry
+    "get_operator_registry",
+    "get_genome_registry",
+    # Meta-Evolution
+    "ConfigCodec",
+    "MetaEvaluator",
+    "MetaEvolutionResult",
+    "run_meta_evolution",
 ]
