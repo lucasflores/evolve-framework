@@ -18,10 +18,17 @@ _MLFLOW_AVAILABLE = False
 _WANDB_AVAILABLE = False
 
 try:
-    from evolve.experiment.tracking.mlflow_tracker import MLflowTracker
+    from evolve.experiment.tracking.mlflow_tracker import (
+        MLflowTracker,
+        ResilientMLflowTracker,
+    )
     _MLFLOW_AVAILABLE = True
 except ImportError:
     MLflowTracker = None  # type: ignore
+    ResilientMLflowTracker = None  # type: ignore
+
+# Tracking callback
+from evolve.experiment.tracking.callback import TrackingCallback
 
 try:
     from evolve.experiment.tracking.wandb_tracker import WandbTracker
@@ -49,5 +56,7 @@ __all__ = [
     "is_mlflow_available",
     "is_wandb_available",
     "MLflowTracker",
+    "ResilientMLflowTracker",
+    "TrackingCallback",
     "WandbTracker",
 ]

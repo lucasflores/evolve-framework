@@ -1,0 +1,297 @@
+# MetricCollector Protocol Contract
+# Feature: 006-mlflow-metrics-tracking
+# Date: March 17, 2026
+
+openapi: "3.1.0"
+info:
+  title: MetricCollector Protocol
+  version: "1.0.0"
+  description: |
+    Protocol for specialized metric collectors (FR-013 through FR-017).
+    Collectors compute domain-specific metrics from population state.
+
+components:
+  schemas:
+    CollectionContext:
+      type: object
+      description: |
+        Context passed to metric collectors providing access to
+        generation state, configuration, and domain-specific data.
+      properties:
+        generation:
+          type: integer
+          minimum: 0
+          description: Current generation number
+
+        config:
+          type: object
+          description: Reference to UnifiedConfig
+
+        tracking_config:
+          $ref: "tracking-config.yaml#/components/schemas/TrackingConfig"
+
+        timing:
+          type: object
+          additionalProperties:
+            type: number
+          description: |
+            Phase timing results from GenerationTimer.
+            Keys like "evaluation_time_ms", "selection_time_ms".
+
+        previous_metrics:
+          type: object
+          additionalProperties:
+            type: number
+          nullable: true
+          description: |
+            Metrics from previous generation.
+            Null for generation 0.
+
+        rng_seed:
+          type: integer
+          description: Seed for deterministic sampling operations
+
+        # Domain-specific contexts (nullable)
+        species:
+          type: array
+          nullable: true
+          description: Species list when speciation enabled
+
+        pareto_front:
+          type: array
+          nullable: true
+          description: Current Pareto front when MO enabled
+
+        mating_stats:
+          $ref: "#/components/schemas/MatingStats"
+          nullable: true
+
+        elite_ids:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: IDs of current generation elites
+
+        previous_elite_ids:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: IDs of previous generation elites
+
+      required:
+        - generation
+        - config
+        - tracking_config
+        - timing
+        - rng_seed
+
+    MatingStats:
+      type: object
+      description: Mating statistics from ERP engine
+      properties:
+        attempted:
+          type: integer
+          minimum: 0
+        successful:
+          type: integer
+          minimum: 0
+        by_protocol:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              attempted:
+                type: integer
+              successful:
+                type: integer
+      required:
+        - attempted
+        - successful
+
+    MetricCollector:
+      type: object
+      description: |
+        Protocol interface for metric collectors.
+        
+        Each collector:
+        - Belongs to a single MetricCategory
+        - Computes metrics from Population + CollectionContext
+        - Returns dict[str, float] of named metrics
+        - Prefixes metric names to avoid collisions
+        
+        Lifecycle:
+        1. reset() called at run start
+        2. collect() called each generation
+        3. State preserved across generations within a run
+      properties:
+        category:
+          $ref: "tracking-config.yaml#/components/schemas/MetricCategory"
+          description: The metric category this collector provides
+
+      # Protocol methods (not declarable in OpenAPI, documented here)
+      x-methods:
+        collect:
+          description: |
+            Collect metrics from current population state.
+            
+            Args:
+              population: Current generation Population[G]
+              context: CollectionContext with generation info
+              
+            Returns:
+              Dictionary mapping metric_name -> value
+              
+            Metric naming conventions:
+              - Prefix with collector domain: "erp_", "mo_", "spec_"
+              - Use snake_case
+              - Include units in name when applicable: "_time_ms", "_rate"
+          parameters:
+            - name: population
+              type: "Population[G]"
+            - name: context
+              type: CollectionContext
+          returns:
+            type: object
+            additionalProperties:
+              type: number
+
+        reset:
+          description: |
+            Reset collector state between runs.
+            Called when a new evolution run starts.
+            Clear any accumulated history or state.
+          parameters: []
+          returns:
+            type: "null"
+
+    # Concrete collector specifications
+
+    ERPMetricCollector:
+      allOf:
+        - $ref: "#/components/schemas/MetricCollector"
+      description: |
+        Evolvable Reproduction Protocol metrics (FR-013).
+        Requires mating_stats in CollectionContext.
+      x-output-metrics:
+        erp_mating_success_rate:
+          type: number
+          description: successful / attempted matings
+        erp_attempted_matings:
+          type: number
+          description: Total mating attempts this generation
+        erp_successful_matings:
+          type: number
+          description: Successful matings this generation
+        "erp_protocol_{name}_success_rate":
+          type: number
+          description: Per-protocol success rate
+
+    MultiObjectiveMetricCollector:
+      allOf:
+        - $ref: "#/components/schemas/MetricCollector"
+      description: |
+        Multi-objective optimization metrics (FR-014).
+        Computes hypervolume for 2-3 objectives, approximate
+        indicators for higher dimensions.
+      x-output-metrics:
+        mo_hypervolume:
+          type: number
+          description: |
+            Hypervolume indicator (2-3 objectives only).
+            Volume dominated by Pareto front bounded by reference.
+        mo_pareto_front_size:
+          type: integer
+          description: Number of individuals on Pareto front
+        mo_spread:
+          type: number
+          description: Distribution uniformity of Pareto front
+        mo_crowding_diversity:
+          type: number
+          description: Mean crowding distance of front solutions
+
+    SpeciationMetricCollector:
+      allOf:
+        - $ref: "#/components/schemas/MetricCollector"
+      description: |
+        Speciation metrics (FR-008, FR-015).
+        Requires species list in CollectionContext.
+      x-output-metrics:
+        spec_species_count:
+          type: integer
+          description: Number of species in population
+        spec_average_species_size:
+          type: number
+          description: Mean individuals per species
+        spec_largest_species_fitness:
+          type: number
+          description: Best fitness in largest species
+        spec_species_births:
+          type: integer
+          description: New species created this generation
+        spec_species_extinctions:
+          type: integer
+          description: Species that went extinct
+        spec_stagnation_count:
+          type: integer
+          description: Species with no fitness improvement
+
+    DerivedAnalyticsCollector:
+      allOf:
+        - $ref: "#/components/schemas/MetricCollector"
+      description: |
+        Derived analytics from core metrics (FR-021 through FR-024).
+        Maintains sliding window of fitness history.
+      x-config:
+        window_size:
+          type: integer
+          default: 10
+          description: Generations for velocity calculation
+      x-output-metrics:
+        derived_selection_pressure:
+          type: number
+          description: |
+            Ratio of best to mean fitness.
+            Higher values indicate stronger selection.
+        derived_fitness_velocity:
+          type: number
+          description: |
+            Rate of best fitness change over window.
+            Positive = improving, negative = degrading.
+        derived_population_entropy:
+          type: number
+          description: |
+            Entropy of fitness distribution.
+            Higher = more diverse fitness values.
+        derived_elite_turnover_rate:
+          type: number
+          description: |
+            Fraction of elites that are new this generation.
+            0 = all same elites, 1 = completely new.
+
+    MetadataExtractor:
+      allOf:
+        - $ref: "#/components/schemas/MetricCollector"
+      description: |
+        Extracts numeric fields from Fitness.metadata (FR-018, FR-019, FR-020).
+        Only aggregates fields present in threshold fraction of individuals.
+      x-config:
+        threshold:
+          type: number
+          default: 0.5
+          description: Min fraction of individuals for field extraction
+        prefix:
+          type: string
+          default: "meta_"
+          description: Prefix for extracted metric names
+      x-output-metrics:
+        "meta_{field}_best":
+          type: number
+          description: Maximum value for metadata field
+        "meta_{field}_mean":
+          type: number
+          description: Mean value for metadata field
+        "meta_{field}_std":
+          type: number
+          description: Std deviation for metadata field

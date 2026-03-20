@@ -30,6 +30,7 @@ from evolve.core.stopping import (
 from evolve.core.types import Fitness, Individual, IndividualMetadata
 from evolve.evaluation.evaluator import Evaluator
 from evolve.utils.random import create_rng
+from evolve.utils.timing import GenerationTimer
 
 G = TypeVar("G")
 
@@ -150,6 +151,7 @@ class EvolutionEngine(Generic[G]):
         self._generation = 0
         self._history: list[dict[str, Any]] = []
         self._callbacks: list[Callback[G]] = []
+        self._timer = GenerationTimer()
 
     def run(
         self,
@@ -227,7 +229,7 @@ class EvolutionEngine(Generic[G]):
 
     def _step(self, population: Population[G]) -> Population[G]:
         """
-        Perform one evolution step.
+        Perform one evolution step with timing instrumentation.
         
         1. Select parents
         2. Apply crossover
@@ -235,7 +237,16 @@ class EvolutionEngine(Generic[G]):
         4. Preserve elites
         5. Create new generation
         6. Evaluate
+        
+        Timing is captured via self._timer for:
+        - selection_time_ms
+        - variation_time_ms (crossover + mutation)
+        - evaluation_time_ms
         """
+        # Reset timer for this generation
+        self._timer.reset()
+        self._timer.start_generation()
+        
         pop_size = self.config.population_size
         n_elites = self.config.elitism
         n_offspring = pop_size - n_elites
@@ -243,11 +254,14 @@ class EvolutionEngine(Generic[G]):
         # Get elites (best individuals preserved unchanged)
         elites = list(population.best(n_elites, minimize=self.config.minimize))
         
-        # Select parents (need n_offspring pairs)
+        # Time selection phase
+        self._timer.start("selection")
         n_parents = n_offspring * 2
         parents = list(self.selection.select(population, n_parents, self.rng))
+        self._timer.stop("selection")
         
-        # Create offspring via crossover and mutation
+        # Time variation phase (crossover + mutation)
+        self._timer.start("variation")
         offspring: list[Individual[G]] = []
         
         for i in range(0, len(parents) - 1, 2):
@@ -293,17 +307,26 @@ class EvolutionEngine(Generic[G]):
         
         # Trim to exact size
         offspring = offspring[:n_offspring]
+        self._timer.stop("variation")
         
         # Combine elites and offspring
         new_individuals = elites + offspring
         
-        # Create and evaluate new population
+        # Create new population
         new_population = Population(
             individuals=new_individuals,
             generation=self._generation + 1,
         )
         
-        return self._evaluate_population(new_population)
+        # Time evaluation phase
+        self._timer.start("evaluation")
+        evaluated_population = self._evaluate_population(new_population)
+        self._timer.stop("evaluation")
+        
+        # End generation timing
+        self._timer.end_generation()
+        
+        return evaluated_population
 
     def _evaluate_population(self, population: Population[G]) -> Population[G]:
         """Evaluate unevaluated individuals."""
@@ -330,7 +353,7 @@ class EvolutionEngine(Generic[G]):
         return Population(individuals=updated, generation=population.generation)
 
     def _compute_metrics(self, population: Population[G]) -> dict[str, Any]:
-        """Compute generation metrics."""
+        """Compute generation metrics including timing."""
         stats = population.statistics
         
         metrics: dict[str, Any] = {
@@ -347,6 +370,10 @@ class EvolutionEngine(Generic[G]):
         
         if stats.std_fitness is not None:
             metrics["std_fitness"] = stats.std_fitness
+        
+        # Add timing metrics (selection, variation, evaluation, total)
+        timing_metrics = self._timer.get_metrics(breakdown=True)
+        metrics.update(timing_metrics)
         
         return metrics
 

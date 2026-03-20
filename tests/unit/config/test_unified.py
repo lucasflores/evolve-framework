@@ -249,3 +249,90 @@ class TestUnifiedConfigValidation:
         """Invalid mutation rate raises ValueError."""
         with pytest.raises(ValueError, match="mutation_rate"):
             UnifiedConfig(population_size=50, mutation_rate=-0.1)
+
+
+class TestUnifiedConfigWithTracking:
+    """Test UnifiedConfig with tracking settings (FR-002)."""
+    
+    def test_tracking_none_by_default(self) -> None:
+        """Tracking is None by default."""
+        config = UnifiedConfig(population_size=50)
+        assert config.tracking is None
+        assert config.is_tracking_enabled is False
+    
+    def test_is_tracking_enabled_with_tracking_config(self) -> None:
+        """is_tracking_enabled returns True when tracking configured."""
+        from evolve.config.tracking import TrackingConfig
+        
+        tracking = TrackingConfig(experiment_name="test")
+        config = UnifiedConfig(population_size=50, tracking=tracking)
+        
+        assert config.is_tracking_enabled is True
+    
+    def test_is_tracking_enabled_false_when_disabled(self) -> None:
+        """is_tracking_enabled returns False when tracking disabled."""
+        from evolve.config.tracking import TrackingConfig
+        
+        tracking = TrackingConfig(experiment_name="test", enabled=False)
+        config = UnifiedConfig(population_size=50, tracking=tracking)
+        
+        assert config.is_tracking_enabled is False
+    
+    def test_tracking_config_serialization(self) -> None:
+        """Test config with tracking round-trips."""
+        from evolve.config.tracking import TrackingConfig, MetricCategory
+        
+        tracking = TrackingConfig(
+            experiment_name="test_exp",
+            run_name="run_001",
+            categories=frozenset({MetricCategory.CORE, MetricCategory.TIMING}),
+            log_interval=5,
+        )
+        original = UnifiedConfig(
+            population_size=50,
+            tracking=tracking,
+        )
+        
+        data = original.to_dict()
+        restored = UnifiedConfig.from_dict(data)
+        
+        assert restored.tracking is not None
+        assert restored.tracking.experiment_name == "test_exp"
+        assert restored.tracking.run_name == "run_001"
+        assert restored.tracking.log_interval == 5
+        assert MetricCategory.CORE in restored.tracking.categories
+        assert MetricCategory.TIMING in restored.tracking.categories
+    
+    def test_tracking_standard_factory(self) -> None:
+        """Test using TrackingConfig.standard factory with UnifiedConfig."""
+        from evolve.config.tracking import TrackingConfig
+        
+        tracking = TrackingConfig.standard("my_experiment")
+        config = UnifiedConfig(population_size=50, tracking=tracking)
+        
+        assert config.is_tracking_enabled is True
+        assert config.tracking.experiment_name == "my_experiment"
+    
+    def test_tracking_minimal_factory(self) -> None:
+        """Test using TrackingConfig.minimal factory with UnifiedConfig."""
+        from evolve.config.tracking import TrackingConfig, MetricCategory
+        
+        tracking = TrackingConfig.minimal()
+        config = UnifiedConfig(population_size=50, tracking=tracking)
+        
+        assert config.is_tracking_enabled is True
+        assert len(config.tracking.categories) == 1
+        assert MetricCategory.CORE in config.tracking.categories
+    
+    def test_tracking_in_json_round_trip(self) -> None:
+        """Test tracking config survives JSON round-trip."""
+        from evolve.config.tracking import TrackingConfig
+        
+        tracking = TrackingConfig(experiment_name="json_test")
+        original = UnifiedConfig(population_size=50, tracking=tracking)
+        
+        json_str = original.to_json()
+        restored = UnifiedConfig.from_json(json_str)
+        
+        assert restored.tracking is not None
+        assert restored.tracking.experiment_name == "json_test"

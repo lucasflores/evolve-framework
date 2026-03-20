@@ -1,0 +1,191 @@
+# TrackingConfig API Contract
+# Feature: 006-mlflow-metrics-tracking
+# Date: March 17, 2026
+
+openapi: "3.1.0"
+info:
+  title: TrackingConfig Schema
+  version: "1.0.0"
+  description: |
+    Configuration dataclass for experiment tracking (FR-001).
+    JSON-serializable for reproducibility and experiment versioning.
+
+components:
+  schemas:
+    MetricCategory:
+      type: string
+      enum:
+        - core
+        - extended_population
+        - diversity
+        - timing
+        - speciation
+        - multiobjective
+        - erp
+        - metadata
+        - derived
+      description: |
+        Categories of metrics that can be enabled.
+        Core is always enabled; others are opt-in.
+
+    TrackingConfig:
+      type: object
+      description: |
+        Configuration for experiment tracking.
+        Specifies backend, experiment naming, and metric collection options.
+      properties:
+        enabled:
+          type: boolean
+          default: true
+          description: Master switch for tracking
+
+        backend:
+          type: string
+          enum: [mlflow, wandb, local, "null"]
+          default: mlflow
+          description: Tracking backend to use
+
+        experiment_name:
+          type: string
+          default: evolve
+          description: MLflow experiment name or equivalent
+
+        run_name:
+          type: string
+          nullable: true
+          description: |
+            Optional run name. Auto-generated from timestamp
+            and config hash if not provided.
+
+        tracking_uri:
+          type: string
+          nullable: true
+          description: |
+            MLflow tracking server URI.
+            Null uses local filesystem store.
+          examples:
+            - "http://localhost:5000"
+            - "databricks"
+            - null
+
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricCategory"
+          default: [core]
+          description: |
+            Set of enabled metric categories (FR-025).
+            Core metrics are always computed.
+            Enhanced metrics are opt-in.
+
+        log_interval:
+          type: integer
+          minimum: 1
+          default: 1
+          description: Log metrics every N generations
+
+        buffer_size:
+          type: integer
+          minimum: 1
+          default: 1000
+          description: |
+            Maximum metrics to buffer when server unreachable.
+            Oldest metrics dropped when buffer full.
+
+        flush_interval:
+          type: number
+          minimum: 1.0
+          default: 30.0
+          description: Seconds between server reconnection attempts
+
+        metadata_threshold:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.5
+          description: |
+            Minimum fraction of individuals that must have a
+            metadata field for it to be extracted (FR-020).
+
+        metadata_prefix:
+          type: string
+          default: "meta_"
+          description: Prefix for extracted metadata metrics
+
+        timing_breakdown:
+          type: boolean
+          default: false
+          description: |
+            Enable fine-grained phase timing breakdown.
+            When true, logs evaluation_time_ms, selection_time_ms,
+            crossover_time_ms, mutation_time_ms separately.
+
+        diversity_sample_size:
+          type: integer
+          minimum: 10
+          default: 1000
+          description: |
+            Maximum samples for diversity computation.
+            Used when population size exceeds this value
+            to maintain O(k²) instead of O(n²) complexity.
+
+        hypervolume_reference:
+          type: array
+          items:
+            type: number
+          nullable: true
+          description: |
+            Reference point for hypervolume computation.
+            Auto-computed from worst objective values if null.
+            Must match number of objectives.
+
+      required: []  # All have defaults
+
+      example:
+        enabled: true
+        backend: mlflow
+        experiment_name: sphere_optimization
+        run_name: "run_2026-03-17_001"
+        tracking_uri: "http://mlflow.internal:5000"
+        categories:
+          - core
+          - extended_population
+          - timing
+          - diversity
+        log_interval: 1
+        timing_breakdown: true
+        diversity_sample_size: 500
+
+    # Factory presets
+    TrackingConfigMinimal:
+      description: Core metrics only, minimal overhead
+      allOf:
+        - $ref: "#/components/schemas/TrackingConfig"
+        - properties:
+            categories:
+              default: [core]
+
+    TrackingConfigStandard:
+      description: Standard metrics for typical experiments
+      allOf:
+        - $ref: "#/components/schemas/TrackingConfig"
+        - properties:
+            categories:
+              default: [core, extended_population, timing]
+
+    TrackingConfigComprehensive:
+      description: All metrics enabled for detailed analysis
+      allOf:
+        - $ref: "#/components/schemas/TrackingConfig"
+        - properties:
+            categories:
+              default:
+                - core
+                - extended_population
+                - diversity
+                - timing
+                - speciation
+                - multiobjective
+                - erp
+                - metadata
+                - derived

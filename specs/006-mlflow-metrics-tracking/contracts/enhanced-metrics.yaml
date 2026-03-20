@@ -1,0 +1,376 @@
+# EnhancedGenerationMetrics Contract
+# Feature: 006-mlflow-metrics-tracking
+# Date: March 17, 2026
+
+openapi: "3.1.0"
+info:
+  title: Enhanced Generation Metrics Schema
+  version: "1.0.0"
+  description: |
+    Extended metrics dictionary structure returned by compute_enhanced_metrics().
+    Combines all metric categories with opt-in granularity.
+
+components:
+  schemas:
+    CoreMetrics:
+      type: object
+      description: |
+        Core fitness statistics (FR-006 partial).
+        Always computed regardless of TrackingConfig.categories.
+      properties:
+        generation:
+          type: integer
+          minimum: 0
+          description: Generation number
+        best_fitness:
+          type: number
+          description: Maximum fitness value in population
+        mean_fitness:
+          type: number
+          description: Average fitness across population
+        std_fitness:
+          type: number
+          minimum: 0
+          description: Standard deviation of fitness values
+      required:
+        - generation
+        - best_fitness
+        - mean_fitness
+        - std_fitness
+
+    ExtendedPopulationMetrics:
+      type: object
+      description: |
+        Extended population statistics (FR-006).
+        Enabled via MetricCategory.EXTENDED_POPULATION.
+      properties:
+        worst_fitness:
+          type: number
+          description: Minimum fitness value in population
+        median_fitness:
+          type: number
+          description: Median fitness value
+        fitness_range:
+          type: number
+          minimum: 0
+          description: |
+            Difference between best and worst fitness.
+            best_fitness - worst_fitness
+        q25_fitness:
+          type: number
+          description: 25th percentile fitness
+        q75_fitness:
+          type: number
+          description: 75th percentile fitness
+
+    DiversityMetrics:
+      type: object
+      description: |
+        Diversity measurements (FR-007).
+        Enabled via MetricCategory.DIVERSITY.
+        Uses sampling for populations > diversity_sample_size.
+      properties:
+        diversity_score:
+          type: number
+          minimum: 0
+          description: |
+            Mean pairwise genetic distance.
+            Computed via configurable distance function.
+            0 = all identical, higher = more diverse.
+        population_entropy:
+          type: number
+          minimum: 0
+          description: |
+            Entropy of fitness distribution.
+            Based on histogram binning (20 bins).
+            Higher = flatter fitness distribution.
+
+    TimingMetrics:
+      type: object
+      description: |
+        Timing instrumentation (FR-010, FR-011).
+        Enabled via MetricCategory.TIMING.
+        Breakdown enabled via timing_breakdown config.
+      properties:
+        generation_time_ms:
+          type: number
+          minimum: 0
+          description: Total generation wall clock time in milliseconds
+        evaluation_time_ms:
+          type: number
+          minimum: 0
+          description: Time spent in fitness evaluation (requires breakdown)
+        selection_time_ms:
+          type: number
+          minimum: 0
+          description: Time spent in parent selection (requires breakdown)
+        crossover_time_ms:
+          type: number
+          minimum: 0
+          description: Time spent in crossover operations (requires breakdown)
+        mutation_time_ms:
+          type: number
+          minimum: 0
+          description: Time spent in mutation operations (requires breakdown)
+        wall_clock_time_ms:
+          type: number
+          minimum: 0
+          description: Wall clock time (alias for generation_time_ms)
+        cpu_time_ms:
+          type: number
+          minimum: 0
+          description: |
+            Total CPU time across all cores.
+            May exceed wall clock for parallel evaluation.
+
+    SpeciationMetrics:
+      type: object
+      description: |
+        Speciation statistics (FR-008, FR-015).
+        Enabled via MetricCategory.SPECIATION.
+        Auto-enabled when speciation is configured.
+      properties:
+        spec_species_count:
+          type: integer
+          minimum: 1
+          description: Number of species in current generation
+        spec_average_species_size:
+          type: number
+          minimum: 1
+          description: Mean individuals per species
+        spec_largest_species_fitness:
+          type: number
+          description: Best fitness in largest species
+        spec_species_births:
+          type: integer
+          minimum: 0
+          description: New species created this generation
+        spec_species_extinctions:
+          type: integer
+          minimum: 0
+          description: Species that went extinct this generation
+        spec_stagnation_count:
+          type: integer
+          minimum: 0
+          description: Species with no fitness improvement for N generations
+        spec_species_sizes:
+          type: array
+          items:
+            type: integer
+          description: Size of each species (sorted descending)
+
+    MultiObjectiveMetrics:
+      type: object
+      description: |
+        Multi-objective performance (FR-014).
+        Enabled via MetricCategory.MULTIOBJECTIVE.
+        Auto-enabled when multiobjective config present.
+      properties:
+        mo_hypervolume:
+          type: number
+          minimum: 0
+          description: |
+            Hypervolume indicator.
+            Only computed for 2-3 objectives due to computational cost.
+            Volume of objective space dominated by Pareto front,
+            bounded by reference point.
+        mo_pareto_front_size:
+          type: integer
+          minimum: 0
+          description: Number of non-dominated individuals
+        mo_spread:
+          type: number
+          minimum: 0
+          description: |
+            Distribution uniformity metric.
+            Lower = more even spacing along Pareto front.
+        mo_crowding_diversity:
+          type: number
+          minimum: 0
+          description: Mean crowding distance of front solutions
+
+    ERPMetrics:
+      type: object
+      description: |
+        Evolvable Reproduction Protocol metrics (FR-013).
+        Enabled via MetricCategory.ERP.
+        Auto-enabled when ERP config present.
+      properties:
+        erp_mating_success_rate:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: |
+            Ratio of successful to attempted matings.
+            0 = reproductive collapse, 1 = all matings successful.
+        erp_attempted_matings:
+          type: integer
+          minimum: 0
+          description: Total mating attempts this generation
+        erp_successful_matings:
+          type: integer
+          minimum: 0
+          description: Matings that produced offspring
+      additionalProperties:
+        type: number
+        description: |
+          Per-protocol metrics with pattern:
+          erp_protocol_{protocol_name}_success_rate
+
+    NEATMetrics:
+      type: object
+      description: |
+        NEAT topology metrics (FR-017).
+        Enabled via MetricCategory.NEAT (when supported).
+      properties:
+        neat_avg_node_count:
+          type: number
+          minimum: 0
+          description: Average nodes per genome
+        neat_avg_connection_count:
+          type: number
+          minimum: 0
+          description: Average connections per genome
+        neat_topology_innovations:
+          type: integer
+          minimum: 0
+          description: New structural innovations this generation
+        neat_avg_genome_complexity:
+          type: number
+          minimum: 0
+          description: Average genome complexity score
+
+    IslandsMetrics:
+      type: object
+      description: |
+        Island model parallelism metrics (FR-016).
+        Enabled via MetricCategory.ISLANDS (when supported).
+      properties:
+        islands_inter_variance:
+          type: number
+          minimum: 0
+          description: Fitness variance between islands
+        islands_intra_variance:
+          type: number
+          minimum: 0
+          description: Average fitness variance within islands
+        islands_migration_events:
+          type: integer
+          minimum: 0
+          description: Individuals migrated this generation
+        islands_best_per_island:
+          type: array
+          items:
+            type: number
+          description: Best fitness on each island
+
+    MetadataMetrics:
+      type: object
+      description: |
+        Extracted Fitness.metadata fields (FR-018, FR-019, FR-020).
+        Enabled via MetricCategory.METADATA.
+        Only includes fields present in > threshold individuals.
+      additionalProperties:
+        type: number
+        description: |
+          Extracted metadata follows pattern:
+          {prefix}{field}_best, {prefix}{field}_mean, {prefix}{field}_std
+          
+          Example for episode_reward field:
+          meta_episode_reward_best: 500
+          meta_episode_reward_mean: 245.5
+          meta_episode_reward_std: 125.3
+
+    DerivedMetrics:
+      type: object
+      description: |
+        Derived analytics computed from other metrics (FR-021 through FR-024).
+        Enabled via MetricCategory.DERIVED.
+      properties:
+        derived_selection_pressure:
+          type: number
+          minimum: 0
+          description: |
+            Ratio of best to mean fitness.
+            1.0 = no selection pressure (flat fitness).
+            Higher = stronger selection.
+        derived_fitness_velocity:
+          type: number
+          description: |
+            Rate of best fitness improvement over sliding window.
+            Positive = improving, negative = degrading, near-zero = stagnant.
+        derived_population_entropy:
+          type: number
+          minimum: 0
+          description: |
+            Shannon entropy of fitness distribution.
+            Higher = more uniform distribution.
+            Lower = fitness concentrated in few values.
+        derived_elite_turnover_rate:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: |
+            Fraction of elite slots filled by new individuals.
+            0 = stable elites, 1 = complete turnover.
+
+    EnhancedGenerationMetrics:
+      description: |
+        Complete generation metrics dictionary.
+        
+        Combines all metric categories. Only categories enabled
+        in TrackingConfig.categories will be populated.
+        
+        Usage:
+          metrics = compute_enhanced_metrics(population, context)
+          metrics["best_fitness"]  # Always present (core)
+          metrics.get("mo_hypervolume")  # None if MO not enabled
+      allOf:
+        - $ref: "#/components/schemas/CoreMetrics"
+        - $ref: "#/components/schemas/ExtendedPopulationMetrics"
+        - $ref: "#/components/schemas/DiversityMetrics"
+        - $ref: "#/components/schemas/TimingMetrics"
+        - $ref: "#/components/schemas/SpeciationMetrics"
+        - $ref: "#/components/schemas/MultiObjectiveMetrics"
+        - $ref: "#/components/schemas/ERPMetrics"
+        - $ref: "#/components/schemas/NEATMetrics"
+        - $ref: "#/components/schemas/IslandsMetrics"
+        - $ref: "#/components/schemas/MetadataMetrics"
+        - $ref: "#/components/schemas/DerivedMetrics"
+
+    # Function signature for compute_enhanced_metrics
+    ComputeEnhancedMetricsSignature:
+      description: |
+        Function signature for extended metrics computation.
+        
+        def compute_enhanced_metrics(
+            population: Population[G],
+            context: CollectionContext,
+            collectors: list[MetricCollector] | None = None,
+        ) -> EnhancedGenerationMetrics:
+            '''
+            Compute comprehensive generation metrics.
+            
+            Args:
+                population: Current generation population
+                context: Collection context with config and state
+                collectors: Optional additional collectors
+                
+            Returns:
+                Dictionary of all computed metrics
+            '''
+      x-function:
+        name: compute_enhanced_metrics
+        module: evolve.experiment.metrics
+        parameters:
+          - name: population
+            type: "Population[G]"
+            required: true
+          - name: context
+            type: CollectionContext
+            required: true
+          - name: collectors
+            type: "list[MetricCollector] | None"
+            default: null
+        returns:
+          type: EnhancedGenerationMetrics

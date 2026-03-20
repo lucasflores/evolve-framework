@@ -279,30 +279,42 @@ def _build_callbacks(config: UnifiedConfig) -> list[Callback]:
     """
     callbacks: list[Callback] = []
     
-    if config.callbacks is None:
-        return callbacks
-    
+    # Callback config may be None, but we still process tracking
     cb_cfg = config.callbacks
     
-    # Logging callback (FR-041)
-    if cb_cfg.enable_logging:
-        callbacks.append(
-            LoggingCallback(
-                log_level=cb_cfg.log_level,
-                log_destination=cb_cfg.log_destination,
+    if cb_cfg is not None:
+        # Logging callback (FR-041)
+        if cb_cfg.enable_logging:
+            callbacks.append(
+                LoggingCallback(
+                    log_level=cb_cfg.log_level,
+                    log_destination=cb_cfg.log_destination,
+                )
             )
-        )
-    
-    # Checkpoint callback (FR-042)
-    if cb_cfg.enable_checkpointing:
-        # Ensure directory exists
-        checkpoint_dir = cb_cfg.checkpoint_dir or "./checkpoints"
-        os.makedirs(checkpoint_dir, exist_ok=True)
         
+        # Checkpoint callback (FR-042)
+        if cb_cfg.enable_checkpointing:
+            # Ensure directory exists
+            checkpoint_dir = cb_cfg.checkpoint_dir or "./checkpoints"
+            os.makedirs(checkpoint_dir, exist_ok=True)
+            
+            callbacks.append(
+                CheckpointCallback(
+                    checkpoint_dir=checkpoint_dir,
+                    checkpoint_frequency=cb_cfg.checkpoint_frequency,
+                )
+            )
+    
+    # Tracking callback (FR-019, FR-028)
+    # Note: Tracking is independent of CallbackConfig
+    if config.is_tracking_enabled:
+        from evolve.experiment.tracking.callback import TrackingCallback
+        
+        tracking_config = config.tracking
         callbacks.append(
-            CheckpointCallback(
-                checkpoint_dir=checkpoint_dir,
-                checkpoint_frequency=cb_cfg.checkpoint_frequency,
+            TrackingCallback(
+                config=tracking_config,
+                unified_config_dict=config.to_dict(),
             )
         )
     

@@ -23,6 +23,7 @@ from evolve.config.multiobjective import (
 )
 from evolve.config.meta import ParameterSpec, MetaEvolutionConfig
 from evolve.config.schema import validate_schema_version, CURRENT_SCHEMA_VERSION
+from evolve.config.tracking import TrackingConfig, MetricCategory
 
 if TYPE_CHECKING:
     from typing import Self
@@ -190,6 +191,9 @@ class UnifiedConfig:
     meta: MetaEvolutionConfig | None = None
     """Meta-evolution settings (enables outer loop when present)."""
     
+    tracking: TrackingConfig | None = None
+    """Tracking configuration for experiment observability (FR-002)."""
+    
     # -------------------------------------------------------------------------
     # Validation
     # -------------------------------------------------------------------------
@@ -241,6 +245,11 @@ class UnifiedConfig:
         """Check if meta-evolution is enabled."""
         return self.meta is not None
     
+    @property
+    def is_tracking_enabled(self) -> bool:
+        """Check if tracking is enabled."""
+        return self.tracking is not None and self.tracking.enabled
+    
     # -------------------------------------------------------------------------
     # Serialization (FR-002)
     # -------------------------------------------------------------------------
@@ -282,6 +291,7 @@ class UnifiedConfig:
             self.multiobjective.to_dict() if self.multiobjective else None
         )
         result["meta"] = self.meta.to_dict() if self.meta else None
+        result["tracking"] = self.tracking.to_dict() if self.tracking else None
         
         return result
     
@@ -325,6 +335,10 @@ class UnifiedConfig:
         if data.get("meta"):
             meta = MetaEvolutionConfig.from_dict(data["meta"])
         
+        tracking = None
+        if data.get("tracking"):
+            tracking = TrackingConfig.from_dict(data["tracking"])
+        
         # Handle tags as list or tuple
         tags = data.get("tags", ())
         if isinstance(tags, list):
@@ -355,6 +369,7 @@ class UnifiedConfig:
             erp=erp,
             multiobjective=multiobjective,
             meta=meta,
+            tracking=tracking,
         )
     
     def to_json(self, indent: int | None = 2) -> str:
@@ -494,6 +509,8 @@ class UnifiedConfig:
         """
         Create a copy with ERP mode enabled.
         
+        Automatically enables ERP tracking category if tracking is enabled.
+        
         Args:
             step_limit: Maximum steps per protocol evaluation.
             recovery_threshold: Success rate for recovery trigger.
@@ -511,7 +528,14 @@ class UnifiedConfig:
             enable_intent=enable_intent,
             enable_recovery=enable_recovery,
         )
-        return replace(self, erp=erp)
+        
+        # Auto-enable ERP tracking category
+        tracking = self.tracking
+        if tracking is not None and tracking.enabled:
+            if not tracking.has_category(MetricCategory.ERP):
+                tracking = tracking.with_category(MetricCategory.ERP)
+        
+        return replace(self, erp=erp, tracking=tracking)
     
     def with_multiobjective(
         self,
@@ -522,6 +546,9 @@ class UnifiedConfig:
     ) -> "UnifiedConfig":
         """
         Create a copy with multi-objective mode enabled.
+        
+        Automatically enables MULTIOBJECTIVE tracking category if tracking
+        is enabled.
         
         Args:
             objectives: Tuple of objective specifications.
@@ -538,4 +565,11 @@ class UnifiedConfig:
             constraints=constraints,
             constraint_handling=constraint_handling,
         )
-        return replace(self, multiobjective=mo)
+        
+        # Auto-enable MULTIOBJECTIVE tracking category (T057)
+        tracking = self.tracking
+        if tracking is not None and tracking.enabled:
+            if not tracking.has_category(MetricCategory.MULTIOBJECTIVE):
+                tracking = tracking.with_category(MetricCategory.MULTIOBJECTIVE)
+        
+        return replace(self, multiobjective=mo, tracking=tracking)

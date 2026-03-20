@@ -618,3 +618,14 @@ class ERPEngine(EvolutionEngine[G]):
         if self._attempted_matings == 0:
             return 0.0
         return self._successful_matings / self._attempted_matings
+
+    def _compute_metrics(self, population: Population[G]) -> dict[str, Any]:
+        """Compute generation metrics including ERP mating statistics."""
+        metrics = super()._compute_metrics(population)
+        
+        # Add ERP mating statistics
+        metrics["attempted_matings"] = self._attempted_matings
+        metrics["successful_matings"] = self._successful_matings
+        metrics["mating_success_rate"] = self.success_rate
+        
+        return metrics
