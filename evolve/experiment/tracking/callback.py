@@ -130,6 +130,9 @@ class TrackingCallback(Callback):
             if self.evaluation_data is not None and self.config.log_datasets:
                 self._log_evaluation_data()
             
+        except ImportError:
+            # Don't silently swallow missing dependencies - fail loudly
+            raise
         except Exception as e:
             logger.warning(f"Failed to start tracking: {e}")
             self._started = False

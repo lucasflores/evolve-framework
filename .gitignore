@@ -89,6 +89,7 @@ Thumbs.db
 # Project-specific
 *.log
 *.tmp
+mlflow.db
 checkpoints/
 mlruns/
 wandb/
