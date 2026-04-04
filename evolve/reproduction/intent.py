@@ -75,9 +75,9 @@ class AlwaysWillingIntent:
 
     def evaluate(
         self,
-        context: IntentContext,
-        params: dict[str, float],
-        rng: Random,
+        _context: IntentContext,
+        _params: dict[str, float],
+        _rng: Random,
         counter: StepCounter,
     ) -> bool:
         counter.step()
@@ -89,9 +89,9 @@ class NeverWillingIntent:
 
     def evaluate(
         self,
-        context: IntentContext,
-        params: dict[str, float],
-        rng: Random,
+        _context: IntentContext,
+        _params: dict[str, float],
+        _rng: Random,
         counter: StepCounter,
     ) -> bool:
         counter.step()
@@ -110,7 +110,7 @@ class FitnessThresholdIntent:
         self,
         context: IntentContext,
         params: dict[str, float],
-        rng: Random,
+        _rng: Random,
         counter: StepCounter,
     ) -> bool:
         counter.step()
@@ -132,7 +132,7 @@ class FitnessRankThresholdIntent:
         self,
         context: IntentContext,
         params: dict[str, float],
-        rng: Random,
+        _rng: Random,
         counter: StepCounter,
     ) -> bool:
         counter.step()
@@ -152,7 +152,7 @@ class ResourceBudgetIntent:
         self,
         context: IntentContext,
         params: dict[str, float],
-        rng: Random,
+        _rng: Random,
         counter: StepCounter,
     ) -> bool:
         counter.step()
@@ -173,7 +173,7 @@ class AgeDependentIntent:
         self,
         context: IntentContext,
         params: dict[str, float],
-        rng: Random,
+        _rng: Random,
         counter: StepCounter,
     ) -> bool:
         counter.step()
@@ -192,7 +192,7 @@ class ProbabilisticIntent:
 
     def evaluate(
         self,
-        context: IntentContext,
+        _context: IntentContext,
         params: dict[str, float],
         rng: Random,
         counter: StepCounter,

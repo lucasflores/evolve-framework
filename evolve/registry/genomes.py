@@ -171,7 +171,7 @@ def _register_builtin_genomes(registry: GenomeRegistry) -> None:
         dimensions: int = 10,
         bounds: tuple[float, float] = (-1.0, 1.0),
         rng: Random | None = None,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> VectorGenome:
         """Create a random VectorGenome."""
         if rng is None:
@@ -199,7 +199,7 @@ def _register_builtin_genomes(registry: GenomeRegistry) -> None:
         length: int = 10,
         alphabet: tuple = (0, 1),
         rng: Random | None = None,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> SequenceGenome:
         """Create a random SequenceGenome."""
         if rng is None:
@@ -221,7 +221,7 @@ def _register_builtin_genomes(registry: GenomeRegistry) -> None:
         input_nodes: int = 2,
         output_nodes: int = 1,
         rng: Random | None = None,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> GraphGenome:
         """Create a minimal GraphGenome (inputs -> outputs directly)."""
         if rng is None:
@@ -246,7 +246,7 @@ def _register_builtin_genomes(registry: GenomeRegistry) -> None:
     def create_scm_genome(
         num_variables: int = 5,
         rng: Random | None = None,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> SCMGenome:
         """Create a random SCMGenome."""
         if rng is None:

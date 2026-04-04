@@ -212,7 +212,7 @@ class TestMetaEvaluatorTrials:
         fitnesses = [0.3, 0.5, 0.4]
         call_count = [0]
 
-        def mock_run(*args):
+        def mock_run(*_args):
             idx = call_count[0] % len(fitnesses)
             call_count[0] += 1
             return MockResult(best_fitness=fitnesses[idx])
@@ -261,7 +261,7 @@ class TestAggregation:
         fitnesses = [1.0, 2.0, 3.0]
         call_count = [0]
 
-        def mock_run(*args):
+        def mock_run(*_args):
             idx = call_count[0]
             call_count[0] += 1
             return MockResult(best_fitness=fitnesses[idx])
@@ -303,7 +303,7 @@ class TestAggregation:
         fitnesses = [1.0, 3.0, 2.0]
         call_count = [0]
 
-        def mock_run(*args):
+        def mock_run(*_args):
             idx = call_count[0]
             call_count[0] += 1
             return MockResult(best_fitness=fitnesses[idx])
@@ -355,7 +355,7 @@ class TestAggregation:
         fitnesses = [1.0, 0.5, 2.0]  # Best for minimize = 0.5
         call_count = [0]
 
-        def mock_run(*args):
+        def mock_run(*_args):
             idx = call_count[0]
             call_count[0] += 1
             return MockResult(best_fitness=fitnesses[idx])

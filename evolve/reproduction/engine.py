@@ -23,10 +23,13 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from random import Random
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 from uuid import UUID, uuid4
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from evolve.evaluation.evaluator import Evaluator
 
 # Import core modules here (not in __init__ to avoid circular imports)
 from evolve.core.engine import EvolutionConfig, EvolutionEngine
@@ -161,7 +164,7 @@ class ERPEngine(EvolutionEngine[G]):
 
         # Protocol factory for immigrants/defaults
         if default_protocol_factory is None:
-            self.default_protocol_factory = lambda rng: ReproductionProtocol.default()
+            self.default_protocol_factory = lambda _rng: ReproductionProtocol.default()
         else:
             self.default_protocol_factory = default_protocol_factory
 
@@ -219,33 +222,36 @@ class ERPEngine(EvolutionEngine[G]):
         offspring = offspring[:n_offspring]
 
         # Check if recovery needed
-        if self.recovery and self.erp_config.enable_recovery:
-            if self.recovery.should_trigger(
+        if (
+            self.recovery
+            and self.erp_config.enable_recovery
+            and self.recovery.should_trigger(
                 self._successful_matings,
                 self._attempted_matings,
                 len(population),
                 self._generation,
-            ):
-                # Recovery may add immigrants
-                result = self.recovery.recover(
-                    offspring,
-                    lambda rng: self._create_random_genome(rng),
-                    self.default_protocol_factory,
-                    self.rng,
-                )
-                if isinstance(result, tuple) and len(result) == 2:
-                    survivors, immigrants = result
-                    # Convert immigrants to individuals
-                    for genome, protocol in immigrants:
-                        immigrant = Individual(
-                            id=uuid4(),
-                            genome=genome,
-                            protocol=protocol,
-                            metadata=IndividualMetadata(origin="immigration"),
-                            created_at=self._generation + 1,
-                        )
-                        offspring.append(immigrant)
-                    offspring = offspring[:n_offspring]
+            )
+        ):
+            # Recovery may add immigrants
+            result = self.recovery.recover(
+                offspring,
+                lambda rng: self._create_random_genome(rng),
+                self.default_protocol_factory,
+                self.rng,
+            )
+            if isinstance(result, tuple) and len(result) == 2:
+                survivors, immigrants = result
+                # Convert immigrants to individuals
+                for genome, protocol in immigrants:
+                    immigrant = Individual(
+                        id=uuid4(),
+                        genome=genome,
+                        protocol=protocol,
+                        metadata=IndividualMetadata(origin="immigration"),
+                        created_at=self._generation + 1,
+                    )
+                    offspring.append(immigrant)
+                offspring = offspring[:n_offspring]
 
         # If still not enough offspring, fallback to cloning
         while len(offspring) < n_offspring:

@@ -300,9 +300,6 @@ class DerivedAnalyticsCollector:
 
         # Normalize by max entropy (uniform distribution)
         max_entropy = np.log2(self.entropy_bins)
-        if max_entropy > 0:
-            normalized_entropy = entropy / max_entropy
-        else:
-            normalized_entropy = 0.0
+        normalized_entropy = entropy / max_entropy if max_entropy > 0 else 0.0
 
         return float(normalized_entropy)

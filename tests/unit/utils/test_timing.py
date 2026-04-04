@@ -43,15 +43,13 @@ class TestTimingContext:
 
     def test_exception_still_captures_time(self) -> None:
         """timing_context should capture time even if exception raised."""
-        results: list[TimingResult] = []
 
-        with pytest.raises(ValueError):
-            with timing_context("error_phase") as results:
-                time.sleep(0.005)
-                raise ValueError("test error")
+        with pytest.raises(ValueError), timing_context("error_phase") as err_results:
+            time.sleep(0.005)
+            raise ValueError("test error")
 
-        assert len(results) == 1
-        assert results[0].elapsed_ms >= 5.0
+        assert len(err_results) == 1
+        assert err_results[0].elapsed_ms >= 5.0
 
     def test_nested_timing_contexts(self) -> None:
         """Nested timing contexts should work independently."""
@@ -195,7 +193,7 @@ class TestTimingOverhead:
         # Measure with timing
         start = time.perf_counter()
         for _ in range(1000):
-            with timing_context("noop") as results:
+            with timing_context("noop"):
                 pass
         with_timing = time.perf_counter() - start
 

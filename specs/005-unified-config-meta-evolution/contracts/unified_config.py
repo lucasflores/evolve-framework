@@ -193,9 +193,8 @@ class MultiObjectiveConfig:
         """Validate multi-objective configuration."""
         if len(self.objectives) < 2:
             raise ValueError("Multi-objective requires at least 2 objectives")
-        if self.reference_point is not None:
-            if len(self.reference_point) != len(self.objectives):
-                raise ValueError("reference_point length must match objectives")
+        if self.reference_point is not None and len(self.reference_point) != len(self.objectives):
+            raise ValueError("reference_point length must match objectives")
 
 
 # =============================================================================

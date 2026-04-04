@@ -68,9 +68,8 @@ class ParameterSpec:
                 raise ValueError("bounds must be a tuple of (min, max)")
             if self.bounds[0] > self.bounds[1]:
                 raise ValueError("bounds[0] must be <= bounds[1]")
-            if self.param_type == "continuous" and self.log_scale:
-                if self.bounds[0] <= 0:
-                    raise ValueError("log_scale requires positive lower bound")
+            if self.param_type == "continuous" and self.log_scale and self.bounds[0] <= 0:
+                raise ValueError("log_scale requires positive lower bound")
         elif self.param_type == "categorical":
             if self.choices is None or len(self.choices) == 0:
                 raise ValueError("choices required for categorical parameter")

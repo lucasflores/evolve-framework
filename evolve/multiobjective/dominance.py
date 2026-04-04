@@ -113,10 +113,7 @@ def is_non_dominated(
     Returns:
         True if no fitness in 'others' dominates 'fitness'
     """
-    for other in others:
-        if dominates(other, fitness):
-            return False
-    return True
+    return all(not dominates(other, fitness) for other in others)
 
 
 def pareto_front(

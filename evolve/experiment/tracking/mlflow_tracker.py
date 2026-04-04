@@ -7,6 +7,7 @@ Requires mlflow to be installed:
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -308,10 +309,7 @@ class ResilientMLflowTracker:
 
         # Flush based on interval
         current_time = time.time()
-        if current_time - self._last_flush_time >= self.config.flush_interval:
-            return True
-
-        return False
+        return current_time - self._last_flush_time >= self.config.flush_interval
 
     def _try_flush(self) -> None:
         """Attempt to flush buffer to MLflow server."""
@@ -450,10 +448,8 @@ class ResilientMLflowTracker:
         if self._buffer:
             self._try_flush()
 
-        try:
+        with contextlib.suppress(Exception):
             mlflow.end_run(status=status)
-        except Exception:
-            pass  # Ignore errors on cleanup
 
         self._started = False
         self.run_id = None

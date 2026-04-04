@@ -249,13 +249,13 @@ class TestTorchSpeedup:
     def torch_available(self):
         """Check if PyTorch is available."""
         try:
-            import torch
+            import torch  # noqa: F401
 
             return True
         except ImportError:
             pytest.skip("PyTorch not installed")
 
-    def test_torch_cpu_speedup(self, torch_available):
+    def test_torch_cpu_speedup(self, _torch_available):
         """Torch CPU should be competitive with NumPy."""
         from evolve.backends.accelerated.torch_evaluator import (
             TorchEvaluator,
@@ -282,7 +282,7 @@ class TestTorchSpeedup:
         or not __import__("torch").cuda.is_available(),
         reason="CUDA not available",
     )
-    def test_torch_cuda_speedup(self, torch_available):
+    def test_torch_cuda_speedup(self, _torch_available):
         """Torch CUDA should be faster than CPU for large populations."""
         import torch
 
@@ -320,13 +320,13 @@ class TestJaxSpeedup:
     def jax_available(self):
         """Check if JAX is available."""
         try:
-            import jax
+            import jax  # noqa: F401
 
             return True
         except ImportError:
             pytest.skip("JAX not installed")
 
-    def test_jax_jit_speedup(self, jax_available):
+    def test_jax_jit_speedup(self, _jax_available):
         """JIT compilation should speed up repeated evaluation."""
         from evolve.backends.accelerated.jax_evaluator import (
             JaxEvaluator,

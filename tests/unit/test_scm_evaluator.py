@@ -404,7 +404,7 @@ class TestAcyclicityStrategies:
         rng = np.random.default_rng(42)
         return rng.standard_normal((100, 3))
 
-    def test_penalty_only_strategy(self, sample_data, basic_scm_config, cyclic_genome_data):
+    def test_penalty_only_strategy(self, sample_data, _basic_scm_config, cyclic_genome_data):
         """T080: Test penalty_only strategy returns -inf fitness + penalty."""
         fitness_config = SCMFitnessConfig(
             acyclicity_strategy="penalty_only",
@@ -425,7 +425,7 @@ class TestAcyclicityStrategies:
         if result.cycle_count > 0:
             assert result.cycle_penalty > 0
 
-    def test_acyclic_subgraph_strategy(self, sample_data, basic_scm_config, cyclic_genome_data):
+    def test_acyclic_subgraph_strategy(self, sample_data, _basic_scm_config, cyclic_genome_data):
         """Test acyclic_subgraph strategy extracts maximal DAG."""
         fitness_config = SCMFitnessConfig(
             acyclicity_strategy="acyclic_subgraph",
@@ -444,7 +444,7 @@ class TestAcyclicityStrategies:
         # Objectives should exist
         assert len(result.objectives) > 0
 
-    def test_parse_order_strategy(self, sample_data, basic_scm_config, cyclic_genome_data):
+    def test_parse_order_strategy(self, sample_data, _basic_scm_config, cyclic_genome_data):
         """T079: Test parse_order strategy breaks cycles by decode order."""
         fitness_config = SCMFitnessConfig(
             acyclicity_strategy="parse_order",
@@ -463,7 +463,7 @@ class TestAcyclicityStrategies:
         # Result should have objectives
         assert len(result.objectives) > 0
 
-    def test_parent_inheritance_strategy(self, sample_data, basic_scm_config, cyclic_genome_data):
+    def test_parent_inheritance_strategy(self, sample_data, _basic_scm_config, cyclic_genome_data):
         """T080a: Test parent_inheritance strategy for ERP-aware behavior."""
         fitness_config = SCMFitnessConfig(
             acyclicity_strategy="parent_inheritance",
@@ -481,7 +481,7 @@ class TestAcyclicityStrategies:
         assert result is not None
         assert len(result.objectives) > 0
 
-    def test_composite_strategy(self, sample_data, basic_scm_config, cyclic_genome_data):
+    def test_composite_strategy(self, sample_data, _basic_scm_config, cyclic_genome_data):
         """T080b: Test composite strategy combines subgraph + proportional penalty."""
         fitness_config = SCMFitnessConfig(
             acyclicity_strategy="composite",

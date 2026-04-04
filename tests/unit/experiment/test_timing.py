@@ -30,7 +30,7 @@ class SimpleEvaluator:
     def capabilities(self) -> EvaluatorCapabilities:
         return EvaluatorCapabilities(n_objectives=1)
 
-    def evaluate(self, individuals, seed=None):
+    def evaluate(self, individuals, _seed=None):
         """Evaluate batch of individuals."""
         results = []
         for ind in individuals:
@@ -149,7 +149,7 @@ class TestEngineTimingInstrumentation:
 
         # Not all times should be monotonically increasing
         # (would indicate accumulation bug)
-        is_monotonic = all(t1 <= t2 for t1, t2 in zip(times[:-1], times[1:]))
+        all(t1 <= t2 for t1, t2 in zip(times[:-1], times[1:]))
 
         # With random variation, strict monotonic increase is unlikely
         # if timing resets properly
@@ -173,10 +173,10 @@ class TestTimingMetricsConsistency:
         """Timing metric keys should be consistent across generations."""
         result = simple_engine.run(simple_population)
 
-        first_keys = set(k for k in result.history[0].keys() if "time" in k)
+        first_keys = {k for k in result.history[0] if "time" in k}
 
         for gen_metrics in result.history[1:]:
-            gen_keys = set(k for k in gen_metrics.keys() if "time" in k)
+            gen_keys = {k for k in gen_metrics if "time" in k}
             assert gen_keys == first_keys
 
     def test_timing_with_minimal_population(self) -> None:

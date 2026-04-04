@@ -488,7 +488,7 @@ class QDArchive(Generic[G]):
         behaviors = []
         low, high = self.bounds
 
-        for cell in self.archive.keys():
+        for cell in self.archive:
             # Convert cell indices to behavior space
             behavior = np.array(
                 [

@@ -11,9 +11,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from random import Random
-from typing import Protocol, TypeVar, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, TypeVar, runtime_checkable
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from evolve.representation.graph import GraphGenome
+    from evolve.representation.vector import VectorGenome
 
 G = TypeVar("G")
 
@@ -240,23 +244,22 @@ class SimulatedBinaryCrossover:
         genes2 = parent2.genes.copy()
 
         for i in range(len(genes1)):
-            if rng.random() <= 0.5:
-                if abs(genes1[i] - genes2[i]) > 1e-14:
-                    y1 = min(genes1[i], genes2[i])
-                    y2 = max(genes1[i], genes2[i])
+            if rng.random() <= 0.5 and abs(genes1[i] - genes2[i]) > 1e-14:
+                y1 = min(genes1[i], genes2[i])
+                y2 = max(genes1[i], genes2[i])
 
-                    u = rng.random()
-                    beta = (
-                        (2.0 * u) ** (1.0 / (self.eta + 1))
-                        if u <= 0.5
-                        else (1.0 / (2.0 * (1.0 - u))) ** (1.0 / (self.eta + 1))
-                    )
+                u = rng.random()
+                beta = (
+                    (2.0 * u) ** (1.0 / (self.eta + 1))
+                    if u <= 0.5
+                    else (1.0 / (2.0 * (1.0 - u))) ** (1.0 / (self.eta + 1))
+                )
 
-                    c1 = 0.5 * ((y1 + y2) - beta * (y2 - y1))
-                    c2 = 0.5 * ((y1 + y2) + beta * (y2 - y1))
+                c1 = 0.5 * ((y1 + y2) - beta * (y2 - y1))
+                c2 = 0.5 * ((y1 + y2) + beta * (y2 - y1))
 
-                    genes1[i] = c1
-                    genes2[i] = c2
+                genes1[i] = c1
+                genes2[i] = c2
 
         child1 = VectorGenome(genes=genes1, bounds=parent1.bounds)
         child2 = VectorGenome(genes=genes2, bounds=parent2.bounds)

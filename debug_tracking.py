@@ -34,7 +34,7 @@ print("\n" + "=" * 60)
 print("Step 3: Check mlruns directory")
 print("=" * 60)
 
-import subprocess
+import subprocess  # noqa: E402
 
 result = subprocess.run(["ls", "-la", "mlruns"], capture_output=True, text=True)
 print(result.stdout or result.stderr)

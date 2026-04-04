@@ -10,7 +10,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from random import Random
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from evolve.representation.sequence import SequenceGenome
 
 # === Enums ===
 

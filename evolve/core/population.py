@@ -9,11 +9,14 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
-from typing import Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 import numpy as np
 
 from evolve.core.types import Fitness, Individual
+
+if TYPE_CHECKING:
+    from random import Random
 
 G = TypeVar("G")
 

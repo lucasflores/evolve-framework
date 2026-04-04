@@ -142,7 +142,7 @@ class TestSafeExecute:
 
     def test_respects_step_limit_parameter(self) -> None:
         def counting_func(counter: StepCounter) -> int:
-            for i in range(100):
+            for _i in range(100):
                 counter.step()
             return 42
 

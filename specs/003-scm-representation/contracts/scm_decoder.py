@@ -180,9 +180,9 @@ class DecodedSCM:
     graph: nx.DiGraph
     """
     Causal graph where edges point from cause to effect.
-    
+
     For equation X = f(A, B), edges are: A → X, B → X
-    
+
     Compatible with NetworkX and DoWhy.
     """
 

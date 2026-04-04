@@ -276,9 +276,9 @@ class DecodedSCM:
     graph: nx.DiGraph
     """
     Causal graph where edges point from cause to effect.
-    
+
     For equation X = f(A, B), edges are: A → X, B → X
-    
+
     Compatible with NetworkX and DoWhy.
     """
 
@@ -434,7 +434,7 @@ class SCMDecoder:
             DecodedSCM with equations, graph, and metadata
         """
         # Build ERC lookup
-        erc_lookup = {idx: val for idx, val in genome.erc_values}
+        erc_lookup = dict(genome.erc_values)
 
         # Execute stack machine
         raw_equations, junk_indices = self._execute_stack_machine(genome.genes, erc_lookup)
@@ -451,7 +451,7 @@ class SCMDecoder:
 
         # Find latent variables used
         latent_used = set()
-        for var in equations.keys():
+        for var in equations:
             if var.startswith("H"):
                 latent_used.add(var)
         for expr in equations.values():
@@ -521,7 +521,7 @@ class SCMDecoder:
 
         for i, gene in enumerate(genes):
             # Handle numeric gene (constant or ERC value)
-            if isinstance(gene, (int, float)):
+            if isinstance(gene, int | float):
                 stack.append(Const(float(gene)))
                 continue
 

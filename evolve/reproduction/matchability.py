@@ -76,9 +76,9 @@ class AcceptAllMatchability:
 
     def evaluate(
         self,
-        context: MateContext,
-        params: dict[str, float],
-        rng: Random,
+        _context: MateContext,
+        _params: dict[str, float],
+        _rng: Random,
         counter: StepCounter,
     ) -> bool:
         counter.step()
@@ -90,9 +90,9 @@ class RejectAllMatchability:
 
     def evaluate(
         self,
-        context: MateContext,
-        params: dict[str, float],
-        rng: Random,
+        _context: MateContext,
+        _params: dict[str, float],
+        _rng: Random,
         counter: StepCounter,
     ) -> bool:
         counter.step()
@@ -111,7 +111,7 @@ class DistanceThresholdMatchability:
         self,
         context: MateContext,
         params: dict[str, float],
-        rng: Random,
+        _rng: Random,
         counter: StepCounter,
     ) -> bool:
         counter.step()
@@ -131,7 +131,7 @@ class SimilarityThresholdMatchability:
         self,
         context: MateContext,
         params: dict[str, float],
-        rng: Random,
+        _rng: Random,
         counter: StepCounter,
     ) -> bool:
         counter.step()
@@ -152,7 +152,7 @@ class FitnessRatioMatchability:
         self,
         context: MateContext,
         params: dict[str, float],
-        rng: Random,
+        _rng: Random,
         counter: StepCounter,
     ) -> bool:
         counter.step()
@@ -172,8 +172,8 @@ class DifferentNicheMatchability:
     def evaluate(
         self,
         context: MateContext,
-        params: dict[str, float],
-        rng: Random,
+        _params: dict[str, float],
+        _rng: Random,
         counter: StepCounter,
     ) -> bool:
         counter.step()
@@ -198,7 +198,7 @@ class ProbabilisticMatchability:
         self,
         context: MateContext,
         params: dict[str, float],
-        rng: Random,
+        _rng: Random,
         counter: StepCounter,
     ) -> float:
         counter.step()
@@ -224,7 +224,7 @@ class DiversitySeekingMatchability:
         self,
         context: MateContext,
         params: dict[str, float],
-        rng: Random,
+        _rng: Random,
         counter: StepCounter,
     ) -> float:
         counter.step()

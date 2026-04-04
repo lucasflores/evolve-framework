@@ -183,7 +183,7 @@ def main():
     # Run evolution
     print("[3/4] Running evolution...")
     history = HistoryCallback()
-    result = erp_engine.run(initial_population=population, callbacks=[history])
+    erp_engine.run(initial_population=population, callbacks=[history])
 
     # Analyze results
     print("[4/4] Analyzing results...")

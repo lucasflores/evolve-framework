@@ -709,7 +709,7 @@ class TestGlossary:
         """Each entry should have all required fields."""
         glossary = get_glossary()
 
-        for term, entry in glossary.items():
+        for _term, entry in glossary.items():
             assert isinstance(entry, TerminologyEntry)
             assert entry.ea_term
             assert entry.ml_analogy

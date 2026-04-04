@@ -143,10 +143,8 @@ class ConfigCodec:
         # Start with base config as dictionary
         updates: dict[str, Any] = {}
 
-        idx = 0
-        for spec in self.param_specs:
+        for idx, spec in enumerate(self.param_specs):
             value = vector[idx]
-            idx += 1
 
             if spec.param_type == "continuous":
                 assert spec.bounds is not None

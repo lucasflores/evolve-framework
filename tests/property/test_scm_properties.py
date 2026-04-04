@@ -178,7 +178,7 @@ class TestGraphValidity:
 
         nodes = set(scm.graph.nodes())
 
-        for target in scm.equations.keys():
+        for target in scm.equations:
             assert target in nodes, f"Equation target {target} not in graph nodes"
 
     @given(scm_genome_strategy())

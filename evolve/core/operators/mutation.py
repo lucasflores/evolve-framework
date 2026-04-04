@@ -11,9 +11,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from random import Random
-from typing import Protocol, TypeVar, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, TypeVar, runtime_checkable
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from evolve.representation.graph import GraphGenome, InnovationTracker
+    from evolve.representation.vector import VectorGenome
 
 G = TypeVar("G")
 
@@ -394,9 +398,8 @@ class NEATMutation:
                     continue
 
                 # Check for cycles if not allowing recurrent
-                if not self.allow_recurrent:
-                    if self._would_create_cycle(genome, n1.id, n2.id):
-                        continue
+                if not self.allow_recurrent and self._would_create_cycle(genome, n1.id, n2.id):
+                    continue
 
                 candidates.append((n1.id, n2.id))
 

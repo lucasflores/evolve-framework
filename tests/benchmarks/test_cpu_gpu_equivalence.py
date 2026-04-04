@@ -115,13 +115,13 @@ class TestTorchEquivalence:
     def torch_available(self):
         """Check if PyTorch is available."""
         try:
-            import torch
+            import torch  # noqa: F401
 
             return True
         except ImportError:
             pytest.skip("PyTorch not installed")
 
-    def test_sphere_torch_equivalence(self, torch_available, test_population):
+    def test_sphere_torch_equivalence(self, _torch_available, test_population):
         """Torch sphere should match CPU within 1e-5."""
         from evolve.backends.accelerated.torch_evaluator import (
             TorchEvaluator,
@@ -139,7 +139,7 @@ class TestTorchEquivalence:
             rtol=1e-5,
         )
 
-    def test_rastrigin_torch_equivalence(self, torch_available, test_population):
+    def test_rastrigin_torch_equivalence(self, _torch_available, test_population):
         """Torch rastrigin should match CPU within 1e-5."""
         from evolve.backends.accelerated.torch_evaluator import (
             TorchEvaluator,
@@ -157,7 +157,7 @@ class TestTorchEquivalence:
             rtol=1e-5,
         )
 
-    def test_rosenbrock_torch_equivalence(self, torch_available, test_population):
+    def test_rosenbrock_torch_equivalence(self, _torch_available, test_population):
         """Torch rosenbrock should match CPU within 1e-5."""
         from evolve.backends.accelerated.torch_evaluator import (
             TorchEvaluator,
@@ -175,7 +175,7 @@ class TestTorchEquivalence:
             rtol=1e-5,
         )
 
-    def test_ackley_torch_equivalence(self, torch_available, test_population):
+    def test_ackley_torch_equivalence(self, _torch_available, test_population):
         """Torch ackley should match CPU within 1e-5."""
         from evolve.backends.accelerated.torch_evaluator import (
             TorchEvaluator,
@@ -198,7 +198,7 @@ class TestTorchEquivalence:
         or not __import__("torch").cuda.is_available(),
         reason="CUDA not available",
     )
-    def test_sphere_cuda_equivalence(self, torch_available, test_population):
+    def test_sphere_cuda_equivalence(self, _torch_available, test_population):
         """CUDA sphere should match CPU within 1e-5."""
         import torch
 
@@ -235,13 +235,13 @@ class TestJaxEquivalence:
     def jax_available(self):
         """Check if JAX is available."""
         try:
-            import jax
+            import jax  # noqa: F401
 
             return True
         except ImportError:
             pytest.skip("JAX not installed")
 
-    def test_sphere_jax_equivalence(self, jax_available, test_population):
+    def test_sphere_jax_equivalence(self, _jax_available, test_population):
         """JAX sphere should match CPU within 1e-5."""
         from evolve.backends.accelerated.jax_evaluator import (
             JaxEvaluator,
@@ -259,7 +259,7 @@ class TestJaxEquivalence:
             rtol=1e-5,
         )
 
-    def test_rastrigin_jax_equivalence(self, jax_available, test_population):
+    def test_rastrigin_jax_equivalence(self, _jax_available, test_population):
         """JAX rastrigin should match CPU within 1e-5."""
         from evolve.backends.accelerated.jax_evaluator import (
             JaxEvaluator,
@@ -277,7 +277,7 @@ class TestJaxEquivalence:
             rtol=1e-5,
         )
 
-    def test_rosenbrock_jax_equivalence(self, jax_available, test_population):
+    def test_rosenbrock_jax_equivalence(self, _jax_available, test_population):
         """JAX rosenbrock should match CPU within 1e-5."""
         from evolve.backends.accelerated.jax_evaluator import (
             JaxEvaluator,
@@ -295,7 +295,7 @@ class TestJaxEquivalence:
             rtol=1e-5,
         )
 
-    def test_ackley_jax_equivalence(self, jax_available, test_population):
+    def test_ackley_jax_equivalence(self, _jax_available, test_population):
         """JAX ackley should match CPU within 1e-5."""
         from evolve.backends.accelerated.jax_evaluator import (
             JaxEvaluator,

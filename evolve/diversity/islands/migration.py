@@ -88,7 +88,7 @@ class BestMigration(Generic[G]):
         self,
         island: Island[G],
         n_emigrants: int,
-        rng: Random,
+        _rng: Random,
     ) -> list[Individual[G]]:
         """Select best individuals as emigrants."""
         if not island.population or n_emigrants <= 0:
@@ -108,8 +108,8 @@ class BestMigration(Generic[G]):
     def select_immigrants(
         self,
         emigrants: list[Individual[G]],
-        target_island: Island[G],
-        rng: Random,
+        _target_island: Island[G],
+        _rng: Random,
     ) -> list[Individual[G]]:
         """Accept all emigrants as immigrants."""
         return emigrants
@@ -147,8 +147,8 @@ class RandomMigration(Generic[G]):
     def select_immigrants(
         self,
         emigrants: list[Individual[G]],
-        target_island: Island[G],
-        rng: Random,
+        _target_island: Island[G],
+        _rng: Random,
     ) -> list[Individual[G]]:
         """Accept all emigrants as immigrants."""
         return emigrants
@@ -199,8 +199,8 @@ class TournamentMigration(Generic[G]):
     def select_immigrants(
         self,
         emigrants: list[Individual[G]],
-        target_island: Island[G],
-        rng: Random,
+        _target_island: Island[G],
+        _rng: Random,
     ) -> list[Individual[G]]:
         """Accept all emigrants as immigrants."""
         return emigrants
@@ -262,7 +262,7 @@ class MigrationController(Generic[G]):
             Migration statistics
         """
         # Build island lookup
-        island_map = {island.id: island for island in islands}
+        {island.id: island for island in islands}
 
         # Collect emigrants from all islands first (deterministic order)
         emigrants: dict[int, list[Individual[G]]] = {}

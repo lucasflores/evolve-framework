@@ -11,9 +11,12 @@ Callbacks allow users to:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Protocol, TypeVar, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 
 from evolve.core.population import Population
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 G = TypeVar("G")
 
@@ -171,7 +174,7 @@ class PrintCallback:
     def on_generation_end(
         self,
         generation: int,
-        population: Population[Any],
+        _population: Population[Any],
         metrics: dict[str, Any],
     ) -> None:
         """Print generation summary."""
@@ -183,7 +186,7 @@ class PrintCallback:
                 msg += f" | Mean: {metrics['mean_fitness']:.6f}"
             print(msg)
 
-    def on_run_start(self, config: Any) -> None:
+    def on_run_start(self, _config: Any) -> None:
         """Print start message."""
         print("Evolution started")
 
@@ -310,7 +313,7 @@ class LoggingCallback:
     def on_generation_end(
         self,
         generation: int,
-        population: Population[Any],
+        _population: Population[Any],
         metrics: dict[str, Any],
     ) -> None:
         """Log generation metrics."""
@@ -318,7 +321,7 @@ class LoggingCallback:
         mean = metrics.get("mean_fitness", "N/A")
         self.logger.info(f"Generation {generation} | Best: {best} | Mean: {mean}")
 
-    def on_run_start(self, config: Any) -> None:
+    def on_run_start(self, _config: Any) -> None:
         """Log evolution start."""
         self.logger.info("Evolution run started")
 
@@ -377,7 +380,7 @@ class CheckpointCallback:
         if generation > 0 and generation % self.checkpoint_frequency == 0:
             self._save_checkpoint(generation, population, metrics)
 
-    def on_run_start(self, config: Any) -> None:
+    def on_run_start(self, _config: Any) -> None:
         """Initialize run ID for checkpoint naming."""
         import time
 
@@ -405,7 +408,7 @@ class CheckpointCallback:
             "generation": generation,
             "population_size": len(population),
             "metrics": {
-                k: float(v) if isinstance(v, (int, float)) else str(v) for k, v in metrics.items()
+                k: float(v) if isinstance(v, int | float) else str(v) for k, v in metrics.items()
             },
             "run_id": self._run_id,
         }

@@ -279,7 +279,7 @@ class TestNSGA2Integration:
         tournament = CrowdedTournamentSelection[VectorGenome](tournament_size=2)
 
         # Evolution loop
-        for gen in range(n_generations):
+        for _gen in range(n_generations):
             # Get ranking info for tournament selection
             ranks, crowding = selector.get_ranking_info(population)
 

@@ -12,9 +12,16 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Generic, Protocol, TypeVar, runtime_checkable
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, runtime_checkable
 
 from evolve.core.types import Fitness, Individual
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    import numpy as np
+
+    from evolve.representation.phenotype import Decoder
 
 G = TypeVar("G")
 
@@ -183,7 +190,7 @@ class FunctionEvaluator(Generic[G]):
     def evaluate(
         self,
         individuals: Sequence[Individual[G]],
-        seed: int | None = None,
+        _seed: int | None = None,
     ) -> Sequence[Fitness]:
         """
         Evaluate by applying fitness function.
@@ -207,7 +214,7 @@ class FunctionEvaluator(Generic[G]):
                 raw_fitness = self._fitness_fn(phenotype)
 
                 # Convert to Fitness object
-                if isinstance(raw_fitness, (int, float)):
+                if isinstance(raw_fitness, int | float):
                     fitness = Fitness.scalar(float(raw_fitness))
                 elif isinstance(raw_fitness, np.ndarray):
                     fitness = Fitness(values=raw_fitness.flatten())
@@ -264,7 +271,7 @@ class BatchEvaluator(Generic[G]):
     def evaluate(
         self,
         individuals: Sequence[Individual[G]],
-        seed: int | None = None,
+        _seed: int | None = None,
     ) -> Sequence[Fitness]:
         """Evaluate all individuals in a single batch."""
         import numpy as np

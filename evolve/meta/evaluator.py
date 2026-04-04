@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from evolve.config.meta import MetaEvolutionConfig
     from evolve.config.unified import UnifiedConfig
+    from evolve.meta.result import MetaEvolutionResult
 
 
 @dataclass
@@ -418,7 +419,6 @@ def _crossover_vectors(
     rng: Random,
 ) -> list[float]:
     """Blend crossover between two vectors."""
-    alpha = 0.5
     child = []
     for v1, v2 in zip(parent1, parent2):
         if rng.random() < 0.5:

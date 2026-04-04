@@ -141,7 +141,7 @@ def analyze_speciation_results(
 
     def count_clusters_simple(distances, thresh):
         """Simple cluster count: nodes with neighbors"""
-        n = len(distances)
+        len(distances)
         has_neighbor = np.any(distances < thresh, axis=1)
         return np.sum(has_neighbor)
 

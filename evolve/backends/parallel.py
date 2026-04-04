@@ -185,8 +185,8 @@ class ParallelBackend:
             try:
                 batch_results = future.result(timeout=self._timeout)
                 results.extend(batch_results)
-            except FuturesTimeoutError:
-                raise TimeoutError(f"Evaluation timed out after {self._timeout} seconds")
+            except FuturesTimeoutError as err:
+                raise TimeoutError(f"Evaluation timed out after {self._timeout} seconds") from err
             except Exception as e:
                 raise RuntimeError(f"Parallel evaluation failed: {e}") from e
 

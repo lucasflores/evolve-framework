@@ -96,7 +96,7 @@ class ERPMetricsCallback(Callback):
         self._count_protocol_distribution(population)
 
     def on_generation_end(
-        self, generation: int, population: Population[Any], best_fitness: float
+        self, _generation: int, _population: Population[Any], _best_fitness: float
     ) -> None:
         """Finalize and store metrics at generation end."""
         self._compute_event_metrics()
@@ -110,7 +110,7 @@ class ERPMetricsCallback(Callback):
         """
         self._events.append(event)
 
-    def on_recovery_triggered(self, recovery_type: str) -> None:
+    def on_recovery_triggered(self, _recovery_type: str) -> None:
         """Record that recovery was triggered."""
         self._current_metrics.recovery_triggered = True
 
@@ -214,13 +214,13 @@ class ERPLoggerCallback(Callback):
         self._attempted = 0
         self._successful = 0
 
-    def on_generation_start(self, generation: int, population: Population[Any]) -> None:
+    def on_generation_start(self, _generation: int, _population: Population[Any]) -> None:
         """Reset counters at generation start."""
         self._attempted = 0
         self._successful = 0
 
     def on_generation_end(
-        self, generation: int, population: Population[Any], best_fitness: float
+        self, generation: int, _population: Population[Any], _best_fitness: float
     ) -> None:
         """Log summary at generation end."""
         if generation % self.log_every == 0:

@@ -75,10 +75,7 @@ def explicit_fitness_sharing(
     # Compute shared fitness
     shared_fitness = []
     for i, ind in enumerate(individuals):
-        if ind.fitness is not None:
-            raw = ind.fitness.values[0]
-        else:
-            raw = 0.0
+        raw = ind.fitness.values[0] if ind.fitness is not None else 0.0
 
         # Divide by niche count (minimum 1 to avoid division by zero)
         shared = raw / max(niche_counts[i], 1.0)

@@ -90,7 +90,7 @@ def pytest_configure(config: pytest.Config) -> None:
 # Hypothesis Settings
 # ============================================================================
 
-from hypothesis import Verbosity, settings
+from hypothesis import Verbosity, settings  # noqa: E402
 
 # Register slower profile for CI
 settings.register_profile("ci", max_examples=200, deadline=None)

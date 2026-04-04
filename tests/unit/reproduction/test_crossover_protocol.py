@@ -502,7 +502,7 @@ class TestInheritProtocol:
         offspring_protocol = inherit_protocol(protocol_a, protocol_b, rng)
 
         # Should be equal to one of the parents
-        assert offspring_protocol == protocol_a or offspring_protocol == protocol_b
+        assert offspring_protocol in (protocol_a, protocol_b)
 
     def test_deterministic_with_same_seed(
         self, protocol_a: ReproductionProtocol, protocol_b: ReproductionProtocol

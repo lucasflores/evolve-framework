@@ -146,7 +146,6 @@ class ExperimentRunner(Generic[G]):
         self.engine.config.max_generations = remaining_gens
 
         # Store original stopping criterion
-        original_stopping = self.engine.stopping
 
         # Create callback for tracking
         class TrackingCallback:
@@ -197,7 +196,7 @@ class ExperimentRunner(Generic[G]):
     def _should_stop(
         self,
         generation: int,
-        population: Population[G],
+        _population: Population[G],
         metrics: dict[str, Any],
     ) -> bool:
         """
@@ -214,9 +213,8 @@ class ExperimentRunner(Generic[G]):
         # Target fitness reached
         if self.config.target_fitness is not None:
             best_fitness = metrics.get("best_fitness")
-            if best_fitness is not None:
-                if best_fitness >= self.config.target_fitness:
-                    return True
+            if best_fitness is not None and best_fitness >= self.config.target_fitness:
+                return True
 
         # Max evaluations exceeded
         if self.config.max_evaluations is not None:

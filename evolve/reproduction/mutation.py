@@ -203,7 +203,7 @@ def mutate_junk_data(
             elif isinstance(value, dict):
                 # Recursively modify nested dict
                 for nested_key in value:
-                    if isinstance(value[nested_key], (int, float)):
+                    if isinstance(value[nested_key], int | float):
                         value[nested_key] = float(value[nested_key]) + rng.gauss(0, 0.1)
 
     return new_junk
@@ -234,7 +234,7 @@ def promote_junk_to_param(
     new_params = dict(params)
 
     # Find promotable entries (numeric values only)
-    promotable = [(k, v) for k, v in junk_data.items() if isinstance(v, (int, float))]
+    promotable = [(k, v) for k, v in junk_data.items() if isinstance(v, int | float)]
     if not promotable:
         return new_junk, new_params
 

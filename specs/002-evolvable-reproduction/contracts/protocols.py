@@ -18,10 +18,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from random import Random
-from typing import Any, Protocol, TypeVar, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 from uuid import UUID
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from evolve.core.population import Population
+    from evolve.core.types import Individual
 
 G = TypeVar("G")  # Genome type
 

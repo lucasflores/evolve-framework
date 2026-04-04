@@ -21,9 +21,11 @@ try:
     from jax import jit, vmap
 
     JAX_AVAILABLE = True
-except ImportError:
+except ImportError as err:
     JAX_AVAILABLE = False
-    raise ImportError("JAX is required for JaxBackend. Install with: pip install jax jaxlib")
+    raise ImportError(
+        "JAX is required for JaxBackend. Install with: pip install jax jaxlib"
+    ) from err
 
 import numpy as np
 
@@ -106,7 +108,7 @@ class JaxEvaluator:
     def evaluate(
         self,
         individuals: Sequence[Individual[G]],
-        seed: int | None = None,
+        _seed: int | None = None,
     ) -> Sequence[Fitness]:
         """
         Evaluate individuals using JAX.

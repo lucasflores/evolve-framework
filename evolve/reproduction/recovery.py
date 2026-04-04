@@ -112,7 +112,7 @@ class ImmigrationRecovery:
         self,
         successful_matings: int,
         attempted_matings: int,
-        population_size: int,
+        _population_size: int,
         generation: int,
     ) -> bool:
         """Check if immigration should be triggered."""
@@ -195,8 +195,8 @@ class MutationBoostRecovery:
         self,
         successful_matings: int,
         attempted_matings: int,
-        population_size: int,
-        generation: int,
+        _population_size: int,
+        _generation: int,
     ) -> bool:
         """Check if mutation boost should be triggered."""
         if self._boost_remaining > 0:
@@ -211,9 +211,9 @@ class MutationBoostRecovery:
     def recover(
         self,
         population: list[Any],
-        genome_factory: Callable[[Random], G],
-        protocol_factory: Callable[[Random], ReproductionProtocol],
-        rng: Random,
+        _genome_factory: Callable[[Random], G],
+        _protocol_factory: Callable[[Random], ReproductionProtocol],
+        _rng: Random,
     ) -> list[Any]:
         """
         Activate mutation boost.
@@ -262,8 +262,8 @@ class RelaxedMatchingRecovery:
         self,
         successful_matings: int,
         attempted_matings: int,
-        population_size: int,
-        generation: int,
+        _population_size: int,
+        _generation: int,
     ) -> bool:
         """Check if matching relaxation should be triggered."""
         if self._relaxation_remaining > 0:
@@ -278,9 +278,9 @@ class RelaxedMatchingRecovery:
     def recover(
         self,
         population: list[Any],
-        genome_factory: Callable[[Random], G],
-        protocol_factory: Callable[[Random], ReproductionProtocol],
-        rng: Random,
+        _genome_factory: Callable[[Random], G],
+        _protocol_factory: Callable[[Random], ReproductionProtocol],
+        _rng: Random,
     ) -> list[Any]:
         """Activate relaxation mode."""
         self._relaxation_remaining = self.relaxation_duration

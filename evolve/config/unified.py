@@ -529,9 +529,12 @@ class UnifiedConfig:
 
         # Auto-enable ERP tracking category
         tracking = self.tracking
-        if tracking is not None and tracking.enabled:
-            if not tracking.has_category(MetricCategory.ERP):
-                tracking = tracking.with_category(MetricCategory.ERP)
+        if (
+            tracking is not None
+            and tracking.enabled
+            and not tracking.has_category(MetricCategory.ERP)
+        ):
+            tracking = tracking.with_category(MetricCategory.ERP)
 
         return replace(self, erp=erp, tracking=tracking)
 
@@ -566,8 +569,11 @@ class UnifiedConfig:
 
         # Auto-enable MULTIOBJECTIVE tracking category (T057)
         tracking = self.tracking
-        if tracking is not None and tracking.enabled:
-            if not tracking.has_category(MetricCategory.MULTIOBJECTIVE):
-                tracking = tracking.with_category(MetricCategory.MULTIOBJECTIVE)
+        if (
+            tracking is not None
+            and tracking.enabled
+            and not tracking.has_category(MetricCategory.MULTIOBJECTIVE)
+        ):
+            tracking = tracking.with_category(MetricCategory.MULTIOBJECTIVE)
 
         return replace(self, multiobjective=mo, tracking=tracking)

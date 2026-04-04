@@ -277,12 +277,12 @@ def main():
         def __init__(self, tracker):
             self.tracker = tracker
 
-        def on_generation_end(self, engine, population, generation):
+        def on_generation_end(self, _engine, population, generation):
             self.tracker.track(population, generation + 1)
 
     tracking_callback = ProtocolTrackingCallback(tracker)
 
-    result = erp_engine.run(initial_population=population, callbacks=[history, tracking_callback])
+    erp_engine.run(initial_population=population, callbacks=[history, tracking_callback])
 
     # Analyze results
     print("[5/5] Analyzing protocol evolution...")

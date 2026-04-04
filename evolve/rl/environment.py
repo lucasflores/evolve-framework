@@ -70,9 +70,9 @@ class Space:
         Returns:
             Box space
         """
-        if isinstance(low, (int, float)):
+        if isinstance(low, int | float):
             low = np.full(shape, low, dtype=dtype)
-        if isinstance(high, (int, float)):
+        if isinstance(high, int | float):
             high = np.full(shape, high, dtype=dtype)
         return cls(shape=shape, dtype=np.dtype(dtype), low=low, high=high)
 
@@ -130,7 +130,7 @@ class Space:
         """
         if self.n is not None:
             # Discrete space
-            if isinstance(x, (int, np.integer)):
+            if isinstance(x, int | np.integer):
                 return 0 <= int(x) < self.n
             return False
 

@@ -9,9 +9,12 @@ NO ML FRAMEWORK IMPORTS ALLOWED (in this module).
 
 from __future__ import annotations
 
-from typing import Any, Generic, Protocol, TypeVar, runtime_checkable
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, runtime_checkable
 
 from evolve.representation.genome import Genome
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 G = TypeVar("G", bound=Genome)
 P = TypeVar("P")

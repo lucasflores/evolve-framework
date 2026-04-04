@@ -7,13 +7,12 @@ and neuroevolution weight encoding.
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
 from random import Random
 from typing import Any
 
-try:
-    from typing import Self
-except ImportError:
+with contextlib.suppress(ImportError):
     pass
 
 import numpy as np

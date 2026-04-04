@@ -21,6 +21,9 @@ if TYPE_CHECKING:
     import pandas as pd
     import plotly.graph_objects as go
 
+    from evolve.core.population import Population
+    from evolve.reproduction.protocol import MatchabilityFunction
+
 
 # =============================================================================
 # DATA STRUCTURES (from data-model.md)
@@ -1090,7 +1093,7 @@ graph TD
     E --> F[Mutation]
     F --> B
     C -->|Yes| G[Return Best]
-    
+
     style A fill:#e1f5fe
     style G fill:#c8e6c9
 """
@@ -1101,7 +1104,7 @@ graph LR
     B --> C[Phenotype<br/>Expressed Form]
     C --> D[Evaluator]
     D --> E[Fitness Score]
-    
+
     style A fill:#fff3e0
     style C fill:#e8f5e9
     style E fill:#fce4ec
@@ -1121,12 +1124,12 @@ graph TD
     subgraph Island 4
         A4[Population 4]
     end
-    
+
     A1 <-->|Migration| A2
     A2 <-->|Migration| A3
     A3 <-->|Migration| A4
     A4 <-->|Migration| A1
-    
+
     style A1 fill:#e3f2fd
     style A2 fill:#e8f5e9
     style A3 fill:#fff3e0
@@ -1252,10 +1255,7 @@ def plot_fitness_comparison(
 
     for name, history in histories.items():
         gens = history.generations
-        if metric == "best":
-            values = history.best_fitness
-        else:
-            values = history.mean_fitness
+        values = history.best_fitness if metric == "best" else history.mean_fitness
         ax.plot(gens, values, label=name, linewidth=2)
 
     ax.set_xlabel("Generation")
@@ -1466,13 +1466,13 @@ def plot_pareto_3d_interactive(
                 y=front.objectives[:, 1],
                 z=front.objectives[:, 2],
                 mode="markers",
-                marker=dict(
-                    size=6,
-                    color=colors,
-                    colorscale="Viridis",
-                    colorbar=dict(title=colorbar_title),
-                    opacity=0.8,
-                ),
+                marker={
+                    "size": 6,
+                    "color": colors,
+                    "colorscale": "Viridis",
+                    "colorbar": {"title": colorbar_title},
+                    "opacity": 0.8,
+                },
                 hovertemplate=(
                     f"{obj_names[0]}: %{{x:.3f}}<br>"
                     f"{obj_names[1]}: %{{y:.3f}}<br>"
@@ -1485,11 +1485,11 @@ def plot_pareto_3d_interactive(
 
     fig.update_layout(
         title=f"Pareto Front (Generation {front.generation})",
-        scene=dict(
-            xaxis_title=obj_names[0],
-            yaxis_title=obj_names[1],
-            zaxis_title=obj_names[2],
-        ),
+        scene={
+            "xaxis_title": obj_names[0],
+            "yaxis_title": obj_names[1],
+            "zaxis_title": obj_names[2],
+        },
         width=800,
         height=600,
     )
@@ -1652,7 +1652,7 @@ def plot_species_stacked_area(
 
 def plot_species_phylogeny(
     history: SpeciesHistory,
-    lineage_tracker: Any | None = None,
+    _lineage_tracker: Any | None = None,
     figsize: tuple[int, int] = (10, 8),
 ) -> plt.Figure:
     """Optional: Phylogenetic tree view of species relationships.
@@ -2133,8 +2133,8 @@ def plot_mating_network(
     try:
         import matplotlib.pyplot as plt
         import networkx as nx
-    except ImportError:
-        raise ImportError("NetworkX required for mating network visualization")
+    except ImportError as err:
+        raise ImportError("NetworkX required for mating network visualization") from err
 
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 10))
@@ -2260,7 +2260,7 @@ def visualize_acceptance_matrix(
     acceptance_matrix = np.zeros((n, n))
 
     # Evaluate all pairs
-    rng = Random(42)
+    Random(42)
     for i in range(n):
         for j in range(n):
             if i == j:
@@ -2287,7 +2287,7 @@ def visualize_acceptance_matrix(
                         acceptance_matrix[i, j] = 1.0  # Accept all
                 else:
                     acceptance_matrix[i, j] = 1.0  # Default accept
-            except:
+            except Exception:
                 acceptance_matrix[i, j] = 0.5  # Unknown
 
     # Plot heatmap
@@ -2350,7 +2350,7 @@ def plot_recovery_events(
             xy=(gen, ax.get_ylim()[1] * 0.9),
             ha="center",
             fontsize=8,
-            bbox=dict(boxstyle="round", facecolor="yellow", alpha=0.5),
+            bbox={"boxstyle": "round", "facecolor": "yellow", "alpha": 0.5},
         )
 
     ax.set_xlabel("Generation")
@@ -2360,134 +2360,6 @@ def plot_recovery_events(
     ax.grid(True, alpha=0.3)
 
     return fig
-
-
-def protocol_diversity_metric(population: Population) -> float:
-    """Compute Shannon entropy over protocol types.
-
-    Args:
-        population: Population with reproduction protocols
-
-    Returns:
-        Normalized entropy (0.0 = all same, 1.0 = maximum diversity)
-    """
-    from collections import Counter
-
-    # Extract protocol types
-    protocol_types = []
-    for ind in population.individuals:
-        if hasattr(ind, "reproduction_protocol") and ind.reproduction_protocol:
-            protocol = ind.reproduction_protocol
-            # Create signature from protocol components
-            sig = (
-                protocol.intent_policy.policy_type
-                if hasattr(protocol, "intent_policy")
-                else "unknown",
-                protocol.matchability.function_type
-                if hasattr(protocol, "matchability")
-                else "unknown",
-                protocol.crossover_spec.crossover_type
-                if hasattr(protocol, "crossover_spec")
-                else "unknown",
-            )
-            protocol_types.append(str(sig))
-        else:
-            protocol_types.append("no_protocol")
-
-    # Count frequencies
-    counts = Counter(protocol_types)
-    n = len(protocol_types)
-
-    if n == 0 or len(counts) == 1:
-        return 0.0
-
-    # Shannon entropy
-    entropy = 0.0
-    for count in counts.values():
-        p = count / n
-        if p > 0:
-            entropy -= p * np.log2(p)
-
-    # Normalize by maximum possible entropy
-    max_entropy = np.log2(len(counts))
-
-    return float(entropy / max_entropy) if max_entropy > 0 else 0.0
-
-
-def create_erp_glossary() -> dict[str, dict[str, str]]:
-    """Create ERP terminology mapping for tutorials.
-
-    Returns:
-        Dict mapping terms to definitions across multiple domains
-    """
-    return {
-        "Intent Policy": {
-            "definition": "Determines when an individual is willing to reproduce",
-            "biology": "Fertility cycle, estrus, sexual maturity",
-            "game_theory": "Decision to enter game or tournament",
-            "ml": "Action probability, policy activation",
-        },
-        "Matchability Function": {
-            "definition": "Determines which partners an individual will accept",
-            "biology": "Mate choice, sexual selection, assortative mating",
-            "game_theory": "Opponent selection strategy",
-            "ml": "Partner value function, compatibility score",
-        },
-        "Crossover Protocol": {
-            "definition": "Specifies how offspring genomes are constructed",
-            "biology": "Recombination, meiosis, genetic inheritance",
-            "game_theory": "Payoff distribution, credit assignment",
-            "ml": "Model averaging, weight mixing strategy",
-        },
-        "Recovery Strategy": {
-            "definition": "Mechanism to prevent population collapse",
-            "biology": "Immigration, founder effect, rescue colonization",
-            "game_theory": "Safety net, minimum viable population",
-            "ml": "Exploration bonus, diversity maintenance",
-        },
-        "Reproduction Protocol": {
-            "definition": "Complete specification of individual's reproductive behavior",
-            "biology": "Mating strategy, life history strategy",
-            "game_theory": "Player strategy profile",
-            "ml": "Meta-policy, reproductive controller",
-        },
-        "Mutual Consent": {
-            "definition": "Both partners must accept each other to mate",
-            "biology": "Bilateral mate choice, courtship acceptance",
-            "game_theory": "Mutual agreement, bilateral trade",
-            "ml": "Bidirectional validation",
-        },
-        "Protocol Inheritance": {
-            "definition": "How offspring acquire reproduction protocols from parents",
-            "biology": "Cultural transmission, learned behavior",
-            "game_theory": "Strategy copying, social learning",
-            "ml": "Policy transfer, knowledge distillation",
-        },
-        "Reproductive Skew": {
-            "definition": "Inequality in reproductive success across population",
-            "biology": "Sexual selection intensity, variance in mating success",
-            "game_theory": "Winner-take-all dynamics, competition outcome",
-            "ml": "Reward distribution inequality",
-        },
-    }
-
-
-def print_erp_glossary_table():
-    """Print ERP terminology mapping as formatted table."""
-    glossary = create_erp_glossary()
-
-    print("=" * 100)
-    print("ERP TERMINOLOGY MAPPING".center(100))
-    print("=" * 100)
-    print(f"{'Term':<25} {'Biology':<25} {'Game Theory':<25} {'ML/RL':<25}")
-    print("-" * 100)
-
-    for term, mappings in glossary.items():
-        print(
-            f"{term:<25} {mappings['biology']:<25} {mappings['game_theory']:<25} {mappings['ml']:<25}"
-        )
-
-    print("=" * 100)
 
 
 # ERP Diagram Constants
@@ -2539,7 +2411,7 @@ graph LR
         B1 --> C1[Fixed Mutation]
         C1 --> D1[Offspring]
     end
-    
+
     subgraph ERP Evolution
         A2[Intent Policy] --> B2{Willing?}
         B2 -->|Yes| C2[Matchability Check]
@@ -2710,16 +2582,17 @@ def _visualize_acceptance_matrix(population):
     # (Real implementation would use matchability evaluators)
     for i, ind_i in enumerate(population.individuals):
         for j, ind_j in enumerate(population.individuals):
-            if i != j and ind_i.protocol and ind_j.protocol:
-                # Simplified acceptance based on fitness threshold
-                if (
-                    ind_i.fitness
-                    and ind_j.fitness
-                    and ind_i.protocol.matchability.type == "fitness_threshold"
-                ):
-                    threshold = ind_i.protocol.matchability.params.get("min_fitness", 0.5)
-                    fitness_j = ind_j.fitness.values[0] if ind_j.fitness else 0.0
-                    acceptance_matrix[i, j] = 1.0 if fitness_j >= threshold else 0.0
+            if (
+                i != j
+                and ind_i.protocol
+                and ind_j.protocol
+                and ind_i.fitness
+                and ind_j.fitness
+                and ind_i.protocol.matchability.type == "fitness_threshold"
+            ):
+                threshold = ind_i.protocol.matchability.params.get("min_fitness", 0.5)
+                fitness_j = ind_j.fitness.values[0] if ind_j.fitness else 0.0
+                acceptance_matrix[i, j] = 1.0 if fitness_j >= threshold else 0.0
 
     # Plot heatmap
     fig, ax = plt.subplots(figsize=(10, 8))
@@ -2772,7 +2645,7 @@ def print_erp_glossary_table():
     print("=" * 80)
     print()
 
-    max_term_len = max(len(term) for term in glossary.keys())
+    max_term_len = max(len(term) for term in glossary)
 
     for term, definition in sorted(glossary.items()):
         print(f"{term:<{max_term_len}}  |  {definition}")

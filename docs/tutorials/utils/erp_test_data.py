@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 if TYPE_CHECKING:
+    from docs.tutorials.utils.tutorial_utils import ERPHistory
     from evolve.core.population import Population
     from evolve.reproduction.protocol import ReproductionProtocol
 
@@ -77,7 +78,7 @@ def create_test_population_with_protocols(
     return Population(individuals=individuals)
 
 
-def _create_diverse_protocol(index: int, total: int, rng: Random) -> ReproductionProtocol:
+def _create_diverse_protocol(index: int, _total: int, rng: Random) -> ReproductionProtocol:
     """Create diverse protocol types across population."""
     from evolve.reproduction.protocol import (
         CrossoverProtocolSpec,
@@ -134,7 +135,7 @@ def _create_diverse_protocol(index: int, total: int, rng: Random) -> Reproductio
     return ReproductionProtocol(intent=intent, matchability=matchability, crossover=crossover)
 
 
-def _create_selective_protocol(rng: Random) -> ReproductionProtocol:
+def _create_selective_protocol(_rng: Random) -> ReproductionProtocol:
     """Create highly selective protocol."""
     from evolve.reproduction.protocol import (
         CrossoverProtocolSpec,
@@ -151,7 +152,7 @@ def _create_selective_protocol(rng: Random) -> ReproductionProtocol:
     )
 
 
-def _create_promiscuous_protocol(rng: Random) -> ReproductionProtocol:
+def _create_promiscuous_protocol(_rng: Random) -> ReproductionProtocol:
     """Create promiscuous protocol (accepts all)."""
     from evolve.reproduction.protocol import (
         CrossoverProtocolSpec,
@@ -258,9 +259,7 @@ def create_diverse_protocol_set() -> list[ReproductionProtocol]:
     return protocols
 
 
-def create_sexual_selection_population(
-    n_males: int, n_females: int, seed: int = 42
-) -> Population:
+def create_sexual_selection_population(n_males: int, n_females: int, seed: int = 42) -> Population:
     """Create population with asymmetric male/female protocols.
 
     Models sexual selection scenario:
@@ -375,8 +374,7 @@ def generate_mock_erp_history(generations: int = 100, seed: int = 42) -> ERPHist
         history.mean_intent_threshold.append(intent + rng.uniform(-3, 3))
 
         # Recovery events at low points
-        if gen > 0 and history.mating_success_rate[-1] < 0.3:
-            if rng.random() < 0.2:  # 20% chance
-                history.recovery_events.append(gen)
+        if gen > 0 and history.mating_success_rate[-1] < 0.3 and rng.random() < 0.2:  # 20% chance
+            history.recovery_events.append(gen)
 
     return history

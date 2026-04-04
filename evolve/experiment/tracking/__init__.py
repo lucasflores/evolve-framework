@@ -29,7 +29,7 @@ except ImportError:
     ResilientMLflowTracker = None  # type: ignore
 
 # Tracking callback
-from evolve.experiment.tracking.callback import TrackingCallback
+from evolve.experiment.tracking.callback import TrackingCallback  # noqa: E402
 
 try:
     from evolve.experiment.tracking.wandb_tracker import WandbTracker

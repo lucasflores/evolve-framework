@@ -232,10 +232,7 @@ class TestDiversitySampleSize:
         population = list(range(population_size))
 
         # Small population - use all
-        if len(population) > sample_size:
-            sampled = population[:sample_size]
-        else:
-            sampled = population
+        sampled = population[:sample_size] if len(population) > sample_size else population
 
         assert len(sampled) == population_size
 

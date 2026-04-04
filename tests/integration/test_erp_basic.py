@@ -80,10 +80,7 @@ def create_mate_context(
     # Compute fitness ratio
     self_f = float(self_fitness[0])
     partner_f = float(partner_fitness[0])
-    if self_f == 0:
-        fitness_ratio = float("inf") if partner_f != 0 else 1.0
-    else:
-        fitness_ratio = partner_f / self_f
+    fitness_ratio = (float("inf") if partner_f != 0 else 1.0) if self_f == 0 else partner_f / self_f
 
     return MateContext(
         partner_distance=distance,
@@ -279,7 +276,7 @@ class TestProtocolInheritance:
         """
         Verify offspring protocol comes from exactly one parent (50/50).
         """
-        rng = Random(42)
+        Random(42)
 
         # Create distinct parent protocols
         protocol_a = ReproductionProtocol(
@@ -323,7 +320,7 @@ class TestProtocolInheritance:
         """
         Verify inherited protocol has all three components from the same parent.
         """
-        rng = Random(42)
+        Random(42)
 
         protocol_a = ReproductionProtocol(
             matchability=MatchabilityFunction(type="accept_all"),
@@ -760,7 +757,7 @@ class TestFullMatingPipeline:
         )
 
         ind_a = create_individual(rng, protocol=protocol_a)
-        ind_b = create_individual(rng, protocol=protocol_b)
+        create_individual(rng, protocol=protocol_b)
 
         # Step 1: Check intent - A fails
         intent_a, _ = safe_evaluate_intent(ind_a.protocol.intent, create_intent_context(ind_a), rng)

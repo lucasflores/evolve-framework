@@ -218,7 +218,7 @@ class SCMEvaluator:
     def evaluate(
         self,
         individuals: Sequence[Individual[SCMGenome]],
-        seed: int | None = None,
+        _seed: int | None = None,
     ) -> Sequence[Fitness | None]:
         """
         Evaluate batch of SCM individuals.
@@ -271,18 +271,18 @@ class SCMEvaluator:
 
         # Check hard constraints
         is_valid = True
-        if "acyclicity" in self.config.constraints:
-            if scm.is_cyclic:
-                if self.config.get_acyclicity_mode() == AcyclicityMode.REJECT:
-                    is_valid = False
+        if (
+            "acyclicity" in self.config.constraints
+            and scm.is_cyclic
+            and self.config.get_acyclicity_mode() == AcyclicityMode.REJECT
+        ):
+            is_valid = False
 
-        if "coverage" in self.config.constraints:
-            if scm.metadata.coverage < 1.0:
-                is_valid = False
+        if "coverage" in self.config.constraints and scm.metadata.coverage < 1.0:
+            is_valid = False
 
-        if "conflict_free" in self.config.constraints:
-            if scm.metadata.conflict_count > 0:
-                is_valid = False
+        if "conflict_free" in self.config.constraints and scm.metadata.conflict_count > 0:
+            is_valid = False
 
         # If invalid and reject mode, return None
         if not is_valid and self.config.get_acyclicity_mode() == AcyclicityMode.REJECT:

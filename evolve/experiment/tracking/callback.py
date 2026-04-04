@@ -91,7 +91,7 @@ class TrackingCallback(Callback):
 
     def on_run_start(
         self,
-        config: Any,
+        _config: Any,
     ) -> None:
         """
         Called when evolution starts.
@@ -138,7 +138,7 @@ class TrackingCallback(Callback):
     def on_generation_end(
         self,
         generation: int,
-        population: Population[Any],
+        _population: Population[Any],
         metrics: dict[str, float] | None = None,
     ) -> None:
         """
@@ -209,11 +209,11 @@ class TrackingCallback(Callback):
             if isinstance(value, dict):
                 # Recursively flatten nested dicts
                 result.update(self._flatten_config(value, f"{full_key}."))
-            elif isinstance(value, (list, tuple)):
+            elif isinstance(value, list | tuple):
                 # Convert lists to string representation
                 if len(value) <= 10:  # Only for short lists
                     result[full_key] = str(value)
-            elif isinstance(value, (str, int, float, bool)) or value is None:
+            elif isinstance(value, str | int | float | bool) or value is None:
                 result[full_key] = value
 
         return result
@@ -314,7 +314,7 @@ class TrackingCallback(Callback):
     def on_run_end(
         self,
         population: Population[Any],
-        reason: str,
+        _reason: str,
     ) -> None:
         """
         Called when evolution ends.
@@ -336,8 +336,8 @@ class TrackingCallback(Callback):
 
     def on_error(
         self,
-        error: Exception,
-        **kwargs: Any,
+        _error: Exception,
+        **_kwargs: Any,
     ) -> None:
         """
         Called when an error occurs during evolution.

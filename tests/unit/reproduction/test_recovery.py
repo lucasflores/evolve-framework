@@ -47,7 +47,7 @@ def genome_factory():
 def protocol_factory():
     """Provide a factory for creating random protocols."""
 
-    def factory(rng: Random) -> ReproductionProtocol:
+    def factory(_rng: Random) -> ReproductionProtocol:
         return ReproductionProtocol.default()
 
     return factory
@@ -203,7 +203,7 @@ class TestMutationBoostRecovery:
         )
 
         # Activate boost
-        recovery.recover([], lambda rng: None, lambda rng: None, Random(42))
+        recovery.recover([], lambda _rng: None, lambda _rng: None, Random(42))
 
         # Should not trigger again while boosted
         assert not recovery.should_trigger(
@@ -221,7 +221,7 @@ class TestMutationBoostRecovery:
         )
 
         # Activate boost
-        recovery.recover([], lambda rng: None, lambda rng: None, Random(42))
+        recovery.recover([], lambda _rng: None, lambda _rng: None, Random(42))
 
         # Should return boosted multiplier
         multiplier = recovery.get_mutation_multiplier()
@@ -235,7 +235,7 @@ class TestMutationBoostRecovery:
         )
 
         # Activate boost
-        recovery.recover([], lambda rng: None, lambda rng: None, Random(42))
+        recovery.recover([], lambda _rng: None, lambda _rng: None, Random(42))
 
         # Should return boost for duration
         assert recovery.get_mutation_multiplier() == 3.0  # Call 1
@@ -285,7 +285,7 @@ class TestRelaxedMatchingRecovery:
             population_size=50,
             generation=10,
         )
-        recovery.recover([], lambda rng: None, lambda rng: None, Random(42))
+        recovery.recover([], lambda _rng: None, lambda _rng: None, Random(42))
 
         # Should not trigger again while relaxed
         assert not recovery.should_trigger(
@@ -300,7 +300,7 @@ class TestRelaxedMatchingRecovery:
         recovery = RelaxedMatchingRecovery(relaxation_duration=3)
 
         # Activate relaxation
-        recovery.recover([], lambda rng: None, lambda rng: None, Random(42))
+        recovery.recover([], lambda _rng: None, lambda _rng: None, Random(42))
 
         # Should be relaxed
         assert recovery.is_relaxed()
@@ -310,7 +310,7 @@ class TestRelaxedMatchingRecovery:
         recovery = RelaxedMatchingRecovery(relaxation_duration=3)
 
         # Activate relaxation
-        recovery.recover([], lambda rng: None, lambda rng: None, Random(42))
+        recovery.recover([], lambda _rng: None, lambda _rng: None, Random(42))
 
         # Should be relaxed during duration
         assert recovery.is_relaxed()  # Call 1

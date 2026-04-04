@@ -388,7 +388,7 @@ class TestRecoveryStability:
         survivors, immigrants = recovery.recover(
             population=[],
             genome_factory=lambda r: create_random_genome(r),
-            protocol_factory=lambda r: ReproductionProtocol.default(),
+            protocol_factory=lambda _r: ReproductionProtocol.default(),
             rng=rng,
         )
 
@@ -427,7 +427,7 @@ class TestRecoveryStability:
         result = recovery.recover(
             population=population,
             genome_factory=lambda r: create_random_genome(r),
-            protocol_factory=lambda r: ReproductionProtocol.default(),
+            protocol_factory=lambda _r: ReproductionProtocol.default(),
             rng=rng,
         )
 
@@ -442,7 +442,7 @@ class TestLongRunningStability:
         """System remains stable over many evaluation cycles."""
         rng = Random(42)
 
-        for gen in range(generations):
+        for _gen in range(generations):
             # Create contexts
             mate_ctx = create_mate_context(rng)
             intent_ctx = create_intent_context(rng)
@@ -470,7 +470,7 @@ class TestLongRunningStability:
 
         protocol = ReproductionProtocol.default()
 
-        for gen in range(generations):
+        for _gen in range(generations):
             protocol = mutator.mutate(protocol, rng)
 
             # Verify protocol is still valid

@@ -144,7 +144,7 @@ class TestSimpleEnvironment:
         )
 
         env.reset(seed=42)
-        for i in range(10):
+        for i in range(10):  # noqa: B007
             _, _, done, _ = env.step(0)
             if done:
                 break
@@ -231,11 +231,11 @@ class TestPolicies:
 
         # First call
         policy.reset_state()
-        action1 = policy(obs)
+        policy(obs)
         state1 = policy.get_state()
 
         # Second call (state should change)
-        action2 = policy(obs)
+        policy(obs)
         state2 = policy.get_state()
 
         assert not np.allclose(state1, state2)
@@ -325,7 +325,7 @@ class TestRollout:
 
         # Pollute state
         policy(np.ones(4))
-        old_state = policy.get_state()
+        policy.get_state()
 
         rollout = StandardRollout()
         result = rollout(policy, env, seed=42)

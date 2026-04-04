@@ -94,11 +94,10 @@ class MetaEvolutionResult:
         pareto_front = []
         for i, (cfg_i, obj_i) in enumerate(configs_with_objectives):
             dominated = False
-            for j, (cfg_j, obj_j) in enumerate(configs_with_objectives):
-                if i != j:
-                    if _dominates(obj_j, obj_i):
-                        dominated = True
-                        break
+            for j, (_cfg_j, obj_j) in enumerate(configs_with_objectives):
+                if i != j and _dominates(obj_j, obj_i):
+                    dominated = True
+                    break
             if not dominated:
                 pareto_front.append((cfg_i, obj_i))
 

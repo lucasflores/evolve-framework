@@ -74,7 +74,7 @@ def create_pareto_population(
         individuals.append(create_multiobjective_individual(rng, [obj1, obj2]))
 
     # Create some dominated individuals
-    for i in range(size - size // 2):
+    for _ in range(size - size // 2):
         # Worse on both objectives
         obj1 = rng.uniform(0.2, 0.8)
         obj2 = rng.uniform(0.2, 0.8) - 0.3  # Shifted down
@@ -478,7 +478,7 @@ class TestERPWithNSGAII:
         front_0_indices = set(fronts[0])
 
         assert len(front_0_indices) == 3, "All individuals should be non-dominated"
-        for i, ind in enumerate(individuals):
+        for i, _ind in enumerate(individuals):
             assert i in front_0_indices, f"Individual {i} should be in front 0"
 
     def test_erp_preserves_pareto_optimality(self) -> None:

@@ -67,7 +67,7 @@ class TestNotebookImportIndependence:
         import importlib
 
         # Clear any cached imports
-        modules_before = set(sys.modules.keys())
+        set(sys.modules.keys())
 
         # Import tutorial_utils
         spec = importlib.util.spec_from_file_location(
@@ -137,7 +137,7 @@ class TestVectorGenomeNotebook:
 
         assert output_path.exists(), "Executed notebook should be created"
 
-    def test_rastrigin_convergence(self, temp_output_dir):
+    def test_rastrigin_convergence(self, _temp_output_dir):
         """Rastrigin optimization should converge within 1% of optimum.
 
         Independent test criterion: Rastrigin converges to within 1% of
@@ -147,7 +147,7 @@ class TestVectorGenomeNotebook:
         # Skip if notebook not fully implemented yet
         pytest.skip("Convergence test requires full notebook implementation")
 
-    def test_rosenbrock_convergence(self, temp_output_dir):
+    def test_rosenbrock_convergence(self, _temp_output_dir):
         """Rosenbrock optimization should converge within 1% of optimum."""
         pytest.skip("Convergence test requires full notebook implementation")
 
@@ -179,7 +179,7 @@ class TestSequenceGenomeNotebook:
             cwd=str(TUTORIALS_DIR),
         )
 
-    def test_symbolic_regression_accuracy(self, temp_output_dir):
+    def test_symbolic_regression_accuracy(self, _temp_output_dir):
         """Evolved expressions should achieve within 5% test error."""
         pytest.skip("Accuracy test requires full notebook implementation")
 

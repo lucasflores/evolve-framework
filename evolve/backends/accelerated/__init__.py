@@ -18,8 +18,6 @@ Example:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 # Track which backends are available
 _TORCH_AVAILABLE = False
 _JAX_AVAILABLE = False

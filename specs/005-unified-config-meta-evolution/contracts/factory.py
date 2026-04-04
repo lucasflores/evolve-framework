@@ -78,7 +78,7 @@ def create_engine(
     """
     # Get registries
     op_registry = get_operator_registry()
-    genome_registry = get_genome_registry()
+    get_genome_registry()
 
     # Determine effective seed
     effective_seed = seed if seed is not None else config.seed
@@ -336,7 +336,7 @@ def _create_erp_engine(
 def _create_multiobjective_engine(
     config: UnifiedConfig,
     evaluator: Evaluator,
-    selection: Any,
+    _selection: Any,
     crossover: Any,
     mutation: Any,
     seed: int | None,

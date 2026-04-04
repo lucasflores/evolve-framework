@@ -120,7 +120,7 @@ class TestFitnessThresholdIntent:
 
         result = evaluator.evaluate(basic_context, params, rng, counter)
 
-        assert result == True  # fitness 0.7 >= 0.5
+        assert result  # fitness 0.7 >= 0.5
 
     def test_rejects_below_threshold(
         self, rng: Random, counter: StepCounter, basic_context: IntentContext
@@ -131,7 +131,7 @@ class TestFitnessThresholdIntent:
 
         result = evaluator.evaluate(basic_context, params, rng, counter)
 
-        assert result == False  # fitness 0.7 < 0.8
+        assert not result  # fitness 0.7 < 0.8
 
     def test_default_threshold_zero(
         self, rng: Random, counter: StepCounter, basic_context: IntentContext
@@ -141,7 +141,7 @@ class TestFitnessThresholdIntent:
 
         result = evaluator.evaluate(basic_context, {}, rng, counter)
 
-        assert result == True
+        assert result
 
 
 # =============================================================================
@@ -361,7 +361,7 @@ class TestEvaluateIntent:
 
         result = evaluate_intent(policy, basic_context, rng, counter)
 
-        assert result == True
+        assert result
 
     def test_inactive_policy_returns_true(
         self, rng: Random, counter: StepCounter, basic_context: IntentContext

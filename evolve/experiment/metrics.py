@@ -131,7 +131,7 @@ class LocalTracker:
 
         # Initialize metrics CSV
         self.metrics_file = self.output_dir / "metrics.csv"
-        self._metrics_file_handle = open(self.metrics_file, "w", newline="")
+        self._metrics_file_handle = open(self.metrics_file, "w", newline="")  # noqa: SIM115
         self._metrics_writer = csv.writer(self._metrics_file_handle)
         self._metrics_writer.writerow(
             [

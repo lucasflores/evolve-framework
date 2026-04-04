@@ -20,7 +20,6 @@ from evolve.reproduction.engine import ERPConfig
 
 # Skip tests if core engine imports fail (circular import)
 try:
-    from evolve.core.engine import EvolutionConfig
     from evolve.core.population import Population
     from evolve.core.types import Fitness, Individual, IndividualMetadata
 
@@ -143,7 +142,7 @@ def create_population(
         rng = Random(42)
 
     individuals = []
-    for i in range(size):
+    for _i in range(size):
         genome = np.array([rng.random() for _ in range(genome_size)])
         fitness = rng.random()
         individuals.append(create_individual(genome, fitness, protocol))

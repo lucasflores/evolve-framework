@@ -173,10 +173,7 @@ class ConfigCodec:
         obj: Any = config
 
         for part in parts:
-            if isinstance(obj, dict):
-                obj = obj[part]
-            else:
-                obj = getattr(obj, part)
+            obj = obj[part] if isinstance(obj, dict) else getattr(obj, part)
 
         return obj
 
@@ -266,7 +263,7 @@ class MetaEvaluator(Evaluator[VectorGenome]):
         # Track total evaluations
         self._total_evaluations: int = 0
 
-    def evaluate(self, genome: VectorGenome, rng: Random) -> Fitness:
+    def evaluate(self, genome: VectorGenome, _rng: Random) -> Fitness:
         """
         Evaluate a configuration by running inner evolution.
 
@@ -341,7 +338,7 @@ class MetaEvaluator(Evaluator[VectorGenome]):
 
     def _extract_fitness(self, fitness: Fitness) -> float:
         """Extract scalar from fitness (handle multi-objective)."""
-        if isinstance(fitness, (int, float)):
+        if isinstance(fitness, int | float):
             return float(fitness)
         elif isinstance(fitness, dict):
             # Multi-objective: return hypervolume or first objective
@@ -451,7 +448,7 @@ class MetaEvolutionResult(Generic[G]):
         """
         self.best_config.to_json(path)
 
-    def get_config_by_hash(self, config_hash: str) -> UnifiedConfig | None:
+    def get_config_by_hash(self, _config_hash: str) -> UnifiedConfig | None:
         """
         Get configuration that produced cached solution.
 
@@ -471,7 +468,7 @@ def create_engine(
     config: UnifiedConfig,
     evaluator: Evaluator | Any,  # Callable also accepted
     seed: int | None = None,
-    callbacks: Any | None = None,
+    _callbacks: Any | None = None,
 ) -> Any:
     """
     Create a ready-to-run engine from unified configuration.
@@ -502,7 +499,7 @@ def create_engine(
 
     # Get registries
     op_registry = get_operator_registry()
-    genome_registry = get_genome_registry()
+    get_genome_registry()
 
     # Determine seed
     effective_seed = seed if seed is not None else config.seed

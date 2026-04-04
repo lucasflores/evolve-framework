@@ -50,7 +50,7 @@ class TestMultiObjectiveWorkflow:
             return [sum(xi**2 for xi in x), sum((xi - 1) ** 2 for xi in x)]
 
         engine = create_engine(config, multi_fitness)
-        population = create_initial_population(config, seed=42)
+        create_initial_population(config, seed=42)
 
         assert engine is not None
         assert hasattr(engine, "_multiobjective_config")

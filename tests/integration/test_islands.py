@@ -125,7 +125,7 @@ class TestTopologies:
         """8-island hypercube should have 3 neighbors each."""
         topo = hypercube_topology(8)
 
-        for island_id, neighbors in topo.items():
+        for _island_id, neighbors in topo.items():
             assert len(neighbors) == 3  # log2(8) = 3
 
     def test_hypercube_requires_power_of_2(self):
@@ -363,7 +363,7 @@ class TestMigrationController:
         )
 
         # Record original best per island
-        original_bests = [island.best_individual.fitness.values[0] for island in islands]
+        [island.best_individual.fitness.values[0] for island in islands]
 
         # Perform migration
         stats = controller.migrate(islands, Random(42))
@@ -546,7 +546,7 @@ class TestIslandEvolutionEngine:
             genes = np.array([rng.gauss(0, 1) for _ in range(5)])
             return VectorGenome(genes=genes)
 
-        result = engine.run(genome_factory)
+        engine.run(genome_factory)
 
         # Check diversity across islands
         diversity = engine.get_diversity_metrics()

@@ -135,7 +135,7 @@ class TestNoveltyArchive:
         archive.maybe_add(b2, novelty_score=n2)  # Added (distance 1.0 > 0.5)
 
         b3 = np.array([0.5])
-        n3 = archive.novelty(b3)  # Counts as evaluation
+        archive.novelty(b3)  # Counts as evaluation
         # Avg distance to [0.0, 1.0] = 0.5, which equals threshold
 
         assert archive._total_added == 2  # First two added
@@ -492,7 +492,7 @@ class TestNoveltyIntegration:
 
         # New population should have higher novelty (farther from archive)
         avg_new = sum(s.values[0] for s in new_scores) / len(new_scores)
-        avg_old = sum(s.values[0] for s in scores) / len(scores)
+        sum(s.values[0] for s in scores) / len(scores)
 
         # Generally, the distant population should be more novel
         # (This test may occasionally fail due to randomness)

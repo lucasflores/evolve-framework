@@ -145,7 +145,7 @@ class TestCrowdingDistanceProperties:
 
         distances = crowding_distance(fitnesses, indices)
 
-        for idx, dist in distances.items():
+        for _idx, dist in distances.items():
             assert dist >= 0 or dist == float("inf")
 
     @given(st.lists(two_d_objectives, min_size=3, max_size=15))

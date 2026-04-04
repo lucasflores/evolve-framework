@@ -111,10 +111,7 @@ def hypervolume_contribution(
     for i in range(n):
         # HV without point i
         remaining = np.delete(points, i, axis=0)
-        if len(remaining) > 0:
-            hv_without = hypervolume_2d(remaining, reference)
-        else:
-            hv_without = 0.0
+        hv_without = hypervolume_2d(remaining, reference) if len(remaining) > 0 else 0.0
         contributions[i] = total_hv - hv_without
 
     return contributions
@@ -192,7 +189,7 @@ def inverted_generational_distance(
 
 def spread(
     front: np.ndarray,
-    reference_front: np.ndarray | None = None,
+    _reference_front: np.ndarray | None = None,
 ) -> float:
     """
     Calculate spread (diversity) metric for a 2D front.

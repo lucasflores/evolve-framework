@@ -208,7 +208,7 @@ class TestResumeEquivalence:
         )
 
         # Store initial population for later
-        init_pop_copy = Population(
+        Population(
             individuals=[
                 Individual(
                     id=ind.id,

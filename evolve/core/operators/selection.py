@@ -191,10 +191,7 @@ class RouletteSelection(Generic[G]):
 
         # Normalize to probabilities
         total = np.sum(fitness_vals)
-        if total <= 0:
-            probs = np.ones(len(evaluated)) / len(evaluated)
-        else:
-            probs = fitness_vals / total
+        probs = np.ones(len(evaluated)) / len(evaluated) if total <= 0 else fitness_vals / total
 
         # Select
         indices = rng.choices(range(len(evaluated)), weights=probs.tolist(), k=n)

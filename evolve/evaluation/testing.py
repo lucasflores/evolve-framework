@@ -249,7 +249,7 @@ class EvaluatorTester:
 
         first_results = self._reference.evaluate(individuals, seed)
 
-        for trial in range(1, n_trials):
+        for _trial in range(1, n_trials):
             results = self._reference.evaluate(individuals, seed)
             assert_fitness_batch_close(
                 results,

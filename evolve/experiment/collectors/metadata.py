@@ -192,7 +192,7 @@ class FitnessMetadataCollector:
         Returns:
             Float value or None if not numeric.
         """
-        if isinstance(value, (int, float)):
+        if isinstance(value, int | float):
             if np.isfinite(value):
                 return float(value)
             return None
@@ -204,7 +204,7 @@ class FitnessMetadataCollector:
                     return val
             return None
 
-        if isinstance(value, (list, tuple)):
+        if isinstance(value, list | tuple):
             if len(value) == 1:
                 return self._try_numeric(key, value[0])
             return None

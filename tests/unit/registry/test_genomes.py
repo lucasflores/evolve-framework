@@ -190,7 +190,7 @@ class TestCustomGenomeRegistration:
             def __init__(self, size: int):
                 self.size = size
 
-        def custom_factory(size: int = 5, **kwargs) -> CustomGenome:
+        def custom_factory(size: int = 5, **_kwargs) -> CustomGenome:
             return CustomGenome(size)
 
         registry.register("custom", custom_factory, default_params={"size": 10})
@@ -206,7 +206,7 @@ class TestCustomGenomeRegistration:
             def __init__(self, size: int):
                 self.size = size
 
-        def custom_factory(size: int = 5, **kwargs) -> CustomGenome:
+        def custom_factory(size: int = 5, **_kwargs) -> CustomGenome:
             return CustomGenome(size)
 
         registry.register("custom", custom_factory, default_params={"size": 10})

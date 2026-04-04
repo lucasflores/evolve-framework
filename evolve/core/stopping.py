@@ -27,8 +27,8 @@ class GenerationLimitStopping:
     def should_stop(
         self,
         generation: int,
-        population: Population[Any],
-        history: list[dict[str, Any]],
+        _population: Population[Any],
+        _history: list[dict[str, Any]],
     ) -> bool:
         """Check if generation limit reached."""
         if generation >= self.max_generations:
@@ -58,9 +58,9 @@ class FitnessThresholdStopping:
 
     def should_stop(
         self,
-        generation: int,
+        _generation: int,
         population: Population[Any],
-        history: list[dict[str, Any]],
+        _history: list[dict[str, Any]],
     ) -> bool:
         """Check if fitness threshold reached."""
         stats = population.statistics
@@ -108,9 +108,9 @@ class StagnationStopping:
 
     def should_stop(
         self,
-        generation: int,
+        _generation: int,
         population: Population[Any],
-        history: list[dict[str, Any]],
+        _history: list[dict[str, Any]],
     ) -> bool:
         """Check if evolution has stagnated."""
         stats = population.statistics
@@ -163,9 +163,9 @@ class TimeLimitStopping:
 
     def should_stop(
         self,
-        generation: int,
-        population: Population[Any],
-        history: list[dict[str, Any]],
+        _generation: int,
+        _population: Population[Any],
+        _history: list[dict[str, Any]],
     ) -> bool:
         """Check if time limit exceeded."""
         import time

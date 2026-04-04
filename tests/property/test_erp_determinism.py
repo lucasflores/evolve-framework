@@ -302,7 +302,7 @@ class TestRecoveryDeterminism:
         def genome_factory(rng: Random) -> np.ndarray:
             return np.array([rng.random() for _ in range(10)])
 
-        def protocol_factory(rng: Random) -> ReproductionProtocol:
+        def protocol_factory(_rng: Random) -> ReproductionProtocol:
             return ReproductionProtocol.default()
 
         # Run with same seed twice

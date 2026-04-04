@@ -17,12 +17,13 @@ from typing import Any, TypeVar
 
 try:
     import torch
-    import torch.nn as nn
 
     TORCH_AVAILABLE = True
-except ImportError:
+except ImportError as err:
     TORCH_AVAILABLE = False
-    raise ImportError("PyTorch is required for TorchBackend. Install with: pip install torch")
+    raise ImportError(
+        "PyTorch is required for TorchBackend. Install with: pip install torch"
+    ) from err
 
 import numpy as np
 

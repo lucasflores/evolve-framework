@@ -116,7 +116,7 @@ class TestIncompatibleConfiguration:
         )
 
         with pytest.raises(OperatorCompatibilityError) as exc_info:
-            create_engine(config, lambda x: 0.0)
+            create_engine(config, lambda _x: 0.0)
 
         assert exc_info.value.operator_name == "sbx"
         assert exc_info.value.genome_type == "graph"

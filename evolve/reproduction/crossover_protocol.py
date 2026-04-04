@@ -91,7 +91,7 @@ class SinglePointCrossoverExecutor:
         parent1: np.ndarray,
         parent2: np.ndarray,
         params: dict[str, float],
-        rng: Random,
+        _rng: Random,
         counter: StepCounter,
     ) -> tuple[np.ndarray, np.ndarray]:
         counter.step()
@@ -130,7 +130,7 @@ class TwoPointCrossoverExecutor:
         parent1: np.ndarray,
         parent2: np.ndarray,
         params: dict[str, float],
-        rng: Random,
+        _rng: Random,
         counter: StepCounter,
     ) -> tuple[np.ndarray, np.ndarray]:
         counter.step()
@@ -259,8 +259,8 @@ class CloneCrossoverExecutor:
         self,
         parent1: np.ndarray,
         parent2: np.ndarray,
-        params: dict[str, float],
-        rng: Random,
+        _params: dict[str, float],
+        _rng: Random,
         counter: StepCounter,
     ) -> tuple[np.ndarray, np.ndarray]:
         counter.step()
@@ -433,7 +433,7 @@ def inherit_protocol(
 def validate_offspring(
     offspring: G,
     parent1: G,
-    parent2: G,
+    _parent2: G,
 ) -> tuple[bool, str | None]:
     """
     Validate offspring genome before population entry.
@@ -454,7 +454,7 @@ def validate_offspring(
     if offspring is None:
         return False, "Offspring is None"
 
-    if type(offspring) != type(parent1):
+    if type(offspring) is not type(parent1):
         return False, f"Type mismatch: {type(offspring)} vs {type(parent1)}"
 
     # For numpy arrays, check for invalid values

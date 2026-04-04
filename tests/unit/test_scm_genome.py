@@ -167,7 +167,7 @@ class TestSCMGenomeCreation:
 
     def test_random_erc_sampling(self, basic_config):
         """Test that ERC values are sampled from Gaussian."""
-        rng = Random(123)
+        Random(123)
         genomes = [SCMGenome.random(basic_config, length=50, rng=Random(i)) for i in range(100)]
 
         # Collect all ERC values
@@ -214,7 +214,7 @@ class TestSCMGenomeCopy:
 class TestSCMGenomeEquality:
     """Tests for SCMGenome equality and hashing."""
 
-    def test_equal_genomes(self, basic_config, rng):
+    def test_equal_genomes(self, basic_config, _rng):
         """Test equality of identical genomes."""
         g1 = SCMGenome.random(basic_config, length=10, rng=Random(42))
         g2 = SCMGenome.random(basic_config, length=10, rng=Random(42))
@@ -229,7 +229,7 @@ class TestSCMGenomeEquality:
 
         assert g1 != g2
 
-    def test_hashable(self, basic_config, rng):
+    def test_hashable(self, basic_config, _rng):
         """Test that genomes can be used in sets."""
         g1 = SCMGenome.random(basic_config, length=10, rng=Random(42))
         g2 = SCMGenome.random(basic_config, length=10, rng=Random(42))
@@ -357,7 +357,7 @@ class TestSCMSequenceDistance:
         distance = scm_sequence_distance(genome, genome)
         assert distance == 0.0
 
-    def test_different_genomes_have_positive_distance(self, basic_config, rng):
+    def test_different_genomes_have_positive_distance(self, basic_config, _rng):
         """Test that different genomes have positive sequence distance."""
         from evolve.representation.scm import scm_sequence_distance
 
@@ -367,7 +367,7 @@ class TestSCMSequenceDistance:
         distance = scm_sequence_distance(genome_a, genome_b)
         assert distance > 0.0
 
-    def test_distance_is_symmetric(self, basic_config, rng):
+    def test_distance_is_symmetric(self, basic_config, _rng):
         """Test that distance(a, b) == distance(b, a)."""
         from evolve.representation.scm import scm_sequence_distance
 
@@ -379,7 +379,7 @@ class TestSCMSequenceDistance:
 
         assert dist_ab == dist_ba
 
-    def test_distance_is_normalized(self, basic_config, rng):
+    def test_distance_is_normalized(self, basic_config, _rng):
         """Test that distance is normalized to [0, 1]."""
         from evolve.representation.scm import scm_sequence_distance
 
@@ -471,7 +471,7 @@ class TestSCMStructuralDistance:
 class TestSCMCombinedDistance:
     """Tests for combined SCM distance with structural_weight (T093)."""
 
-    def test_weight_zero_uses_sequence_only(self, basic_config, rng):
+    def test_weight_zero_uses_sequence_only(self, basic_config, _rng):
         """Test that structural_weight=0 gives sequence-only distance."""
         from evolve.representation.scm import scm_distance, scm_sequence_distance
         from evolve.representation.scm_decoder import SCMDecoder
@@ -485,7 +485,7 @@ class TestSCMCombinedDistance:
 
         assert combined == pytest.approx(sequence_only, abs=1e-10)
 
-    def test_weight_one_uses_structural_only(self, basic_config, rng):
+    def test_weight_one_uses_structural_only(self, basic_config, _rng):
         """Test that structural_weight=1.0 gives structural-only distance."""
         from evolve.representation.scm import scm_distance, scm_structural_distance
         from evolve.representation.scm_decoder import SCMDecoder
@@ -499,7 +499,7 @@ class TestSCMCombinedDistance:
 
         assert combined == pytest.approx(structural_only, abs=1e-10)
 
-    def test_weight_half_averages_both(self, basic_config, rng):
+    def test_weight_half_averages_both(self, basic_config, _rng):
         """Test that structural_weight=0.5 averages sequence and structural."""
         from evolve.representation.scm import (
             scm_distance,

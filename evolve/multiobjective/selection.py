@@ -40,7 +40,7 @@ class NSGA2Selector(Generic[G]):
         self,
         population: Sequence[Individual[G]],
         n_select: int,
-        rng: Random,
+        _rng: Random,
     ) -> list[Individual[G]]:
         """
         Select individuals based on rank and crowding.
