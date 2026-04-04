@@ -10,19 +10,19 @@ Provides:
 NO ML FRAMEWORK IMPORTS ALLOWED (except NumPy).
 """
 
+from evolve.diversity.islands.engine import IslandEvolutionEngine
 from evolve.diversity.islands.island import Island
+from evolve.diversity.islands.migration import (
+    BestMigration,
+    MigrationController,
+    MigrationPolicy,
+    RandomMigration,
+)
 from evolve.diversity.islands.topology import (
-    ring_topology,
     fully_connected_topology,
     hypercube_topology,
+    ring_topology,
 )
-from evolve.diversity.islands.migration import (
-    MigrationPolicy,
-    BestMigration,
-    RandomMigration,
-    MigrationController,
-)
-from evolve.diversity.islands.engine import IslandEvolutionEngine
 
 __all__ = [
     "Island",

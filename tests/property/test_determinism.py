@@ -7,12 +7,13 @@ Uses Hypothesis for generating random test cases.
 
 import numpy as np
 import pytest
-from hypothesis import given, settings, strategies as st
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
-from evolve.core.engine import EvolutionEngine, EvolutionConfig, create_initial_population
-from evolve.core.operators.selection import TournamentSelection
-from evolve.core.operators.crossover import UniformCrossover, BlendCrossover
+from evolve.core.engine import EvolutionConfig, EvolutionEngine, create_initial_population
+from evolve.core.operators.crossover import BlendCrossover, UniformCrossover
 from evolve.core.operators.mutation import GaussianMutation
+from evolve.core.operators.selection import TournamentSelection
 from evolve.evaluation.evaluator import FunctionEvaluator
 from evolve.evaluation.reference.functions import sphere
 from evolve.representation.vector import VectorGenome
@@ -32,13 +33,13 @@ class TestDeterminism:
         """
         n_dims = 5
         bounds = (np.full(n_dims, -5.0), np.full(n_dims, 5.0))
-        
+
         config = EvolutionConfig(
             population_size=20,
             max_generations=10,
             elitism=1,
         )
-        
+
         # Run 1
         engine1 = EvolutionEngine(
             config=config,
@@ -48,7 +49,7 @@ class TestDeterminism:
             mutation=GaussianMutation(mutation_rate=0.1, sigma=0.1),
             seed=seed,
         )
-        
+
         rng1 = create_rng(seed)
         pop1 = create_initial_population(
             genome_factory=lambda r: VectorGenome.random(n_dims, bounds, r),
@@ -56,7 +57,7 @@ class TestDeterminism:
             rng=rng1,
         )
         result1 = engine1.run(pop1)
-        
+
         # Run 2 (same seed)
         engine2 = EvolutionEngine(
             config=config,
@@ -66,7 +67,7 @@ class TestDeterminism:
             mutation=GaussianMutation(mutation_rate=0.1, sigma=0.1),
             seed=seed,
         )
-        
+
         rng2 = create_rng(seed)
         pop2 = create_initial_population(
             genome_factory=lambda r: VectorGenome.random(n_dims, bounds, r),
@@ -74,11 +75,11 @@ class TestDeterminism:
             rng=rng2,
         )
         result2 = engine2.run(pop2)
-        
+
         # Results should be identical
         assert result1.generations == result2.generations
         assert len(result1.history) == len(result2.history)
-        
+
         # Best fitness should be identical
         assert result1.best.fitness is not None
         assert result2.best.fitness is not None
@@ -87,14 +88,14 @@ class TestDeterminism:
             result2.best.fitness.values,
             decimal=10,
         )
-        
+
         # Best genome should be identical
         np.testing.assert_array_almost_equal(
             result1.best.genome.genes,
             result2.best.genome.genes,
             decimal=10,
         )
-        
+
         # History should be identical
         for h1, h2 in zip(result1.history, result2.history):
             assert h1["generation"] == h2["generation"]
@@ -117,16 +118,16 @@ class TestDeterminism:
         if seed1 == seed2:
             # Skip if seeds are equal
             return
-        
+
         n_dims = 5
         bounds = (np.full(n_dims, -5.0), np.full(n_dims, 5.0))
-        
+
         config = EvolutionConfig(
             population_size=20,
             max_generations=10,
             elitism=1,
         )
-        
+
         # Run with seed1
         engine1 = EvolutionEngine(
             config=config,
@@ -136,7 +137,7 @@ class TestDeterminism:
             mutation=GaussianMutation(mutation_rate=0.2, sigma=0.2),
             seed=seed1,
         )
-        
+
         rng1 = create_rng(seed1)
         pop1 = create_initial_population(
             genome_factory=lambda r: VectorGenome.random(n_dims, bounds, r),
@@ -144,7 +145,7 @@ class TestDeterminism:
             rng=rng1,
         )
         result1 = engine1.run(pop1)
-        
+
         # Run with seed2
         engine2 = EvolutionEngine(
             config=config,
@@ -154,7 +155,7 @@ class TestDeterminism:
             mutation=GaussianMutation(mutation_rate=0.2, sigma=0.2),
             seed=seed2,
         )
-        
+
         rng2 = create_rng(seed2)
         pop2 = create_initial_population(
             genome_factory=lambda r: VectorGenome.random(n_dims, bounds, r),
@@ -162,7 +163,7 @@ class TestDeterminism:
             rng=rng2,
         )
         result2 = engine2.run(pop2)
-        
+
         # At least the final best genomes should differ
         # (very unlikely to be identical with different seeds)
         assert not np.allclose(
@@ -202,11 +203,13 @@ class TestSeedDerivation:
         master_seed2=st.integers(min_value=0, max_value=2**63 - 1),
     )
     @settings(max_examples=20)
-    def test_different_masters_produce_different_derived_seeds(self, master_seed1: int, master_seed2: int):
+    def test_different_masters_produce_different_derived_seeds(
+        self, master_seed1: int, master_seed2: int
+    ):
         """Different master seeds should produce different worker seeds."""
         if master_seed1 == master_seed2:
             return
-        
+
         derived1 = derive_seed(master_seed1, 0)
         derived2 = derive_seed(master_seed2, 0)
         assert derived1 != derived2
@@ -225,13 +228,13 @@ class TestOperatorDeterminism:
             bounds=(np.zeros(5), np.ones(5) * 10),
         )
         mutation = GaussianMutation(mutation_rate=0.5, sigma=0.5)
-        
+
         rng1 = create_rng(seed)
         result1 = mutation.mutate(genome, rng1)
-        
+
         rng2 = create_rng(seed)
         result2 = mutation.mutate(genome, rng2)
-        
+
         np.testing.assert_array_equal(result1.genes, result2.genes)
 
     @given(seed=st.integers(min_value=0, max_value=2**31 - 1))
@@ -240,14 +243,14 @@ class TestOperatorDeterminism:
         """Same seed should produce same crossover result."""
         parent1 = VectorGenome(genes=np.zeros(5))
         parent2 = VectorGenome(genes=np.ones(5))
-        
+
         crossover = UniformCrossover(swap_prob=0.5)
-        
+
         rng1 = create_rng(seed)
         child1a, child1b = crossover.crossover(parent1, parent2, rng1)
-        
+
         rng2 = create_rng(seed)
         child2a, child2b = crossover.crossover(parent1, parent2, rng2)
-        
+
         np.testing.assert_array_equal(child1a.genes, child2a.genes)
         np.testing.assert_array_equal(child1b.genes, child2b.genes)

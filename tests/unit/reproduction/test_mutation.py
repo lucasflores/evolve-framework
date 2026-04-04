@@ -25,7 +25,6 @@ from evolve.reproduction.protocol import (
     ReproductionProtocol,
 )
 
-
 # =============================================================================
 # Fixtures
 # =============================================================================
@@ -365,10 +364,12 @@ class TestProtocolMutator:
 
     def test_mutate_single_component(self, rng: Random, default_protocol: ReproductionProtocol):
         """Can mutate just one component."""
-        mutator = ProtocolMutator(config=MutationConfig(
-            param_mutation_rate=1.0,
-            type_mutation_rate=1.0,
-        ))
+        mutator = ProtocolMutator(
+            config=MutationConfig(
+                param_mutation_rate=1.0,
+                type_mutation_rate=1.0,
+            )
+        )
 
         # Mutate only matchability
         mutated = mutator.mutate_single_component(default_protocol, rng, "matchability")
@@ -378,7 +379,9 @@ class TestProtocolMutator:
         assert mutated.crossover == default_protocol.crossover
         assert mutated.junk_data == default_protocol.junk_data
 
-    def test_mutate_single_component_invalid_raises(self, rng: Random, default_protocol: ReproductionProtocol):
+    def test_mutate_single_component_invalid_raises(
+        self, rng: Random, default_protocol: ReproductionProtocol
+    ):
         """Invalid component name raises ValueError."""
         mutator = ProtocolMutator()
 
@@ -395,12 +398,14 @@ class TestProtocolMutator:
             junk_data={"dormant_param": 0.7},
         )
 
-        mutator = ProtocolMutator(config=MutationConfig(
-            junk_activate_rate=1.0,
-            param_mutation_rate=0.0,
-            type_mutation_rate=0.0,
-            activation_mutation_rate=0.0,
-        ))
+        mutator = ProtocolMutator(
+            config=MutationConfig(
+                junk_activate_rate=1.0,
+                param_mutation_rate=0.0,
+                type_mutation_rate=0.0,
+                activation_mutation_rate=0.0,
+            )
+        )
         rng = Random(42)
 
         mutated = mutator.mutate(protocol_with_junk, rng)
@@ -422,11 +427,13 @@ class TestMutationIntegration:
 
     def test_mutation_over_generations(self, default_protocol: ReproductionProtocol):
         """Protocol evolves over multiple generations."""
-        mutator = ProtocolMutator(config=MutationConfig(
-            param_mutation_rate=0.5,
-            type_mutation_rate=0.2,
-            junk_add_rate=0.3,
-        ))
+        mutator = ProtocolMutator(
+            config=MutationConfig(
+                param_mutation_rate=0.5,
+                type_mutation_rate=0.2,
+                junk_add_rate=0.3,
+            )
+        )
         rng = Random(42)
 
         protocol = default_protocol

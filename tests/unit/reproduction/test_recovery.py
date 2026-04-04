@@ -9,19 +9,18 @@ These tests verify that recovery mechanisms properly:
 - Compose multiple strategies
 """
 
-import pytest
 from random import Random
 
 import numpy as np
+import pytest
 
 from evolve.reproduction.protocol import ReproductionProtocol
 from evolve.reproduction.recovery import (
+    CompositeRecovery,
     ImmigrationRecovery,
     MutationBoostRecovery,
     RelaxedMatchingRecovery,
-    CompositeRecovery,
 )
-
 
 # =============================================================================
 # Fixtures
@@ -37,16 +36,20 @@ def rng():
 @pytest.fixture
 def genome_factory():
     """Provide a factory for creating random genomes."""
+
     def factory(rng: Random) -> np.ndarray:
         return rng.random() * np.ones(10)
+
     return factory
 
 
 @pytest.fixture
 def protocol_factory():
     """Provide a factory for creating random protocols."""
+
     def factory(rng: Random) -> ReproductionProtocol:
         return ReproductionProtocol.default()
+
     return factory
 
 
@@ -61,7 +64,7 @@ class TestImmigrationRecovery:
     def test_should_not_trigger_high_success_rate(self):
         """Should not trigger when success rate is high."""
         recovery = ImmigrationRecovery(trigger_threshold=0.1)
-        
+
         assert not recovery.should_trigger(
             successful_matings=9,
             attempted_matings=10,
@@ -75,7 +78,7 @@ class TestImmigrationRecovery:
             trigger_threshold=0.1,
             min_generations=0,  # Disable generation check
         )
-        
+
         assert recovery.should_trigger(
             successful_matings=0,
             attempted_matings=10,
@@ -89,7 +92,7 @@ class TestImmigrationRecovery:
             trigger_threshold=0.1,
             min_generations=10,
         )
-        
+
         # Low success but early generation
         assert not recovery.should_trigger(
             successful_matings=0,
@@ -97,7 +100,7 @@ class TestImmigrationRecovery:
             population_size=50,
             generation=5,
         )
-        
+
         # Low success and past min_generations
         assert recovery.should_trigger(
             successful_matings=0,
@@ -113,7 +116,7 @@ class TestImmigrationRecovery:
             min_generations=0,
             cooldown_generations=5,
         )
-        
+
         # First trigger at generation 10
         assert recovery.should_trigger(
             successful_matings=0,
@@ -121,11 +124,11 @@ class TestImmigrationRecovery:
             population_size=50,
             generation=10,
         )
-        
+
         # Do recovery to start cooldown (sets _last_trigger to generation)
         survivors = [np.ones(10) for _ in range(5)]
         recovery.recover(survivors, genome_factory, protocol_factory, rng, generation=10)
-        
+
         # Should not trigger during cooldown (generation 10 + 5 = 15)
         assert not recovery.should_trigger(
             successful_matings=0,
@@ -137,21 +140,21 @@ class TestImmigrationRecovery:
     def test_recover_adds_immigrants(self, rng, genome_factory, protocol_factory):
         """Should add immigrants to population."""
         recovery = ImmigrationRecovery(immigration_rate=0.2)
-        
+
         survivors = [np.ones(10) for _ in range(10)]
         result = recovery.recover(survivors, genome_factory, protocol_factory, rng)
-        
+
         # Should return tuple of (survivors, immigrants)
         assert isinstance(result, tuple)
         survivors_out, immigrants = result
-        
+
         # Should have immigrants (20% of 10 = 2)
         assert len(immigrants) >= 1
 
     def test_zero_attempts_triggers_recovery(self):
         """With zero attempts, should trigger recovery."""
         recovery = ImmigrationRecovery(trigger_threshold=0.1, min_generations=0)
-        
+
         # Zero attempts means we can't compute success rate, default to trigger
         result = recovery.should_trigger(
             successful_matings=0,
@@ -176,7 +179,7 @@ class TestMutationBoostRecovery:
             boost_multiplier=3.0,
             boost_duration=5,
         )
-        
+
         assert recovery.should_trigger(
             successful_matings=0,
             attempted_matings=10,
@@ -190,7 +193,7 @@ class TestMutationBoostRecovery:
             boost_multiplier=3.0,
             boost_duration=5,
         )
-        
+
         # First trigger
         assert recovery.should_trigger(
             successful_matings=0,
@@ -198,10 +201,10 @@ class TestMutationBoostRecovery:
             population_size=50,
             generation=10,
         )
-        
+
         # Activate boost
         recovery.recover([], lambda rng: None, lambda rng: None, Random(42))
-        
+
         # Should not trigger again while boosted
         assert not recovery.should_trigger(
             successful_matings=0,
@@ -216,10 +219,10 @@ class TestMutationBoostRecovery:
             boost_multiplier=3.0,
             boost_duration=5,
         )
-        
+
         # Activate boost
         recovery.recover([], lambda rng: None, lambda rng: None, Random(42))
-        
+
         # Should return boosted multiplier
         multiplier = recovery.get_mutation_multiplier()
         assert multiplier == 3.0
@@ -230,13 +233,13 @@ class TestMutationBoostRecovery:
             boost_multiplier=3.0,
             boost_duration=3,
         )
-        
+
         # Activate boost
         recovery.recover([], lambda rng: None, lambda rng: None, Random(42))
-        
+
         # Should return boost for duration
         assert recovery.get_mutation_multiplier() == 3.0  # Call 1
-        assert recovery.get_mutation_multiplier() == 3.0  # Call 2  
+        assert recovery.get_mutation_multiplier() == 3.0  # Call 2
         assert recovery.get_mutation_multiplier() == 3.0  # Call 3
         # Should expire after duration
         assert recovery.get_mutation_multiplier() == 1.0  # Call 4
@@ -244,10 +247,10 @@ class TestMutationBoostRecovery:
     def test_recover_returns_population(self, rng, genome_factory, protocol_factory):
         """Mutation boost returns population unchanged."""
         recovery = MutationBoostRecovery()
-        
+
         survivors = [np.ones(10) for _ in range(5)]
         result = recovery.recover(survivors, genome_factory, protocol_factory, rng)
-        
+
         # Should return population unchanged (not a tuple)
         assert len(result) == 5
 
@@ -263,7 +266,7 @@ class TestRelaxedMatchingRecovery:
     def test_should_trigger_low_success(self):
         """Should trigger when success rate is low."""
         recovery = RelaxedMatchingRecovery(relaxation_duration=3)
-        
+
         assert recovery.should_trigger(
             successful_matings=0,
             attempted_matings=10,
@@ -274,7 +277,7 @@ class TestRelaxedMatchingRecovery:
     def test_should_not_trigger_when_relaxed(self):
         """Should not trigger when already relaxed."""
         recovery = RelaxedMatchingRecovery(relaxation_duration=3)
-        
+
         # Activate relaxation
         recovery.should_trigger(
             successful_matings=0,
@@ -283,7 +286,7 @@ class TestRelaxedMatchingRecovery:
             generation=10,
         )
         recovery.recover([], lambda rng: None, lambda rng: None, Random(42))
-        
+
         # Should not trigger again while relaxed
         assert not recovery.should_trigger(
             successful_matings=0,
@@ -295,20 +298,20 @@ class TestRelaxedMatchingRecovery:
     def test_is_relaxed_when_active(self):
         """Should indicate relaxation is active."""
         recovery = RelaxedMatchingRecovery(relaxation_duration=3)
-        
+
         # Activate relaxation
         recovery.recover([], lambda rng: None, lambda rng: None, Random(42))
-        
+
         # Should be relaxed
         assert recovery.is_relaxed()
 
     def test_relaxation_expires(self):
         """Relaxation should expire after duration."""
         recovery = RelaxedMatchingRecovery(relaxation_duration=3)
-        
+
         # Activate relaxation
         recovery.recover([], lambda rng: None, lambda rng: None, Random(42))
-        
+
         # Should be relaxed during duration
         assert recovery.is_relaxed()  # Call 1
         assert recovery.is_relaxed()  # Call 2
@@ -319,10 +322,10 @@ class TestRelaxedMatchingRecovery:
     def test_recover_returns_population(self, rng, genome_factory, protocol_factory):
         """Relaxed matching returns population unchanged."""
         recovery = RelaxedMatchingRecovery()
-        
+
         survivors = [np.ones(10) for _ in range(5)]
         result = recovery.recover(survivors, genome_factory, protocol_factory, rng)
-        
+
         # Returns population unchanged (not a tuple)
         assert len(result) == 5
 
@@ -344,9 +347,9 @@ class TestCompositeRecovery:
         )
         # Mutation boost with different threshold
         mutation = MutationBoostRecovery()
-        
+
         composite = CompositeRecovery(strategies=[immigration, mutation])
-        
+
         # Should trigger
         assert composite.should_trigger(
             successful_matings=0,
@@ -363,18 +366,21 @@ class TestCompositeRecovery:
             trigger_threshold=0.5,
         )
         mutation = MutationBoostRecovery(boost_multiplier=2.0)
-        
+
         composite = CompositeRecovery(strategies=[immigration, mutation])
-        
+
         survivors = [np.ones(10) for _ in range(10)]
         result = composite.recover(
-            survivors, genome_factory, protocol_factory, rng,
+            survivors,
+            genome_factory,
+            protocol_factory,
+            rng,
             successful_matings=0,
             attempted_matings=10,
             population_size=10,
             generation=10,
         )
-        
+
         # Should apply immigration (first strategy to trigger)
         # Immigration returns tuple
         assert isinstance(result, tuple)
@@ -384,7 +390,7 @@ class TestCompositeRecovery:
     def test_empty_strategies_list(self):
         """Should handle empty strategies list."""
         composite = CompositeRecovery(strategies=[])
-        
+
         # Should not trigger with no strategies
         assert not composite.should_trigger(
             successful_matings=0,
@@ -400,18 +406,21 @@ class TestCompositeRecovery:
             trigger_threshold=0.0,  # Never triggers
             min_generations=100,
         )
-        
+
         composite = CompositeRecovery(strategies=[immigration])
-        
+
         survivors = [np.ones(10) for _ in range(5)]
         result = composite.recover(
-            survivors, genome_factory, protocol_factory, rng,
+            survivors,
+            genome_factory,
+            protocol_factory,
+            rng,
             successful_matings=10,  # High success
             attempted_matings=10,
             population_size=5,
             generation=10,
         )
-        
+
         # Should return unchanged population
         assert len(result) == 5
 
@@ -427,7 +436,7 @@ class TestEdgeCases:
     def test_negative_success_rate_handled(self):
         """Should handle edge case of negative values."""
         recovery = ImmigrationRecovery(trigger_threshold=0.1, min_generations=0)
-        
+
         # Negative values compute negative rate which is < threshold
         result = recovery.should_trigger(
             successful_matings=-1,  # Invalid but computes as < threshold
@@ -441,11 +450,11 @@ class TestEdgeCases:
     def test_large_population(self, rng, genome_factory, protocol_factory):
         """Should handle large populations."""
         recovery = ImmigrationRecovery(immigration_rate=0.01)
-        
+
         # Large population
         survivors = [np.ones(10) for _ in range(1000)]
         result = recovery.recover(survivors, genome_factory, protocol_factory, rng)
-        
+
         survivors_out, immigrants = result
         # Should add 1% = 10 immigrants
         assert len(immigrants) >= 5
@@ -453,10 +462,10 @@ class TestEdgeCases:
     def test_recovery_with_empty_survivors(self, rng, genome_factory, protocol_factory):
         """Should handle empty survivor list."""
         recovery = ImmigrationRecovery(immigration_rate=0.5)
-        
+
         survivors = []
         result = recovery.recover(survivors, genome_factory, protocol_factory, rng)
-        
+
         # Should still work, at least 1 immigrant
         survivors_out, immigrants = result
         assert len(survivors_out) == 0

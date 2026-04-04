@@ -10,8 +10,9 @@ Evaluators may use GPU/JIT but must:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Generic, Protocol, Sequence, TypeVar, runtime_checkable
+from typing import Any, Generic, Protocol, TypeVar, runtime_checkable
 
 from evolve.core.types import Fitness, Individual
 
@@ -22,9 +23,9 @@ G = TypeVar("G")
 class EvaluatorCapabilities:
     """
     Declares what an evaluator can do.
-    
+
     Used by the engine to optimize evaluation strategy.
-    
+
     Attributes:
         batchable: Can evaluate multiple individuals at once
         stochastic: Results vary with RNG (e.g., RL rollouts)
@@ -58,19 +59,19 @@ class EvaluationError(Exception):
 class Evaluator(Protocol[G]):
     """
     Computes fitness for batches of individuals.
-    
+
     This is the PRIMARY ACCELERATION BOUNDARY.
     Evaluators may use GPU/JIT but must:
     - Have CPU reference implementation
     - Accept explicit seeds for reproducibility
     - Produce equivalent results across backends (within tolerance)
-    
+
     Example:
         >>> class MyEvaluator:
         ...     @property
         ...     def capabilities(self) -> EvaluatorCapabilities:
         ...         return EvaluatorCapabilities(n_objectives=1)
-        ...     
+        ...
         ...     def evaluate(self, individuals, seed=None):
         ...         return [Fitness.scalar(f(ind.genome)) for ind in individuals]
     """
@@ -87,14 +88,14 @@ class Evaluator(Protocol[G]):
     ) -> Sequence[Fitness]:
         """
         Evaluate batch of individuals.
-        
+
         Args:
             individuals: Individuals to evaluate (may need decoding)
             seed: Random seed for stochastic evaluation
-            
+
         Returns:
             Fitness values in same order as input
-            
+
         Raises:
             EvaluationError: If evaluation fails
         """
@@ -105,7 +106,7 @@ class Evaluator(Protocol[G]):
 class DiagnosticEvaluator(Protocol[G]):
     """
     Evaluator that can return additional diagnostic information.
-    
+
     Useful for debugging, visualization, and understanding
     the fitness landscape.
     """
@@ -117,10 +118,10 @@ class DiagnosticEvaluator(Protocol[G]):
     ) -> tuple[Sequence[Fitness], Sequence[dict[str, Any]]]:
         """
         Evaluate with diagnostic information.
-        
+
         Returns:
             (fitness_values, diagnostics_per_individual)
-            
+
         Diagnostics may include:
         - Per-objective breakdown
         - Intermediate values
@@ -133,10 +134,10 @@ class DiagnosticEvaluator(Protocol[G]):
 class FunctionEvaluator(Generic[G]):
     """
     Evaluator wrapping a fitness function.
-    
+
     The simplest evaluator type - applies a function
     to each individual's phenotype.
-    
+
     Example:
         >>> def sphere(x):
         ...     return np.sum(x ** 2)
@@ -146,15 +147,15 @@ class FunctionEvaluator(Generic[G]):
 
     def __init__(
         self,
-        fitness_fn: "Callable[[Any], float | np.ndarray]",  # type: ignore[name-defined]
-        decoder: "Decoder[G, Any] | None" = None,  # type: ignore[name-defined]
+        fitness_fn: Callable[[Any], float | np.ndarray],  # type: ignore[name-defined]
+        decoder: Decoder[G, Any] | None = None,  # type: ignore[name-defined]
         n_objectives: int = 1,
         n_constraints: int = 0,
         minimize: bool = True,
     ) -> None:
         """
         Create function evaluator.
-        
+
         Args:
             fitness_fn: Function mapping phenotype → fitness value(s)
             decoder: Optional genome→phenotype decoder
@@ -186,13 +187,13 @@ class FunctionEvaluator(Generic[G]):
     ) -> Sequence[Fitness]:
         """
         Evaluate by applying fitness function.
-        
+
         If decoder is provided, decodes genome first.
         """
         import numpy as np
-        
+
         results: list[Fitness] = []
-        
+
         for idx, individual in enumerate(individuals):
             try:
                 # Decode genome if decoder provided
@@ -201,10 +202,10 @@ class FunctionEvaluator(Generic[G]):
                 else:
                     # Assume genome has a 'genes' attribute or is directly usable
                     phenotype = getattr(individual.genome, "genes", individual.genome)
-                
+
                 # Evaluate
                 raw_fitness = self._fitness_fn(phenotype)
-                
+
                 # Convert to Fitness object
                 if isinstance(raw_fitness, (int, float)):
                     fitness = Fitness.scalar(float(raw_fitness))
@@ -212,24 +213,24 @@ class FunctionEvaluator(Generic[G]):
                     fitness = Fitness(values=raw_fitness.flatten())
                 else:
                     fitness = Fitness.scalar(float(raw_fitness))
-                
+
                 results.append(fitness)
-                
+
             except Exception as e:
                 raise EvaluationError(
                     f"Evaluation failed for individual {idx}: {e}",
                     individual_idx=idx,
                 ) from e
-        
+
         return results
 
 
 class BatchEvaluator(Generic[G]):
     """
     Evaluator that processes all individuals in a single batch.
-    
+
     More efficient for vectorized operations (NumPy/GPU).
-    
+
     Example:
         >>> def batch_sphere(genes_matrix):
         ...     return np.sum(genes_matrix ** 2, axis=1)
@@ -238,12 +239,12 @@ class BatchEvaluator(Generic[G]):
 
     def __init__(
         self,
-        batch_fn: "Callable[[np.ndarray], np.ndarray]",  # type: ignore[name-defined]
+        batch_fn: Callable[[np.ndarray], np.ndarray],  # type: ignore[name-defined]
         n_objectives: int = 1,
     ) -> None:
         """
         Create batch evaluator.
-        
+
         Args:
             batch_fn: Function mapping (N, D) array → (N,) or (N, M) array
             n_objectives: Number of objectives
@@ -267,17 +268,14 @@ class BatchEvaluator(Generic[G]):
     ) -> Sequence[Fitness]:
         """Evaluate all individuals in a single batch."""
         import numpy as np
-        
+
         # Stack genes into matrix
-        genes_list = [
-            getattr(ind.genome, "genes", ind.genome)
-            for ind in individuals
-        ]
+        genes_list = [getattr(ind.genome, "genes", ind.genome) for ind in individuals]
         genes_matrix = np.vstack(genes_list)
-        
+
         # Batch evaluate
         raw_fitness = self._batch_fn(genes_matrix)
-        
+
         # Convert to Fitness objects
         if raw_fitness.ndim == 1:
             return [Fitness.scalar(float(v)) for v in raw_fitness]

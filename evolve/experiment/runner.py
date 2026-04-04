@@ -27,14 +27,14 @@ G = TypeVar("G")
 class ExperimentRunner(Generic[G]):
     """
     Orchestrates experiment execution.
-    
+
     Handles:
     - Configuration validation
     - Checkpointing
     - Metric tracking
     - Resume from checkpoint
     - Stopping criteria
-    
+
     Example:
         >>> config = ExperimentConfig(
         ...     name="my_experiment",
@@ -51,8 +51,8 @@ class ExperimentRunner(Generic[G]):
     """
 
     config: ExperimentConfig
-    engine: "EvolutionEngine[G]"
-    initial_population: "Population[G]"
+    engine: EvolutionEngine[G]
+    initial_population: Population[G]
     tracker: MetricTracker = field(default_factory=NullTracker)
     checkpoint_manager: CheckpointManager | None = field(default=None)
     _started: bool = field(default=False, repr=False)
@@ -80,17 +80,16 @@ class ExperimentRunner(Generic[G]):
                 checkpoint_interval=self.config.checkpoint_interval,
             )
 
-    def run(self, resume: bool = False) -> "EvolutionResult[G]":
+    def run(self, resume: bool = False) -> EvolutionResult[G]:
         """
         Execute the experiment.
-        
+
         Args:
             resume: Whether to resume from checkpoint
-            
+
         Returns:
             Evolution result with best individual
         """
-        from evolve.core.engine import EvolutionResult
 
         start_generation = 0
         population = self.initial_population
@@ -127,16 +126,16 @@ class ExperimentRunner(Generic[G]):
 
     def _run_evolution(
         self,
-        population: "Population[G]",
+        population: Population[G],
         start_generation: int,
-    ) -> "EvolutionResult[G]":
+    ) -> EvolutionResult[G]:
         """
         Run evolution loop with monitoring.
-        
+
         Args:
             population: Starting population
             start_generation: Generation to start from
-            
+
         Returns:
             Evolution result
         """
@@ -157,7 +156,7 @@ class ExperimentRunner(Generic[G]):
             def on_generation_end(
                 cb_self,
                 generation: int,
-                pop: "Population[G]",
+                pop: Population[G],
                 metrics: dict[str, Any],
             ) -> None:
                 # Adjust generation number to account for resume
@@ -172,9 +171,7 @@ class ExperimentRunner(Generic[G]):
                     and cb_self.runner.checkpoint_manager.should_checkpoint(actual_gen)
                 ):
                     best = pop.best(1, minimize=cb_self.runner.engine.config.minimize)[0]
-                    checkpoint = cb_self.runner._create_checkpoint(
-                        pop, actual_gen, best
-                    )
+                    checkpoint = cb_self.runner._create_checkpoint(pop, actual_gen, best)
                     cb_self.runner.checkpoint_manager.save(checkpoint)
 
                 # Check early stopping
@@ -200,17 +197,17 @@ class ExperimentRunner(Generic[G]):
     def _should_stop(
         self,
         generation: int,
-        population: "Population[G]",
+        population: Population[G],
         metrics: dict[str, Any],
     ) -> bool:
         """
         Check if early stopping criteria are met.
-        
+
         Args:
             generation: Current generation
             population: Current population
             metrics: Current metrics
-            
+
         Returns:
             True if should stop early
         """
@@ -232,18 +229,18 @@ class ExperimentRunner(Generic[G]):
 
     def _create_checkpoint(
         self,
-        population: "Population[G]",
+        population: Population[G],
         generation: int,
-        best: "Individual[G]",
+        best: Individual[G],
     ) -> Checkpoint:
         """
         Create checkpoint from current state.
-        
+
         Args:
             population: Current population
             generation: Current generation
             best: Best individual
-            
+
         Returns:
             Checkpoint object
         """
@@ -260,13 +257,13 @@ class ExperimentRunner(Generic[G]):
     def _restore_checkpoint(
         self,
         checkpoint: Checkpoint,
-    ) -> tuple["Population[G]", int]:
+    ) -> tuple[Population[G], int]:
         """
         Restore state from checkpoint.
-        
+
         Args:
             checkpoint: Checkpoint to restore
-            
+
         Returns:
             Tuple of (population, start_generation)
         """
@@ -301,10 +298,10 @@ class ExperimentRunner(Generic[G]):
 class ExperimentComparison:
     """
     Compare results across multiple experiments.
-    
+
     Loads metrics from multiple experiment directories
     and provides comparison utilities.
-    
+
     Example:
         >>> comparison = ExperimentComparison({
         ...     "baseline": Path("experiments/baseline"),
@@ -318,7 +315,7 @@ class ExperimentComparison:
     def load_metrics(self) -> dict[str, list[dict[str, Any]]]:
         """
         Load metrics from all experiments.
-        
+
         Returns:
             Dictionary mapping experiment name to metrics list
         """
@@ -329,11 +326,10 @@ class ExperimentComparison:
         for name, path in self.experiments.items():
             metrics_file = path / "metrics.csv"
             if metrics_file.exists():
-                with open(metrics_file, "r") as f:
+                with open(metrics_file) as f:
                     reader = csv.DictReader(f)
                     results[name] = [
-                        {k: float(v) if v else 0.0 for k, v in row.items()}
-                        for row in reader
+                        {k: float(v) if v else 0.0 for k, v in row.items()} for row in reader
                     ]
 
         return results
@@ -341,7 +337,7 @@ class ExperimentComparison:
     def summarize(self) -> list[dict[str, Any]]:
         """
         Create summary of all experiments.
-        
+
         Returns:
             List of summary dictionaries
         """
@@ -359,14 +355,16 @@ class ExperimentComparison:
 
             if metrics:
                 final = metrics[-1]
-                summaries.append({
-                    "name": name,
-                    "final_best": final.get("best_fitness", 0),
-                    "final_mean": final.get("mean_fitness", 0),
-                    "generations": len(metrics),
-                    "seed": config.seed,
-                    "population_size": config.population_size,
-                })
+                summaries.append(
+                    {
+                        "name": name,
+                        "final_best": final.get("best_fitness", 0),
+                        "final_mean": final.get("mean_fitness", 0),
+                        "generations": len(metrics),
+                        "seed": config.seed,
+                        "population_size": config.population_size,
+                    }
+                )
 
         return summaries
 
@@ -375,9 +373,9 @@ class ExperimentComparison:
 class SweepConfig:
     """
     Configuration for hyperparameter sweep.
-    
+
     Defines the parameter space for experiments.
-    
+
     Example:
         >>> sweep = SweepConfig(
         ...     base_config=ExperimentConfig(...),
@@ -396,7 +394,7 @@ class SweepConfig:
     def generate_configs(self) -> list[ExperimentConfig]:
         """
         Generate all config combinations.
-        
+
         Returns:
             List of configs for each parameter combination
         """

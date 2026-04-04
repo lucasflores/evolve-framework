@@ -24,7 +24,7 @@ from evolve.evaluation.evaluator import FunctionEvaluator
 from evolve.evaluation.reference.functions import sphere
 from evolve.experiment.checkpoint import Checkpoint, CheckpointManager
 from evolve.experiment.config import ExperimentConfig
-from evolve.experiment.metrics import LocalTracker, NullTracker, compute_generation_metrics
+from evolve.experiment.metrics import LocalTracker, compute_generation_metrics
 from evolve.representation.vector import VectorGenome
 
 
@@ -175,7 +175,7 @@ class TestResumeEquivalence:
     def test_checkpoint_resume_identical(self, simple_engine_setup: dict) -> None:
         """
         Checkpoint, kill, resume produces identical results.
-        
+
         This is the key reproducibility test:
         1. Run evolution for N generations
         2. Save checkpoint at generation M
@@ -286,11 +286,17 @@ class TestResumeEquivalence:
 
         # Compare final results
         # Best fitness should be identical
-        assert abs(result_full.best.fitness.values[0] - result_resumed.best.fitness.values[0]) < 1e-10
+        assert (
+            abs(result_full.best.fitness.values[0] - result_resumed.best.fitness.values[0]) < 1e-10
+        )
 
         # Final population should have same fitness values
-        full_fitnesses = sorted([ind.fitness.values[0] for ind in result_full.population.individuals])
-        resumed_fitnesses = sorted([ind.fitness.values[0] for ind in result_resumed.population.individuals])
+        full_fitnesses = sorted(
+            [ind.fitness.values[0] for ind in result_full.population.individuals]
+        )
+        resumed_fitnesses = sorted(
+            [ind.fitness.values[0] for ind in result_resumed.population.individuals]
+        )
 
         for f1, f2 in zip(full_fitnesses, resumed_fitnesses):
             assert abs(f1 - f2) < 1e-10, f"Fitness mismatch: {f1} vs {f2}"
@@ -314,11 +320,14 @@ class TestLocalTracker:
 
             # Log some metrics
             for gen in range(5):
-                tracker.log_generation(gen, {
-                    "best_fitness": float(gen),
-                    "mean_fitness": float(gen) * 0.5,
-                    "std_fitness": 0.1,
-                })
+                tracker.log_generation(
+                    gen,
+                    {
+                        "best_fitness": float(gen),
+                        "mean_fitness": float(gen) * 0.5,
+                        "std_fitness": 0.1,
+                    },
+                )
 
             tracker.log_params({"custom_param": "value"})
             tracker.end_run()
@@ -350,7 +359,7 @@ class TestLocalTracker:
 
             # Read CSV
             metrics_file = Path(tmpdir) / "test_exp" / "metrics.csv"
-            with open(metrics_file, "r") as f:
+            with open(metrics_file) as f:
                 reader = csv.DictReader(f)
                 rows = list(reader)
 
@@ -421,17 +430,18 @@ class TestExperimentConfig:
 
 class TestSCMGenomeCheckpointing:
     """T091: Verify SCMGenome checkpoint compatibility."""
-    
+
     def test_scm_genome_checkpoint_roundtrip(self) -> None:
         """SCMGenome checkpoints save and load correctly."""
         from uuid import uuid4
+
         from evolve.representation.scm import SCMConfig, SCMGenome
-        
+
         rng = Random(42)
-        
+
         # Create SCM config (only observed_variables is required)
         scm_config = SCMConfig(observed_variables=("X", "Y", "Z"))
-        
+
         # Create individuals with SCM genomes
         individuals = [
             Individual(
@@ -443,7 +453,7 @@ class TestSCMGenomeCheckpointing:
             )
             for i in range(10)
         ]
-        
+
         # Create checkpoint
         checkpoint = Checkpoint(
             experiment_name="scm_test",
@@ -454,54 +464,55 @@ class TestSCMGenomeCheckpointing:
             rng_state=rng.getstate(),
             fitness_history=[{"gen": i, "best": float(i)} for i in range(5)],
         )
-        
+
         # Save and load
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "scm_checkpoint.pkl"
             checkpoint.save(path)
-            
+
             loaded = Checkpoint.load(path)
-            
+
             # Verify checkpoint metadata
             assert loaded.experiment_name == "scm_test"
             assert loaded.generation == 5
             assert len(loaded.population) == 10
-            
+
             # Verify SCMGenome data preserved
             for orig, restored in zip(individuals, loaded.population):
                 assert isinstance(restored.genome, SCMGenome)
                 assert list(restored.genome.genes) == list(orig.genome.genes)
                 assert restored.genome.config.observed_variables == scm_config.observed_variables
-    
+
     def test_scm_genome_pickle_directly(self) -> None:
         """SCMGenome can be pickled directly."""
         from evolve.representation.scm import SCMConfig, SCMGenome
-        
+
         scm_config = SCMConfig(observed_variables=("A", "B", "C", "D"))
-        
+
         genome = SCMGenome.random(scm_config, length=80, rng=Random(42))
-        
+
         # Pickle round-trip
         pickled = pickle.dumps(genome)
         restored = pickle.loads(pickled)
-        
+
         assert isinstance(restored, SCMGenome)
         assert list(restored.genes) == list(genome.genes)
         assert restored.config == genome.config
-    
+
     def test_checkpoint_manager_with_scm_population(self) -> None:
         """CheckpointManager handles SCM populations correctly."""
         from uuid import uuid4
+
         from evolve.representation.scm import SCMConfig, SCMGenome
-        
+
         scm_config = SCMConfig(observed_variables=("X", "Y"))
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             manager = CheckpointManager(
                 output_dir=Path(tmpdir),
                 checkpoint_interval=1,
             )
-            
+
             # Create population with SCM genomes
             individuals = [
                 Individual(
@@ -513,7 +524,7 @@ class TestSCMGenomeCheckpointing:
                 )
                 for i in range(5)
             ]
-            
+
             # Save checkpoint
             checkpoint = Checkpoint(
                 experiment_name="scm_manager_test",
@@ -524,13 +535,13 @@ class TestSCMGenomeCheckpointing:
                 rng_state=Random(99).getstate(),
             )
             manager.save(checkpoint)
-            
+
             # Load latest
             loaded = manager.load_latest()
             assert loaded is not None
             assert loaded.generation == 10
             assert len(loaded.population) == 5
-            
+
             # Verify genome types preserved
             for ind in loaded.population:
                 assert isinstance(ind.genome, SCMGenome)

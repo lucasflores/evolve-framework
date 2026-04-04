@@ -13,7 +13,7 @@ Example:
     >>> from evolve import EvolutionEngine, EvolutionConfig, VectorGenome
     >>> from evolve.core.operators import TournamentSelection, UniformCrossover, GaussianMutation
     >>> from evolve.evaluation import FunctionEvaluator
-    >>> 
+    >>>
     >>> engine = EvolutionEngine(
     ...     config=EvolutionConfig(population_size=100, max_generations=100),
     ...     evaluator=FunctionEvaluator(lambda g: sum(g.genes**2)),
@@ -30,78 +30,52 @@ __version__ = "0.1.0"
 __author__ = "Evolve Framework Team"
 
 # Core types
-from evolve.core.types import Fitness, Individual, IndividualMetadata
-from evolve.core.population import Population
+# Unified Configuration (new config system)
+from evolve.config import (
+    CallbackConfig,
+    ConstraintSpec,
+    ERPSettings,
+    MetaEvolutionConfig,
+    MultiObjectiveConfig,
+    ObjectiveSpec,
+    ParameterSpec,
+    StoppingConfig,
+    UnifiedConfig,
+)
 from evolve.core.engine import (
-    EvolutionEngine,
     EvolutionConfig,
+    EvolutionEngine,
     EvolutionResult,
     create_initial_population,
 )
 
 # Operators
 from evolve.core.operators import (
-    TournamentSelection,
-    RouletteSelection,
-    RankSelection,
     ElitistSelection,
-    SinglePointCrossover,
-    TwoPointCrossover,
-    UniformCrossover,
-    SimulatedBinaryCrossover,
     GaussianMutation,
     PolynomialMutation,
+    RankSelection,
+    RouletteSelection,
+    SimulatedBinaryCrossover,
+    SinglePointCrossover,
+    TournamentSelection,
+    TwoPointCrossover,
+    UniformCrossover,
 )
-
-# Representation
-from evolve.representation.vector import VectorGenome
-
-# SCM (Structural Causal Model) Representation
-from evolve.representation.scm import (
-    SCMConfig,
-    SCMGenome,
-    SCMAlphabet,
-    ConflictResolution,
-    AcyclicityMode,
-    scm_distance,
-    scm_sequence_distance,
-    scm_structural_distance,
-)
-from evolve.representation.scm_decoder import (
-    SCMDecoder,
-    DecodedSCM,
-    SCMMetadata,
-    to_string,
-)
+from evolve.core.population import Population
+from evolve.core.types import Fitness, Individual, IndividualMetadata
 
 # Evaluation
-from evolve.evaluation.evaluator import FunctionEvaluator, EvaluatorCapabilities
+from evolve.evaluation.evaluator import EvaluatorCapabilities, FunctionEvaluator
 from evolve.evaluation.scm_evaluator import SCMEvaluator, SCMFitnessConfig
-
-# Unified Configuration (new config system)
-from evolve.config import (
-    UnifiedConfig,
-    StoppingConfig,
-    CallbackConfig,
-    ERPSettings,
-    ObjectiveSpec,
-    ConstraintSpec,
-    MultiObjectiveConfig,
-    ParameterSpec,
-    MetaEvolutionConfig,
-)
 
 # Factory (one-line engine creation)
 from evolve.factory import (
-    create_engine,
-    create_initial_population as create_population_from_config,
     OperatorCompatibilityError,
+    create_engine,
 )
-
-# Registry (operator and genome lookup)
-from evolve.registry import (
-    get_operator_registry,
-    get_genome_registry,
+from evolve.factory import (
+    create_initial_population as create_population_from_config,
 )
 
 # Meta-Evolution
@@ -111,6 +85,33 @@ from evolve.meta import (
     MetaEvolutionResult,
     run_meta_evolution,
 )
+
+# Registry (operator and genome lookup)
+from evolve.registry import (
+    get_genome_registry,
+    get_operator_registry,
+)
+
+# SCM (Structural Causal Model) Representation
+from evolve.representation.scm import (
+    AcyclicityMode,
+    ConflictResolution,
+    SCMAlphabet,
+    SCMConfig,
+    SCMGenome,
+    scm_distance,
+    scm_sequence_distance,
+    scm_structural_distance,
+)
+from evolve.representation.scm_decoder import (
+    DecodedSCM,
+    SCMDecoder,
+    SCMMetadata,
+    to_string,
+)
+
+# Representation
+from evolve.representation.vector import VectorGenome
 
 # Reproduction (import submodule for ERP support)
 # Note: ERPEngine must be imported separately to avoid circular imports:

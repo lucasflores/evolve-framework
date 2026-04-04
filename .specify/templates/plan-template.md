@@ -3,7 +3,7 @@
 **Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
 **Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
-**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
+**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
 
 ## Summary
 
@@ -22,7 +22,7 @@
 **Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
 **Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
 **Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
+**Project Type**: [e.g., library/cli/web-service/mobile-app/compiler/desktop-app or NEEDS CLARIFICATION]  
 **Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
 **Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
 **Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
@@ -31,20 +31,7 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-Verify compliance with Evolve Framework Constitution principles:
-
-- [ ] **Model-Agnostic Architecture**: No hard dependencies on PyTorch, JAX, TensorFlow, or RL libraries in core modules
-- [ ] **Separation of Concerns**: Evolutionary logic, representation, evaluation, and execution are decoupled
-- [ ] **Optional Acceleration**: GPU/JIT features are opt-in with CPU reference implementations
-- [ ] **Determinism**: All stochastic processes use explicit seeds; experiments are reproducible
-- [ ] **Extensibility**: Clear extension points defined; optimization justified with profiling data
-- [ ] **Multi-Domain Support**: Design accommodates classical EA, neuroevolution, multi-objective, causal discovery, RL
-- [ ] **Observability**: Structured logging, metrics, and experiment tracking are integrated
-- [ ] **Clear Abstractions**: Type annotations, explicit interfaces, documented contracts
-- [ ] **Composability**: No global state; components are independently testable
-- [ ] **Test-First**: Tests written before implementation; reference implementations provided
-
-**Violations requiring justification** (if any): [Document in Complexity Tracking section]
+[Gates determined based on constitution file]
 
 ## Project Structure
 

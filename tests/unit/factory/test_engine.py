@@ -2,32 +2,30 @@
 
 from __future__ import annotations
 
-import os
 import tempfile
 from typing import Any
-from unittest.mock import MagicMock, patch
 
 import pytest
 
-from evolve.config.unified import UnifiedConfig
-from evolve.config.stopping import StoppingConfig
 from evolve.config.callbacks import CallbackConfig
 from evolve.config.erp import ERPSettings
 from evolve.config.multiobjective import MultiObjectiveConfig, ObjectiveSpec
+from evolve.config.stopping import StoppingConfig
+from evolve.config.unified import UnifiedConfig
+from evolve.core.stopping import (
+    CompositeStoppingCriterion,
+    GenerationLimitStopping,
+)
 from evolve.factory.engine import (
+    OperatorCompatibilityError,
+    _build_callbacks,
+    _build_stopping_criteria,
+    _validate_operator_compatibility,
     create_engine,
     create_initial_population,
-    OperatorCompatibilityError,
-    _validate_operator_compatibility,
-    _build_stopping_criteria,
-    _build_callbacks,
 )
-from evolve.registry.operators import reset_operator_registry
 from evolve.registry.genomes import reset_genome_registry
-from evolve.core.stopping import (
-    GenerationLimitStopping,
-    CompositeStoppingCriterion,
-)
+from evolve.registry.operators import reset_operator_registry
 
 
 @pytest.fixture(autouse=True)
@@ -42,14 +40,14 @@ def reset_registries():
 
 def simple_fitness(genome: Any) -> float:
     """Simple fitness function for testing."""
-    if hasattr(genome, 'genes'):
+    if hasattr(genome, "genes"):
         return float(sum(genome.genes))
     return 0.0
 
 
 class TestCreateEngine:
     """Tests for create_engine() function."""
-    
+
     def test_create_engine_minimal_config(self) -> None:
         """Test creating engine with minimal configuration."""
         config = UnifiedConfig(
@@ -60,13 +58,13 @@ class TestCreateEngine:
             genome_type="vector",
             genome_params={"dimensions": 5, "bounds": (-1.0, 1.0)},
         )
-        
+
         engine = create_engine(config, simple_fitness)
-        
+
         assert engine is not None
-        assert hasattr(engine, 'config')
+        assert hasattr(engine, "config")
         assert engine.config.population_size == 20
-    
+
     def test_create_engine_with_seed(self) -> None:
         """Test creating engine with explicit seed."""
         config = UnifiedConfig(
@@ -77,14 +75,14 @@ class TestCreateEngine:
             genome_type="vector",
             genome_params={"dimensions": 3, "bounds": (-1.0, 1.0)},
         )
-        
+
         engine1 = create_engine(config, simple_fitness, seed=42)
         engine2 = create_engine(config, simple_fitness, seed=42)
-        
+
         # Both should be created successfully
         assert engine1 is not None
         assert engine2 is not None
-    
+
     def test_create_engine_uses_config_seed(self) -> None:
         """Test that config seed is used when no override provided."""
         config = UnifiedConfig(
@@ -96,11 +94,11 @@ class TestCreateEngine:
             genome_type="vector",
             genome_params={"dimensions": 3, "bounds": (-1.0, 1.0)},
         )
-        
+
         engine = create_engine(config, simple_fitness)
-        
+
         assert engine is not None
-    
+
     def test_create_engine_with_callable_evaluator(self) -> None:
         """Test that callable fitness function is wrapped."""
         config = UnifiedConfig(
@@ -111,12 +109,12 @@ class TestCreateEngine:
             genome_type="vector",
             genome_params={"dimensions": 3, "bounds": (-1.0, 1.0)},
         )
-        
+
         # Pass callable directly - should be wrapped
         engine = create_engine(config, lambda g: sum(g.values))
-        
+
         assert engine is not None
-    
+
     def test_create_engine_minimization(self) -> None:
         """Test engine with minimization objective."""
         config = UnifiedConfig(
@@ -128,11 +126,11 @@ class TestCreateEngine:
             genome_type="vector",
             genome_params={"dimensions": 3, "bounds": (-1.0, 1.0)},
         )
-        
+
         engine = create_engine(config, simple_fitness)
-        
+
         assert engine.config.minimize is True
-    
+
     def test_create_engine_maximization(self) -> None:
         """Test engine with maximization objective."""
         config = UnifiedConfig(
@@ -144,15 +142,15 @@ class TestCreateEngine:
             genome_type="vector",
             genome_params={"dimensions": 3, "bounds": (-1.0, 1.0)},
         )
-        
+
         engine = create_engine(config, simple_fitness)
-        
+
         assert engine.config.minimize is False
 
 
 class TestOperatorCompatibility:
     """Tests for operator-genome compatibility validation."""
-    
+
     def test_validate_compatible_operators(self) -> None:
         """Test validation passes for compatible operators."""
         config = UnifiedConfig(
@@ -162,10 +160,10 @@ class TestOperatorCompatibility:
             mutation="gaussian",  # Vector compatible
             genome_type="vector",
         )
-        
+
         # Should not raise
         _validate_operator_compatibility(config)
-    
+
     def test_invalid_crossover_raises_error(self) -> None:
         """Test incompatible crossover raises OperatorCompatibilityError."""
         config = UnifiedConfig(
@@ -175,14 +173,14 @@ class TestOperatorCompatibility:
             mutation="gaussian",
             genome_type="vector",
         )
-        
+
         with pytest.raises(OperatorCompatibilityError) as exc_info:
             _validate_operator_compatibility(config)
-        
+
         assert exc_info.value.operator_name == "neat"
         assert exc_info.value.category == "crossover"
         assert exc_info.value.genome_type == "vector"
-    
+
     def test_invalid_mutation_raises_error(self) -> None:
         """Test incompatible mutation raises OperatorCompatibilityError."""
         config = UnifiedConfig(
@@ -192,13 +190,13 @@ class TestOperatorCompatibility:
             mutation="neat",  # Graph-only mutation
             genome_type="vector",
         )
-        
+
         with pytest.raises(OperatorCompatibilityError) as exc_info:
             _validate_operator_compatibility(config)
-        
+
         assert exc_info.value.operator_name == "neat"
         assert exc_info.value.category == "mutation"
-    
+
     def test_compatibility_error_message(self) -> None:
         """Test compatibility error has descriptive message."""
         error = OperatorCompatibilityError(
@@ -207,7 +205,7 @@ class TestOperatorCompatibility:
             genome_type="vector",
             compatible_types={"graph"},
         )
-        
+
         message = str(error)
         assert "neat" in message.lower()
         assert "Crossover" in message  # Capitalized
@@ -217,7 +215,7 @@ class TestOperatorCompatibility:
 
 class TestStoppingCriteria:
     """Tests for _build_stopping_criteria()."""
-    
+
     def test_default_stopping_generation_limit(self) -> None:
         """Test default uses generation limit from max_generations."""
         config = UnifiedConfig(
@@ -228,11 +226,11 @@ class TestStoppingCriteria:
             mutation="gaussian",
             genome_type="vector",
         )
-        
+
         stopping = _build_stopping_criteria(config)
-        
+
         assert isinstance(stopping, GenerationLimitStopping)
-    
+
     def test_stopping_with_fitness_threshold(self) -> None:
         """Test stopping with fitness threshold creates composite."""
         config = UnifiedConfig(
@@ -244,11 +242,11 @@ class TestStoppingCriteria:
             mutation="gaussian",
             genome_type="vector",
         )
-        
+
         stopping = _build_stopping_criteria(config)
-        
+
         assert isinstance(stopping, CompositeStoppingCriterion)
-    
+
     def test_stopping_with_stagnation(self) -> None:
         """Test stopping with stagnation detection."""
         config = UnifiedConfig(
@@ -260,11 +258,11 @@ class TestStoppingCriteria:
             mutation="gaussian",
             genome_type="vector",
         )
-        
+
         stopping = _build_stopping_criteria(config)
-        
+
         assert isinstance(stopping, CompositeStoppingCriterion)
-    
+
     def test_stopping_with_time_limit(self) -> None:
         """Test stopping with time limit."""
         config = UnifiedConfig(
@@ -276,15 +274,15 @@ class TestStoppingCriteria:
             mutation="gaussian",
             genome_type="vector",
         )
-        
+
         stopping = _build_stopping_criteria(config)
-        
+
         assert isinstance(stopping, CompositeStoppingCriterion)
 
 
 class TestCallbacks:
     """Tests for _build_callbacks()."""
-    
+
     def test_no_callbacks_returns_empty(self) -> None:
         """Test no callbacks config returns empty list."""
         config = UnifiedConfig(
@@ -295,11 +293,11 @@ class TestCallbacks:
             mutation="gaussian",
             genome_type="vector",
         )
-        
+
         callbacks = _build_callbacks(config)
-        
+
         assert callbacks == []
-    
+
     def test_logging_callback_created(self) -> None:
         """Test logging callback is created when enabled."""
         config = UnifiedConfig(
@@ -310,12 +308,12 @@ class TestCallbacks:
             mutation="gaussian",
             genome_type="vector",
         )
-        
+
         callbacks = _build_callbacks(config)
-        
+
         assert len(callbacks) == 1
         assert callbacks[0].__class__.__name__ == "LoggingCallback"
-    
+
     def test_checkpoint_callback_created(self) -> None:
         """Test checkpoint callback created when enabled."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -331,18 +329,15 @@ class TestCallbacks:
                 mutation="gaussian",
                 genome_type="vector",
             )
-            
+
             callbacks = _build_callbacks(config)
-            
-            assert any(
-                cb.__class__.__name__ == "CheckpointCallback"
-                for cb in callbacks
-            )
+
+            assert any(cb.__class__.__name__ == "CheckpointCallback" for cb in callbacks)
 
 
 class TestERPEngine:
     """Tests for ERP engine creation."""
-    
+
     def test_create_erp_engine(self) -> None:
         """Test creating an ERP engine."""
         config = UnifiedConfig(
@@ -357,16 +352,16 @@ class TestERPEngine:
                 recovery_threshold=0.5,
             ),
         )
-        
+
         engine = create_engine(config, simple_fitness)
-        
+
         # ERP engine should have different type
         assert engine.__class__.__name__ == "ERPEngine"
 
 
 class TestMultiObjectiveEngine:
     """Tests for multi-objective engine creation."""
-    
+
     def test_create_multiobjective_engine(self) -> None:
         """Test creating a multi-objective engine."""
         config = UnifiedConfig(
@@ -383,12 +378,12 @@ class TestMultiObjectiveEngine:
                 ],
             ),
         )
-        
+
         engine = create_engine(config, simple_fitness)
-        
+
         # Should have multi-objective config attached
         assert hasattr(engine, "_multiobjective_config")
-    
+
     def test_multiobjective_with_reference_point(self) -> None:
         """Test reference point is stored on engine."""
         config = UnifiedConfig(
@@ -406,16 +401,16 @@ class TestMultiObjectiveEngine:
                 reference_point=[10.0, 10.0],
             ),
         )
-        
+
         engine = create_engine(config, simple_fitness)
-        
+
         assert hasattr(engine, "_reference_point")
         assert engine._reference_point == [10.0, 10.0]
 
 
 class TestCreateInitialPopulation:
     """Tests for create_initial_population()."""
-    
+
     def test_creates_correct_population_size(self) -> None:
         """Test population has correct size."""
         config = UnifiedConfig(
@@ -426,11 +421,11 @@ class TestCreateInitialPopulation:
             genome_type="vector",
             genome_params={"dimensions": 5, "bounds": (-1.0, 1.0)},
         )
-        
+
         population = create_initial_population(config)
-        
+
         assert len(population) == 50
-    
+
     def test_deterministic_with_seed(self) -> None:
         """Test population is deterministic with same seed."""
         config = UnifiedConfig(
@@ -441,14 +436,14 @@ class TestCreateInitialPopulation:
             genome_type="vector",
             genome_params={"dimensions": 3, "bounds": (-1.0, 1.0)},
         )
-        
+
         pop1 = create_initial_population(config, seed=42)
         pop2 = create_initial_population(config, seed=42)
-        
+
         # Check genomes are identical
         for ind1, ind2 in zip(pop1.individuals, pop2.individuals):
             assert list(ind1.genome.genes) == list(ind2.genome.genes)
-    
+
     def test_creates_vector_genomes(self) -> None:
         """Test creates vector genomes with correct dimensions."""
         config = UnifiedConfig(
@@ -459,12 +454,12 @@ class TestCreateInitialPopulation:
             genome_type="vector",
             genome_params={"dimensions": 10, "bounds": (-1.0, 1.0)},
         )
-        
+
         population = create_initial_population(config)
-        
+
         for individual in population.individuals:
             assert len(individual.genome.genes) == 10
-    
+
     def test_genome_within_bounds(self) -> None:
         """Test genome values are within bounds."""
         config = UnifiedConfig(
@@ -475,9 +470,9 @@ class TestCreateInitialPopulation:
             genome_type="vector",
             genome_params={"dimensions": 5, "bounds": (-2.0, 2.0)},
         )
-        
+
         population = create_initial_population(config, seed=123)
-        
+
         for individual in population.individuals:
             for val in individual.genome.genes:
                 assert -2.0 <= val <= 2.0

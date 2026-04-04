@@ -12,6 +12,59 @@ Key Components:
 - ERPEngine: Evolution engine with ERP support
 """
 
+from evolve.reproduction.crossover_protocol import (
+    BlendCrossoverExecutor,
+    CloneCrossoverExecutor,
+    CrossoverExecutor,
+    CrossoverRegistry,
+    # Built-in executors
+    SinglePointCrossoverExecutor,
+    TwoPointCrossoverExecutor,
+    UniformCrossoverExecutor,
+    execute_crossover,
+    inherit_protocol,
+    safe_execute_crossover,
+    validate_offspring,
+)
+from evolve.reproduction.intent import (
+    AgeDependentIntent,
+    # Built-in evaluators
+    AlwaysWillingIntent,
+    FitnessRankThresholdIntent,
+    FitnessThresholdIntent,
+    IntentEvaluator,
+    IntentRegistry,
+    NeverWillingIntent,
+    ProbabilisticIntent,
+    ResourceBudgetIntent,
+    evaluate_intent,
+    safe_evaluate_intent,
+)
+from evolve.reproduction.matchability import (
+    # Built-in evaluators
+    AcceptAllMatchability,
+    DifferentNicheMatchability,
+    DistanceThresholdMatchability,
+    DiversitySeekingMatchability,
+    FitnessRatioMatchability,
+    MatchabilityEvaluator,
+    MatchabilityRegistry,
+    ProbabilisticMatchability,
+    RejectAllMatchability,
+    SimilarityThresholdMatchability,
+    evaluate_matchability,
+    safe_evaluate_matchability,
+)
+from evolve.reproduction.mutation import (
+    MutationConfig,
+    ProtocolMutator,
+    demote_param_to_junk,
+    mutate_crossover,
+    mutate_intent,
+    mutate_junk_data,
+    mutate_matchability,
+    promote_junk_to_param,
+)
 from evolve.reproduction.protocol import (
     CrossoverProtocolSpec,
     CrossoverType,
@@ -22,72 +75,20 @@ from evolve.reproduction.protocol import (
     ReproductionIntentPolicy,
     ReproductionProtocol,
 )
+from evolve.reproduction.recovery import (
+    CompositeRecovery,
+    ImmigrationRecovery,
+    MutationBoostRecovery,
+    RecoveryStrategy,
+    RelaxedMatchingRecovery,
+)
 from evolve.reproduction.sandbox import (
     StepCounter,
     StepLimitExceeded,
-    sandboxed_execute,
     safe_execute,
+    sandboxed_execute,
 )
-from evolve.reproduction.matchability import (
-    MatchabilityEvaluator,
-    MatchabilityRegistry,
-    evaluate_matchability,
-    safe_evaluate_matchability,
-    # Built-in evaluators
-    AcceptAllMatchability,
-    RejectAllMatchability,
-    DistanceThresholdMatchability,
-    SimilarityThresholdMatchability,
-    FitnessRatioMatchability,
-    DifferentNicheMatchability,
-    ProbabilisticMatchability,
-    DiversitySeekingMatchability,
-)
-from evolve.reproduction.crossover_protocol import (
-    CrossoverExecutor,
-    CrossoverRegistry,
-    execute_crossover,
-    safe_execute_crossover,
-    inherit_protocol,
-    validate_offspring,
-    # Built-in executors
-    SinglePointCrossoverExecutor,
-    TwoPointCrossoverExecutor,
-    UniformCrossoverExecutor,
-    BlendCrossoverExecutor,
-    CloneCrossoverExecutor,
-)
-from evolve.reproduction.intent import (
-    IntentEvaluator,
-    IntentRegistry,
-    evaluate_intent,
-    safe_evaluate_intent,
-    # Built-in evaluators
-    AlwaysWillingIntent,
-    NeverWillingIntent,
-    FitnessThresholdIntent,
-    FitnessRankThresholdIntent,
-    ResourceBudgetIntent,
-    AgeDependentIntent,
-    ProbabilisticIntent,
-)
-from evolve.reproduction.mutation import (
-    MutationConfig,
-    ProtocolMutator,
-    mutate_matchability,
-    mutate_intent,
-    mutate_crossover,
-    mutate_junk_data,
-    promote_junk_to_param,
-    demote_param_to_junk,
-)
-from evolve.reproduction.recovery import (
-    RecoveryStrategy,
-    ImmigrationRecovery,
-    MutationBoostRecovery,
-    RelaxedMatchingRecovery,
-    CompositeRecovery,
-)
+
 # Note: Callbacks and ERPEngine are imported separately to avoid circular imports:
 #   from evolve.reproduction.callbacks import ERPMetricsCallback, ERPLoggerCallback
 #   from evolve.reproduction.engine import ERPConfig, ERPEngine

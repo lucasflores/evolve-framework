@@ -9,35 +9,32 @@ These tests verify the ERP engine properly:
 - Tracks reproduction events
 """
 
-import pytest
 from random import Random
 from uuid import uuid4
 
 import numpy as np
+import pytest
 
 # Import engine directly to avoid circular import
-from evolve.reproduction.engine import ERPConfig, ERPEngine
-
+from evolve.reproduction.engine import ERPConfig
 
 # Skip tests if core engine imports fail (circular import)
 try:
     from evolve.core.engine import EvolutionConfig
     from evolve.core.population import Population
-    from evolve.core.types import Individual, IndividualMetadata, Fitness
+    from evolve.core.types import Fitness, Individual, IndividualMetadata
+
     CORE_AVAILABLE = True
 except ImportError:
     CORE_AVAILABLE = False
 
 from evolve.reproduction.protocol import (
-    ReproductionProtocol,
-    MatchabilityFunction,
-    ReproductionIntentPolicy,
     CrossoverProtocolSpec,
     CrossoverType,
+    MatchabilityFunction,
+    ReproductionIntentPolicy,
+    ReproductionProtocol,
 )
-from evolve.reproduction.matchability import AcceptAllMatchability, RejectAllMatchability
-from evolve.reproduction.intent import AlwaysWillingIntent, NeverWillingIntent
-
 
 pytestmark = pytest.mark.skipif(not CORE_AVAILABLE, reason="Core modules not available")
 
@@ -124,7 +121,7 @@ def create_individual(
     """Helper to create test individuals."""
     if protocol is None:
         protocol = ReproductionProtocol.default()
-    
+
     return Individual(
         id=uuid4(),
         genome=genome,
@@ -144,13 +141,13 @@ def create_population(
     """Helper to create test populations."""
     if rng is None:
         rng = Random(42)
-    
+
     individuals = []
     for i in range(size):
         genome = np.array([rng.random() for _ in range(genome_size)])
         fitness = rng.random()
         individuals.append(create_individual(genome, fitness, protocol))
-    
+
     return Population(individuals=individuals, generation=0)
 
 
@@ -168,11 +165,11 @@ class TestERPConfig:
             population_size=100,
             max_generations=50,
         )
-        
+
         # Should have base config attributes
         assert config.population_size == 100
         assert config.max_generations == 50
-        
+
         # Should have ERP-specific attributes
         assert config.step_limit > 0
         assert 0 <= config.recovery_threshold <= 1
@@ -181,7 +178,7 @@ class TestERPConfig:
     def test_config_defaults(self):
         """ERPConfig should have sensible defaults."""
         config = ERPConfig()
-        
+
         assert config.step_limit == 1000
         assert config.recovery_threshold == 0.1
         assert config.protocol_mutation_rate == 0.1
@@ -214,7 +211,7 @@ class TestProtocolInheritance:
     def test_inherit_protocol_basic(self, rng, default_protocol):
         """Protocol inheritance should select from one parent."""
         from evolve.reproduction.crossover_protocol import inherit_protocol
-        
+
         parent1_protocol = default_protocol
         parent2_protocol = ReproductionProtocol(
             matchability=MatchabilityFunction(
@@ -224,9 +221,9 @@ class TestProtocolInheritance:
             intent=parent1_protocol.intent,
             crossover=parent1_protocol.crossover,
         )
-        
+
         child_protocol = inherit_protocol(parent1_protocol, parent2_protocol, rng)
-        
+
         # Should have one parent's matchability
         assert child_protocol.matchability.type in [
             parent1_protocol.matchability.type,
@@ -244,15 +241,15 @@ class TestProtocolInheritance:
             intent=parent1.intent,
             crossover=parent1.crossover,
         )
-        
+
         from evolve.reproduction.crossover_protocol import inherit_protocol
-        
+
         rng1 = Random(12345)
         rng2 = Random(12345)
-        
+
         child1 = inherit_protocol(parent1, parent2, rng1)
         child2 = inherit_protocol(parent1, parent2, rng2)
-        
+
         assert child1.matchability.type == child2.matchability.type
 
 
@@ -263,12 +260,12 @@ class TestIntentIntegration:
         """Intent evaluation should work with proper context."""
         from evolve.reproduction.intent import safe_evaluate_intent
         from evolve.reproduction.protocol import IntentContext
-        
+
         policy = ReproductionIntentPolicy(
             type="always_willing",
             params={},
         )
-        
+
         context = IntentContext(
             fitness=np.array([1.0]),
             fitness_rank=5,
@@ -277,9 +274,9 @@ class TestIntentIntegration:
             generation=10,
             population_size=50,
         )
-        
+
         willing, success = safe_evaluate_intent(policy, context, rng, step_limit=100)
-        
+
         assert success is True
         assert willing is True
 
@@ -287,12 +284,12 @@ class TestIntentIntegration:
         """Never willing intent should block reproduction."""
         from evolve.reproduction.intent import safe_evaluate_intent
         from evolve.reproduction.protocol import IntentContext
-        
+
         policy = ReproductionIntentPolicy(
             type="never_willing",
             params={},
         )
-        
+
         context = IntentContext(
             fitness=np.array([1.0]),
             fitness_rank=5,
@@ -301,9 +298,9 @@ class TestIntentIntegration:
             generation=10,
             population_size=50,
         )
-        
+
         willing, success = safe_evaluate_intent(policy, context, rng, step_limit=100)
-        
+
         assert success is True
         assert willing is False
 
@@ -315,12 +312,12 @@ class TestMatchabilityIntegration:
         """Matchability evaluation should work with proper context."""
         from evolve.reproduction.matchability import safe_evaluate_matchability
         from evolve.reproduction.protocol import MateContext
-        
+
         function = MatchabilityFunction(
             type="accept_all",
             params={},
         )
-        
+
         context = MateContext(
             partner_distance=0.5,
             partner_fitness_rank=10,
@@ -331,9 +328,9 @@ class TestMatchabilityIntegration:
             self_fitness=np.array([1.0]),
             partner_fitness=np.array([1.2]),
         )
-        
+
         accepts, success = safe_evaluate_matchability(function, context, rng, step_limit=100)
-        
+
         assert success is True
         assert accepts is True
 
@@ -341,12 +338,12 @@ class TestMatchabilityIntegration:
         """Reject all matchability should block mating."""
         from evolve.reproduction.matchability import safe_evaluate_matchability
         from evolve.reproduction.protocol import MateContext
-        
+
         function = MatchabilityFunction(
             type="reject_all",
             params={},
         )
-        
+
         context = MateContext(
             partner_distance=0.5,
             partner_fitness_rank=10,
@@ -357,9 +354,9 @@ class TestMatchabilityIntegration:
             self_fitness=np.array([1.0]),
             partner_fitness=np.array([1.2]),
         )
-        
+
         accepts, success = safe_evaluate_matchability(function, context, rng, step_limit=100)
-        
+
         assert success is True
         assert accepts is False
 
@@ -370,10 +367,10 @@ class TestReproductionEvents:
     def test_reproduction_event_fields(self):
         """ReproductionEvent should have all required fields."""
         from evolve.reproduction.protocol import ReproductionEvent
-        
+
         id1, id2 = uuid4(), uuid4()
         child_id = uuid4()
-        
+
         event = ReproductionEvent(
             generation=5,
             parent1_id=id1,
@@ -384,7 +381,7 @@ class TestReproductionEvents:
             matchability_result=(True, True),
             intent_result=(True, True),
         )
-        
+
         assert event.generation == 5
         assert event.parent1_id == id1
         assert event.parent2_id == id2
@@ -395,7 +392,7 @@ class TestReproductionEvents:
     def test_failed_reproduction_event(self):
         """Failed reproduction should have reason."""
         from evolve.reproduction.protocol import ReproductionEvent
-        
+
         event = ReproductionEvent(
             generation=5,
             parent1_id=uuid4(),
@@ -406,7 +403,7 @@ class TestReproductionEvents:
             matchability_result=(False, True),
             intent_result=(False, True),
         )
-        
+
         assert event.success is False
         assert event.failure_reason == "Intent failed"
         assert event.offspring_ids is None
@@ -425,23 +422,23 @@ class TestEdgeCases:
         config = ERPConfig(
             protocol_mutation_rate=0.5,
         )
-        
+
         assert config.protocol_mutation_rate == 0.5
 
     def test_recovery_disabled(self):
         """Recovery can be disabled via config."""
         config = ERPConfig(enable_recovery=False)
-        
+
         assert config.enable_recovery is False
 
     def test_intent_disabled(self):
         """Intent checking can be disabled via config."""
         config = ERPConfig(enable_intent=False)
-        
+
         assert config.enable_intent is False
 
     def test_step_limit_configurable(self):
         """Step limit should be configurable."""
         config = ERPConfig(step_limit=500)
-        
+
         assert config.step_limit == 500

@@ -1,0 +1,13 @@
+lockfile_version: '1'
+generated_at: '2026-03-26T00:49:08.909916+00:00'
+apm_version: 0.8.5
+dependencies:
+- repo_url: lucasflores/agent-skills
+  host: github.com
+  resolved_commit: 8434caf3f85dabb8df197185f449fea1488406ec
+  package_type: apm_package
+  deployed_files:
+  - .github/agents/research-assistant.agent.md
+  - .github/skills/idea-to-speckit
+  - .github/skills/research-assistant
+  content_hash: sha256:39e905e551978c182c620b78d419690fcabeecfc2ba75db65e25666b9b785847

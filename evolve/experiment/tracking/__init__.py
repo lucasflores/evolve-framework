@@ -22,6 +22,7 @@ try:
         MLflowTracker,
         ResilientMLflowTracker,
     )
+
     _MLFLOW_AVAILABLE = True
 except ImportError:
     MLflowTracker = None  # type: ignore
@@ -32,6 +33,7 @@ from evolve.experiment.tracking.callback import TrackingCallback
 
 try:
     from evolve.experiment.tracking.wandb_tracker import WandbTracker
+
     _WANDB_AVAILABLE = True
 except ImportError:
     WandbTracker = None  # type: ignore

@@ -3,7 +3,7 @@ Core protocol dataclasses for Evolvable Reproduction Protocols.
 
 This module defines the core data structures for the Reproduction Protocol Genome (RPG):
 - MatchabilityFunction: Determines mate acceptability
-- ReproductionIntentPolicy: Governs when reproduction is attempted  
+- ReproductionIntentPolicy: Governs when reproduction is attempted
 - CrossoverProtocolSpec: Specifies offspring genome construction
 - ReproductionProtocol: The complete evolvable protocol
 - MateContext/IntentContext: Evaluation contexts
@@ -18,7 +18,6 @@ from typing import Any
 from uuid import UUID
 
 import numpy as np
-
 
 # =============================================================================
 # Enums

@@ -13,6 +13,7 @@ from typing import Any
 
 try:
     import wandb
+
     WANDB_AVAILABLE = True
 except ImportError:
     WANDB_AVAILABLE = False
@@ -25,15 +26,15 @@ from evolve.experiment.config import ExperimentConfig
 class WandbTracker:
     """
     Weights & Biases experiment tracking.
-    
+
     Logs metrics, parameters, and artifacts to W&B.
-    
+
     Example:
         >>> tracker = WandbTracker(project="evolve")
         >>> tracker.start_run(config)
         >>> tracker.log_generation(0, {"best_fitness": 10.5})
         >>> tracker.end_run()
-        
+
     Requires:
         pip install wandb
     """
@@ -45,9 +46,7 @@ class WandbTracker:
 
     def __post_init__(self) -> None:
         if not WANDB_AVAILABLE:
-            raise ImportError(
-                "wandb is not installed. Install with: pip install wandb"
-            )
+            raise ImportError("wandb is not installed. Install with: pip install wandb")
 
     def start_run(self, config: ExperimentConfig) -> None:
         """Start W&B run."""

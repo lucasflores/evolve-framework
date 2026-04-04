@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# managed by dev-stack — do not edit manually
+set -euo pipefail
+
+HOOK_LABEL="[dev-stack] pre-commit"
+SKIP_FILE=".dev-stack/pipeline-skipped"
+
+mark_skip() {
+  mkdir -p "$(dirname "$SKIP_FILE")"
+  printf "%s: %s\n" "$HOOK_LABEL" "$1" >"$SKIP_FILE"
+}
+
+if [[ "${DEV_STACK_NO_HOOKS:-0}" == "1" ]]; then
+  echo "$HOOK_LABEL: skipping (DEV_STACK_NO_HOOKS=1)" >&2
+  mark_skip "skipped via DEV_STACK_NO_HOOKS=1"
+  exit 0
+fi
+
+if [[ "${1:-}" == "--no-hooks" ]]; then
+  echo "$HOOK_LABEL: skipping (--no-hooks flag)" >&2
+  mark_skip "skipped via --no-hooks flag"
+  exit 0
+fi
+
+if ! command -v dev-stack >/dev/null 2>&1; then
+  echo "$HOOK_LABEL: dev-stack CLI not found in PATH" >&2
+  exit 0
+fi
+
+export DEV_STACK_HOOK_CONTEXT=pre-commit
+
+if dev-stack hooks --help >/dev/null 2>&1; then
+  dev-stack hooks run pre-commit "$@"
+else
+  echo "$HOOK_LABEL: hooks command unavailable; skipping" >&2
+fi

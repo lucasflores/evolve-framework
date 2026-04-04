@@ -13,7 +13,7 @@ import pickle
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Self, Sequence, TypeVar
+from typing import Any, Self, TypeVar
 
 from evolve.core.types import Individual
 
@@ -24,10 +24,10 @@ G = TypeVar("G")
 class Checkpoint:
     """
     Complete state for resuming an experiment.
-    
+
     Includes everything needed to continue evolution
     from exactly this point.
-    
+
     Example:
         >>> checkpoint = Checkpoint.from_engine(engine, config)
         >>> checkpoint.save("checkpoint.pkl")
@@ -65,9 +65,9 @@ class Checkpoint:
     def save(self, path: Path | str) -> None:
         """
         Save checkpoint to disk.
-        
+
         Uses pickle for complex objects.
-        
+
         Args:
             path: Output file path
         """
@@ -80,10 +80,10 @@ class Checkpoint:
     def load(cls, path: Path | str) -> Self:
         """
         Load checkpoint from disk.
-        
+
         Args:
             path: Input file path
-            
+
         Returns:
             Loaded Checkpoint
         """
@@ -106,12 +106,12 @@ class Checkpoint:
 class CheckpointManager:
     """
     Manages checkpoint saving and loading.
-    
+
     Handles:
     - Saving checkpoints at intervals
     - Loading latest checkpoint for resume
     - Pruning old checkpoints to save disk space
-    
+
     Example:
         >>> manager = CheckpointManager("./checkpoints", keep_last_n=5)
         >>> if manager.should_checkpoint(generation):
@@ -129,7 +129,7 @@ class CheckpointManager:
     ) -> None:
         """
         Create checkpoint manager.
-        
+
         Args:
             output_dir: Directory for checkpoint files
             keep_last_n: Number of recent checkpoints to keep
@@ -143,10 +143,10 @@ class CheckpointManager:
     def should_checkpoint(self, generation: int) -> bool:
         """
         Check if checkpoint should be saved at this generation.
-        
+
         Args:
             generation: Current generation number
-            
+
         Returns:
             True if checkpoint should be saved
         """
@@ -155,12 +155,12 @@ class CheckpointManager:
     def save(self, checkpoint: Checkpoint) -> Path:
         """
         Save checkpoint and manage history.
-        
+
         Prunes old checkpoints beyond keep_last_n.
-        
+
         Args:
             checkpoint: Checkpoint to save
-            
+
         Returns:
             Path to saved checkpoint file
         """
@@ -176,7 +176,7 @@ class CheckpointManager:
     def load_latest(self) -> Checkpoint | None:
         """
         Load most recent checkpoint.
-        
+
         Returns:
             Latest checkpoint or None if no checkpoints exist
         """
@@ -188,10 +188,10 @@ class CheckpointManager:
     def load_generation(self, generation: int) -> Checkpoint | None:
         """
         Load checkpoint for specific generation.
-        
+
         Args:
             generation: Generation number to load
-            
+
         Returns:
             Checkpoint for that generation or None
         """
@@ -203,7 +203,7 @@ class CheckpointManager:
     def list_checkpoints(self) -> list[tuple[int, Path]]:
         """
         List all checkpoints with generation numbers.
-        
+
         Returns:
             List of (generation, path) tuples sorted by generation
         """
@@ -223,7 +223,7 @@ class CheckpointManager:
     def clear(self) -> int:
         """
         Remove all checkpoints.
-        
+
         Returns:
             Number of checkpoints removed
         """

@@ -9,25 +9,25 @@ Tests cover:
 - Asymmetric matchability behavior
 """
 
+from random import Random
+
 import numpy as np
 import pytest
-from random import Random
 
 from evolve.reproduction.matchability import (
     AcceptAllMatchability,
-    RejectAllMatchability,
     DistanceThresholdMatchability,
-    SimilarityThresholdMatchability,
-    FitnessRatioMatchability,
-    DifferentNicheMatchability,
-    ProbabilisticMatchability,
     DiversitySeekingMatchability,
+    FitnessRatioMatchability,
     MatchabilityRegistry,
+    ProbabilisticMatchability,
+    RejectAllMatchability,
+    SimilarityThresholdMatchability,
     evaluate_matchability,
     safe_evaluate_matchability,
 )
 from evolve.reproduction.protocol import MatchabilityFunction, MateContext
-from evolve.reproduction.sandbox import StepCounter, StepLimitExceeded
+from evolve.reproduction.sandbox import StepCounter
 
 
 @pytest.fixture
@@ -60,12 +60,16 @@ def basic_context() -> MateContext:
 class TestAcceptAllMatchability:
     """Tests for AcceptAllMatchability evaluator."""
 
-    def test_always_accepts(self, basic_context: MateContext, rng: Random, counter: StepCounter) -> None:
+    def test_always_accepts(
+        self, basic_context: MateContext, rng: Random, counter: StepCounter
+    ) -> None:
         evaluator = AcceptAllMatchability()
         result = evaluator.evaluate(basic_context, {}, rng, counter)
         assert result is True
 
-    def test_increments_counter(self, basic_context: MateContext, rng: Random, counter: StepCounter) -> None:
+    def test_increments_counter(
+        self, basic_context: MateContext, rng: Random, counter: StepCounter
+    ) -> None:
         evaluator = AcceptAllMatchability()
         evaluator.evaluate(basic_context, {}, rng, counter)
         assert counter.count == 1
@@ -74,7 +78,9 @@ class TestAcceptAllMatchability:
 class TestRejectAllMatchability:
     """Tests for RejectAllMatchability evaluator."""
 
-    def test_always_rejects(self, basic_context: MateContext, rng: Random, counter: StepCounter) -> None:
+    def test_always_rejects(
+        self, basic_context: MateContext, rng: Random, counter: StepCounter
+    ) -> None:
         evaluator = RejectAllMatchability()
         result = evaluator.evaluate(basic_context, {}, rng, counter)
         assert result is False
@@ -218,13 +224,17 @@ class TestFitnessRatioMatchability:
 class TestProbabilisticMatchability:
     """Tests for ProbabilisticMatchability evaluator."""
 
-    def test_returns_probability(self, basic_context: MateContext, rng: Random, counter: StepCounter) -> None:
+    def test_returns_probability(
+        self, basic_context: MateContext, rng: Random, counter: StepCounter
+    ) -> None:
         evaluator = ProbabilisticMatchability()
         result = evaluator.evaluate(basic_context, {"base_prob": 0.5}, rng, counter)
         assert isinstance(result, float)
         assert 0.0 <= result <= 1.0
 
-    def test_base_prob_only(self, basic_context: MateContext, rng: Random, counter: StepCounter) -> None:
+    def test_base_prob_only(
+        self, basic_context: MateContext, rng: Random, counter: StepCounter
+    ) -> None:
         evaluator = ProbabilisticMatchability()
         context = MateContext(
             partner_distance=0.0,  # No distance effect
@@ -236,7 +246,9 @@ class TestProbabilisticMatchability:
             self_fitness=np.array([0.5]),
             partner_fitness=np.array([0.5]),
         )
-        result = evaluator.evaluate(context, {"base_prob": 0.7, "distance_weight": 0.0}, rng, counter)
+        result = evaluator.evaluate(
+            context, {"base_prob": 0.7, "distance_weight": 0.0}, rng, counter
+        )
         assert result == pytest.approx(0.7)
 
     def test_distance_increases_probability(self, rng: Random, counter: StepCounter) -> None:
@@ -251,7 +263,9 @@ class TestProbabilisticMatchability:
             self_fitness=np.array([0.5]),
             partner_fitness=np.array([0.5]),
         )
-        result = evaluator.evaluate(context, {"base_prob": 0.5, "distance_weight": 0.4}, rng, counter)
+        result = evaluator.evaluate(
+            context, {"base_prob": 0.5, "distance_weight": 0.4}, rng, counter
+        )
         # 0.5 + 0.4 * 0.5 = 0.7
         assert result == pytest.approx(0.7)
 
@@ -268,7 +282,9 @@ class TestProbabilisticMatchability:
             partner_fitness=np.array([0.5]),
         )
         # Would be 0.8 + 1.0 * 0.5 = 1.3, should clamp to 1.0
-        result = evaluator.evaluate(context, {"base_prob": 0.8, "distance_weight": 0.5}, rng, counter)
+        result = evaluator.evaluate(
+            context, {"base_prob": 0.8, "distance_weight": 0.5}, rng, counter
+        )
         assert result == 1.0
 
 
@@ -333,9 +349,13 @@ class TestMatchabilityRegistry:
         evaluator = MatchabilityRegistry.get_or_default("unknown_type")
         assert isinstance(evaluator, RejectAllMatchability)
 
-    def test_register_custom_evaluator(self, basic_context: MateContext, rng: Random, counter: StepCounter) -> None:
+    def test_register_custom_evaluator(
+        self, basic_context: MateContext, rng: Random, counter: StepCounter
+    ) -> None:
         class CustomMatchability:
-            def evaluate(self, context: MateContext, params: dict, rng: Random, counter: StepCounter) -> bool:
+            def evaluate(
+                self, context: MateContext, params: dict, rng: Random, counter: StepCounter
+            ) -> bool:
                 counter.step()
                 return params.get("result", False)
 
@@ -349,17 +369,23 @@ class TestMatchabilityRegistry:
 class TestEvaluateMatchability:
     """Tests for evaluate_matchability function."""
 
-    def test_evaluates_active_function(self, basic_context: MateContext, rng: Random, counter: StepCounter) -> None:
+    def test_evaluates_active_function(
+        self, basic_context: MateContext, rng: Random, counter: StepCounter
+    ) -> None:
         func = MatchabilityFunction(type="accept_all", params={}, active=True)
         result = evaluate_matchability(func, basic_context, rng, counter)
         assert result is True
 
-    def test_inactive_function_rejects(self, basic_context: MateContext, rng: Random, counter: StepCounter) -> None:
+    def test_inactive_function_rejects(
+        self, basic_context: MateContext, rng: Random, counter: StepCounter
+    ) -> None:
         func = MatchabilityFunction(type="accept_all", params={}, active=False)
         result = evaluate_matchability(func, basic_context, rng, counter)
         assert result is False
 
-    def test_unknown_type_raises(self, basic_context: MateContext, rng: Random, counter: StepCounter) -> None:
+    def test_unknown_type_raises(
+        self, basic_context: MateContext, rng: Random, counter: StepCounter
+    ) -> None:
         func = MatchabilityFunction(type="nonexistent_type", params={}, active=True)
         with pytest.raises(ValueError, match="Unknown matchability type"):
             evaluate_matchability(func, basic_context, rng, counter)
@@ -423,7 +449,7 @@ class TestAsymmetricMatchability:
     def test_asymmetric_acceptance(self, rng: Random) -> None:
         """
         Verify that A accepting B doesn't imply B accepts A.
-        
+
         Setup: A has distance threshold 0.3, B has threshold 0.7
         Distance between them: 0.5
         Result: A accepts B (0.5 >= 0.3), B rejects A (0.5 < 0.7)
@@ -440,7 +466,7 @@ class TestAsymmetricMatchability:
             params={"min_distance": 0.7},
             active=True,
         )
-        
+
         # Context for A evaluating B (same distance either way)
         context = MateContext(
             partner_distance=0.5,
@@ -452,11 +478,11 @@ class TestAsymmetricMatchability:
             self_fitness=np.array([0.5]),
             partner_fitness=np.array([0.5]),
         )
-        
+
         # A evaluates B
         a_accepts_b, _ = safe_evaluate_matchability(func_a, context, rng)
         # B evaluates A
         b_accepts_a, _ = safe_evaluate_matchability(func_b, context, rng)
-        
+
         assert a_accepts_b is True, "A should accept B (0.5 >= 0.3)"
         assert b_accepts_a is False, "B should reject A (0.5 < 0.7)"

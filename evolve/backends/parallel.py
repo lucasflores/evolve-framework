@@ -8,15 +8,14 @@ NO ML FRAMEWORK IMPORTS ALLOWED.
 
 from __future__ import annotations
 
-import multiprocessing as mp
 import os
-from concurrent.futures import ProcessPoolExecutor, TimeoutError as FuturesTimeoutError
-from typing import Any, Callable, Sequence, TypeVar
+from collections.abc import Sequence
+from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeoutError
+from typing import Any, TypeVar
 
 from evolve.backends.base import (
     BackendCapabilities,
-    BackendConfig,
-    ExecutionBackend,
     Evaluator,
     derive_seed,
 )
@@ -37,7 +36,7 @@ def _get_cpu_count() -> int:
             return max(1, quota // period)
     except (FileNotFoundError, ValueError):
         pass
-    
+
     # Fall back to os.cpu_count
     return os.cpu_count() or 1
 
@@ -54,21 +53,21 @@ def _evaluate_batch(
 class ParallelBackend:
     """
     Parallel execution backend using multiprocessing.
-    
+
     Distributes evaluation across multiple CPU cores using
     a process pool. Each worker gets a derived seed for
     reproducibility.
-    
+
     Advantages:
     - Utilizes multiple CPU cores
     - True parallelism (bypasses GIL)
     - Scales well with population size
-    
+
     Disadvantages:
     - Serialization overhead (pickle)
     - Memory usage per worker
     - Startup cost for process pool
-    
+
     Example:
         >>> backend = ParallelBackend(n_workers=4)
         >>> results = backend.map_evaluate(evaluator, population)
@@ -83,7 +82,7 @@ class ParallelBackend:
     ) -> None:
         """
         Create parallel backend.
-        
+
         Args:
             n_workers: Number of worker processes (None = auto-detect)
             batch_size: Individuals per batch (None = auto)
@@ -93,7 +92,7 @@ class ParallelBackend:
         self._batch_size = batch_size
         self._timeout = timeout
         self._executor: ProcessPoolExecutor | None = None
-        
+
         self._capabilities = BackendCapabilities(
             parallel=True,
             gpu=False,
@@ -128,7 +127,7 @@ class ParallelBackend:
         """Compute optimal batch size."""
         if self._batch_size is not None:
             return self._batch_size
-        
+
         # Heuristic: aim for at least 2 batches per worker
         # but not too small (overhead dominates)
         min_batch = 10
@@ -143,43 +142,43 @@ class ParallelBackend:
     ) -> Sequence[Fitness]:
         """
         Evaluate individuals in parallel.
-        
+
         Splits individuals into batches and distributes
         across worker processes.
-        
+
         Args:
             evaluator: Evaluator to use
             individuals: Individuals to evaluate
             seed: Base seed (derived seeds sent to workers)
-            
+
         Returns:
             Fitness values in same order as individuals
         """
         if not individuals:
             return []
-        
+
         n = len(individuals)
-        
+
         # For small populations, sequential is faster
         if n < self._n_workers * 2:
             return evaluator.evaluate(individuals, seed=seed)
-        
+
         batch_size = self._compute_batch_size(n)
-        
+
         # Split into batches
         batches: list[tuple[Sequence[Individual[G]], int | None]] = []
         for i in range(0, n, batch_size):
             batch = individuals[i : i + batch_size]
             batch_seed = derive_seed(seed, i) if seed is not None else None
             batches.append((batch, batch_seed))
-        
+
         # Submit to executor
         executor = self._get_executor()
         futures = [
             executor.submit(_evaluate_batch, evaluator, batch, batch_seed)
             for batch, batch_seed in batches
         ]
-        
+
         # Collect results in order
         results: list[Fitness] = []
         for future in futures:
@@ -187,12 +186,10 @@ class ParallelBackend:
                 batch_results = future.result(timeout=self._timeout)
                 results.extend(batch_results)
             except FuturesTimeoutError:
-                raise TimeoutError(
-                    f"Evaluation timed out after {self._timeout} seconds"
-                )
+                raise TimeoutError(f"Evaluation timed out after {self._timeout} seconds")
             except Exception as e:
                 raise RuntimeError(f"Parallel evaluation failed: {e}") from e
-        
+
         return results
 
     def shutdown(self) -> None:
@@ -208,7 +205,7 @@ class ParallelBackend:
     def __repr__(self) -> str:
         return f"ParallelBackend(n_workers={self._n_workers})"
 
-    def __enter__(self) -> "ParallelBackend":
+    def __enter__(self) -> ParallelBackend:
         """Context manager entry."""
         return self
 

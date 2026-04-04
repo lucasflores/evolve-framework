@@ -13,18 +13,18 @@ import numpy as np
 import pytest
 
 from evolve.core.types import Individual
-from evolve.evaluation.evaluator import FunctionEvaluator, BatchEvaluator
-from evolve.evaluation.reference.functions import sphere, rastrigin, rosenbrock, ackley
+from evolve.evaluation.evaluator import BatchEvaluator, FunctionEvaluator
+from evolve.evaluation.reference.functions import ackley, rastrigin, rosenbrock, sphere
 from evolve.evaluation.testing import (
-    assert_evaluator_equivalence,
     EvaluatorTester,
+    assert_evaluator_equivalence,
 )
 from evolve.representation.vector import VectorGenome
-
 
 # ============================================================================
 # Test Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def test_population():
@@ -56,6 +56,7 @@ def small_population():
 # CPU Reference Tests
 # ============================================================================
 
+
 @pytest.mark.benchmark
 class TestCPUReferenceConsistency:
     """Test CPU reference implementations are consistent."""
@@ -86,16 +87,17 @@ class TestCPUReferenceConsistency:
 
     def test_batch_vs_individual_sphere(self, small_population):
         """Batch evaluation should match individual evaluation."""
+
         # Create batch evaluator
         def batch_sphere(x):
-            return np.sum(x ** 2, axis=1)
-        
+            return np.sum(x**2, axis=1)
+
         batch_eval = BatchEvaluator(batch_sphere)
         func_eval = FunctionEvaluator(sphere)
-        
+
         batch_results = batch_eval.evaluate(small_population)
         func_results = func_eval.evaluate(small_population)
-        
+
         for b, f in zip(batch_results, func_results):
             np.testing.assert_allclose(b.values, f.values, rtol=1e-10)
 
@@ -103,6 +105,7 @@ class TestCPUReferenceConsistency:
 # ============================================================================
 # PyTorch Equivalence Tests
 # ============================================================================
+
 
 @pytest.mark.benchmark
 class TestTorchEquivalence:
@@ -113,21 +116,21 @@ class TestTorchEquivalence:
         """Check if PyTorch is available."""
         try:
             import torch
+
             return True
         except ImportError:
             pytest.skip("PyTorch not installed")
 
     def test_sphere_torch_equivalence(self, torch_available, test_population):
         """Torch sphere should match CPU within 1e-5."""
-        import torch
         from evolve.backends.accelerated.torch_evaluator import (
             TorchEvaluator,
             sphere_torch,
         )
-        
+
         cpu_evaluator = FunctionEvaluator(sphere)
-        torch_evaluator = TorchEvaluator(sphere_torch, device='cpu')
-        
+        torch_evaluator = TorchEvaluator(sphere_torch, device="cpu")
+
         assert_evaluator_equivalence(
             cpu_evaluator,
             torch_evaluator,
@@ -138,15 +141,14 @@ class TestTorchEquivalence:
 
     def test_rastrigin_torch_equivalence(self, torch_available, test_population):
         """Torch rastrigin should match CPU within 1e-5."""
-        import torch
         from evolve.backends.accelerated.torch_evaluator import (
             TorchEvaluator,
             rastrigin_torch,
         )
-        
+
         cpu_evaluator = FunctionEvaluator(rastrigin)
-        torch_evaluator = TorchEvaluator(rastrigin_torch, device='cpu')
-        
+        torch_evaluator = TorchEvaluator(rastrigin_torch, device="cpu")
+
         assert_evaluator_equivalence(
             cpu_evaluator,
             torch_evaluator,
@@ -157,15 +159,14 @@ class TestTorchEquivalence:
 
     def test_rosenbrock_torch_equivalence(self, torch_available, test_population):
         """Torch rosenbrock should match CPU within 1e-5."""
-        import torch
         from evolve.backends.accelerated.torch_evaluator import (
             TorchEvaluator,
             rosenbrock_torch,
         )
-        
+
         cpu_evaluator = FunctionEvaluator(rosenbrock)
-        torch_evaluator = TorchEvaluator(rosenbrock_torch, device='cpu')
-        
+        torch_evaluator = TorchEvaluator(rosenbrock_torch, device="cpu")
+
         assert_evaluator_equivalence(
             cpu_evaluator,
             torch_evaluator,
@@ -176,15 +177,14 @@ class TestTorchEquivalence:
 
     def test_ackley_torch_equivalence(self, torch_available, test_population):
         """Torch ackley should match CPU within 1e-5."""
-        import torch
         from evolve.backends.accelerated.torch_evaluator import (
             TorchEvaluator,
             ackley_torch,
         )
-        
+
         cpu_evaluator = FunctionEvaluator(ackley)
-        torch_evaluator = TorchEvaluator(ackley_torch, device='cpu')
-        
+        torch_evaluator = TorchEvaluator(ackley_torch, device="cpu")
+
         assert_evaluator_equivalence(
             cpu_evaluator,
             torch_evaluator,
@@ -194,24 +194,25 @@ class TestTorchEquivalence:
         )
 
     @pytest.mark.skipif(
-        not hasattr(__import__('torch', fromlist=['']), 'cuda') or 
-        not __import__('torch').cuda.is_available(),
-        reason="CUDA not available"
+        not hasattr(__import__("torch", fromlist=[""]), "cuda")
+        or not __import__("torch").cuda.is_available(),
+        reason="CUDA not available",
     )
     def test_sphere_cuda_equivalence(self, torch_available, test_population):
         """CUDA sphere should match CPU within 1e-5."""
         import torch
+
         from evolve.backends.accelerated.torch_evaluator import (
             TorchEvaluator,
             sphere_torch,
         )
-        
+
         if not torch.cuda.is_available():
             pytest.skip("CUDA not available")
-        
+
         cpu_evaluator = FunctionEvaluator(sphere)
-        cuda_evaluator = TorchEvaluator(sphere_torch, device='cuda')
-        
+        cuda_evaluator = TorchEvaluator(sphere_torch, device="cuda")
+
         assert_evaluator_equivalence(
             cpu_evaluator,
             cuda_evaluator,
@@ -225,6 +226,7 @@ class TestTorchEquivalence:
 # JAX Equivalence Tests
 # ============================================================================
 
+
 @pytest.mark.benchmark
 class TestJaxEquivalence:
     """Test JAX evaluators match CPU reference."""
@@ -234,6 +236,7 @@ class TestJaxEquivalence:
         """Check if JAX is available."""
         try:
             import jax
+
             return True
         except ImportError:
             pytest.skip("JAX not installed")
@@ -244,10 +247,10 @@ class TestJaxEquivalence:
             JaxEvaluator,
             sphere_jax,
         )
-        
+
         cpu_evaluator = FunctionEvaluator(sphere)
         jax_evaluator = JaxEvaluator(sphere_jax)
-        
+
         assert_evaluator_equivalence(
             cpu_evaluator,
             jax_evaluator,
@@ -262,10 +265,10 @@ class TestJaxEquivalence:
             JaxEvaluator,
             rastrigin_jax,
         )
-        
+
         cpu_evaluator = FunctionEvaluator(rastrigin)
         jax_evaluator = JaxEvaluator(rastrigin_jax)
-        
+
         assert_evaluator_equivalence(
             cpu_evaluator,
             jax_evaluator,
@@ -280,10 +283,10 @@ class TestJaxEquivalence:
             JaxEvaluator,
             rosenbrock_jax,
         )
-        
+
         cpu_evaluator = FunctionEvaluator(rosenbrock)
         jax_evaluator = JaxEvaluator(rosenbrock_jax)
-        
+
         assert_evaluator_equivalence(
             cpu_evaluator,
             jax_evaluator,
@@ -298,10 +301,10 @@ class TestJaxEquivalence:
             JaxEvaluator,
             ackley_jax,
         )
-        
+
         cpu_evaluator = FunctionEvaluator(ackley)
         jax_evaluator = JaxEvaluator(ackley_jax)
-        
+
         assert_evaluator_equivalence(
             cpu_evaluator,
             jax_evaluator,
@@ -315,24 +318,25 @@ class TestJaxEquivalence:
 # Cross-Backend Equivalence
 # ============================================================================
 
+
 @pytest.mark.benchmark
 class TestCrossBackendEquivalence:
     """Test equivalence across different backends."""
 
     def test_sequential_parallel_equivalence(self, test_population):
         """Sequential and parallel backends should match."""
-        from evolve.backends.sequential import SequentialBackend
         from evolve.backends.parallel import ParallelBackend
-        
+        from evolve.backends.sequential import SequentialBackend
+
         evaluator = FunctionEvaluator(sphere)
-        
+
         seq_backend = SequentialBackend()
         par_backend = ParallelBackend(n_workers=2)
-        
+
         try:
             seq_results = seq_backend.map_evaluate(evaluator, test_population, seed=42)
             par_results = par_backend.map_evaluate(evaluator, test_population, seed=42)
-            
+
             for s, p in zip(seq_results, par_results):
                 np.testing.assert_allclose(s.values, p.values, rtol=1e-10)
         finally:

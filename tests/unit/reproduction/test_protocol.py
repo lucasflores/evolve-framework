@@ -10,6 +10,8 @@ Tests cover:
 - ReproductionEvent creation
 """
 
+from uuid import uuid4
+
 import numpy as np
 import pytest
 
@@ -23,7 +25,6 @@ from evolve.reproduction.protocol import (
     ReproductionIntentPolicy,
     ReproductionProtocol,
 )
-from uuid import uuid4
 
 
 class TestMatchabilityFunction:
@@ -202,7 +203,9 @@ class TestReproductionProtocol:
     def test_creation_full(self) -> None:
         """Test creating with all components."""
         protocol = ReproductionProtocol(
-            matchability=MatchabilityFunction(type="distance_threshold", params={"min_distance": 0.3}),
+            matchability=MatchabilityFunction(
+                type="distance_threshold", params={"min_distance": 0.3}
+            ),
             intent=ReproductionIntentPolicy(type="fitness_threshold", params={"threshold": 0.5}),
             crossover=CrossoverProtocolSpec(type=CrossoverType.UNIFORM, params={"swap_prob": 0.5}),
             junk_data={"dormant_param": 42},
@@ -346,7 +349,7 @@ class TestReproductionEvent:
         parent2 = uuid4()
         offspring1 = uuid4()
         offspring2 = uuid4()
-        
+
         event = ReproductionEvent(
             generation=10,
             parent1_id=parent1,

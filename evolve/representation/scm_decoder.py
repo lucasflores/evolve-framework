@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING, Any
 import networkx as nx
 
 if TYPE_CHECKING:
-    from evolve.representation.scm import SCMConfig, SCMGenome, ConflictResolution
+    from evolve.representation.scm import SCMConfig, SCMGenome
 
 
 __all__ = [
@@ -53,14 +53,16 @@ __all__ = [
 
 # === Expression AST ===
 
+
 @dataclass(frozen=True)
 class Var:
     """
     Variable reference in expression.
-    
+
     Represents a reference to a variable (observed or latent)
     in an SCM equation's right-hand side.
     """
+
     name: str
 
 
@@ -68,10 +70,11 @@ class Var:
 class Const:
     """
     Numeric constant in expression.
-    
+
     Represents a literal numeric value, either from the
     standard constant set or an ERC.
     """
+
     value: float
 
 
@@ -79,12 +82,13 @@ class Const:
 class BinOp:
     """
     Binary operation in expression.
-    
+
     Represents arithmetic operations: +, -, *, /
     """
+
     op: str  # One of: '+', '-', '*', '/'
-    left: "Expression"
-    right: "Expression"
+    left: Expression
+    right: Expression
 
 
 # Type alias for expression tree
@@ -93,12 +97,13 @@ Expression = Var | Const | BinOp
 
 # === Expression Utilities ===
 
+
 def complexity(expr: Expression) -> int:
     """
     Count total AST nodes.
-    
+
     Used for simplicity objective (lower is better).
-    
+
     Examples:
         complexity(Var("A")) == 1
         complexity(BinOp("+", Var("A"), Const(1))) == 3
@@ -115,7 +120,7 @@ def complexity(expr: Expression) -> int:
 def variables(expr: Expression) -> frozenset[str]:
     """
     Extract all variable names from expression.
-    
+
     Returns set of variable names referenced in expression.
     Does not include constants.
     """
@@ -131,14 +136,14 @@ def variables(expr: Expression) -> frozenset[str]:
 def evaluate(expr: Expression, env: dict[str, float]) -> float:
     """
     Evaluate expression given variable assignments.
-    
+
     Args:
         expr: Expression to evaluate
         env: Mapping from variable name to value
-        
+
     Returns:
         Numeric result (may be NaN for undefined operations)
-        
+
     Raises:
         KeyError: If required variable not in env
     """
@@ -168,7 +173,7 @@ def evaluate(expr: Expression, env: dict[str, float]) -> float:
 def to_string(expr: Expression) -> str:
     """
     Convert expression to human-readable infix string.
-    
+
     Examples:
         to_string(BinOp("+", Var("A"), Var("B"))) == "(A + B)"
         to_string(Var("X")) == "X"
@@ -218,33 +223,34 @@ def expr_from_dict(data: dict[str, Any]) -> Expression:
 
 # === Decoded SCM ===
 
+
 @dataclass(frozen=True)
 class SCMMetadata:
     """
     Metadata from decoding process.
-    
+
     Contains information about junk genes, conflicts, cycles,
     and variable coverage for fitness evaluation and debugging.
     """
-    
+
     conflict_count: int
     """Number of variables with multiple equations (before resolution)."""
-    
+
     junk_gene_indices: tuple[int, ...]
     """Indices of genes that didn't contribute to final equations."""
-    
+
     is_cyclic: bool
     """Whether the causal graph contains cycles."""
-    
+
     cycles: tuple[tuple[str, ...], ...]
     """List of cycles as variable name tuples (empty if acyclic)."""
-    
+
     latent_variables_used: frozenset[str]
     """Latent variables that appear in equations."""
-    
+
     coverage: float
     """Fraction of observed variables with equations (0.0 to 1.0)."""
-    
+
     conflicts: dict[str, int]
     """Map from variable to number of conflicting definitions."""
 
@@ -253,20 +259,20 @@ class SCMMetadata:
 class DecodedSCM:
     """
     Decoded Structural Causal Model.
-    
+
     Contains structural equations, causal graph, and metadata
     from the decoding process.
-    
+
     Invariants:
         - equations.keys() are variables with definitions
         - graph.nodes() includes all referenced variables
         - graph.edges() match equation dependencies
         - metadata accurately reflects decoding results
     """
-    
+
     equations: dict[str, Expression]
     """Mapping from variable name to its defining expression."""
-    
+
     graph: nx.DiGraph
     """
     Causal graph where edges point from cause to effect.
@@ -275,43 +281,43 @@ class DecodedSCM:
     
     Compatible with NetworkX and DoWhy.
     """
-    
+
     metadata: SCMMetadata
     """Decoding metadata for evaluation and debugging."""
-    
+
     # === Properties ===
-    
+
     @property
     def is_cyclic(self) -> bool:
         """Whether the causal graph contains cycles."""
         return self.metadata.is_cyclic
-    
+
     @property
     def cycles(self) -> tuple[tuple[str, ...], ...]:
         """Detected cycles in the graph."""
         return self.metadata.cycles
-    
+
     @property
     def endogenous_variables(self) -> frozenset[str]:
         """Variables with equations (have incoming edges)."""
         return frozenset(self.equations.keys())
-    
+
     @property
     def exogenous_variables(self) -> frozenset[str]:
         """Variables without equations (no incoming edges)."""
         all_vars = frozenset(self.graph.nodes())
         return all_vars - self.endogenous_variables
-    
+
     @property
     def edge_count(self) -> int:
         """Number of edges in causal graph."""
         return self.graph.number_of_edges()
-    
+
     @property
     def total_complexity(self) -> int:
         """Sum of AST complexity across all equations."""
         return sum(complexity(expr) for expr in self.equations.values())
-    
+
     @property
     def junk_fraction(self) -> float:
         """Fraction of genes that were junk."""
@@ -320,23 +326,20 @@ class DecodedSCM:
             return 0.0
         # This is approximate - would need genome length for exact calculation
         return 0.0  # Placeholder - actual calculation needs genome length
-    
+
     # === Serialization ===
-    
+
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to JSON-serializable dict.
-        
-        Note: The NetworkX graph is not serialized; it can be 
+
+        Note: The NetworkX graph is not serialized; it can be
         reconstructed from equations.
         """
         return {
             "type": "DecodedSCM",
             "version": "1.0",
-            "equations": {
-                name: expr_to_dict(expr)
-                for name, expr in self.equations.items()
-            },
+            "equations": {name: expr_to_dict(expr) for name, expr in self.equations.items()},
             "metadata": {
                 "conflict_count": self.metadata.conflict_count,
                 "junk_gene_indices": list(self.metadata.junk_gene_indices),
@@ -345,24 +348,23 @@ class DecodedSCM:
                 "latent_variables_used": list(self.metadata.latent_variables_used),
                 "coverage": self.metadata.coverage,
                 "conflicts": self.metadata.conflicts,
-            }
+            },
         }
-    
+
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "DecodedSCM":
+    def from_dict(cls, data: dict[str, Any]) -> DecodedSCM:
         """
         Reconstruct from serialized dict.
-        
+
         Rebuilds the NetworkX graph from equations.
         """
         if data.get("type") != "DecodedSCM":
             raise ValueError(f"Expected type 'DecodedSCM', got {data.get('type')}")
-        
+
         equations = {
-            name: expr_from_dict(expr_data)
-            for name, expr_data in data["equations"].items()
+            name: expr_from_dict(expr_data) for name, expr_data in data["equations"].items()
         }
-        
+
         # Rebuild graph from equations
         graph = nx.DiGraph()
         for target, expr in equations.items():
@@ -371,7 +373,7 @@ class DecodedSCM:
             for dep in deps:
                 graph.add_node(dep)
                 graph.add_edge(dep, target)
-        
+
         meta = data["metadata"]
         metadata = SCMMetadata(
             conflict_count=meta["conflict_count"],
@@ -382,71 +384,71 @@ class DecodedSCM:
             coverage=meta["coverage"],
             conflicts=meta["conflicts"],
         )
-        
+
         return cls(equations=equations, graph=graph, metadata=metadata)
 
 
 # === Decoder ===
 
+
 class SCMDecoder:
     """
     Stack machine decoder for SCM genomes.
-    
+
     Implements Decoder[SCMGenome, DecodedSCM] protocol.
-    
+
     The decoder is stateless - all configuration comes from
     the genome's SCMConfig. This enables safe concurrent use.
-    
+
     Decoding is deterministic: the same genome always produces
     the same DecodedSCM (no random number generation).
     """
-    
-    def __init__(self, config: "SCMConfig") -> None:
+
+    def __init__(self, config: SCMConfig) -> None:
         """
         Initialize decoder with configuration.
-        
+
         Args:
             config: SCM configuration for decoding behavior
         """
         self.config = config
         from evolve.representation.scm import SCMAlphabet
+
         self._alphabet = SCMAlphabet.from_config(config)
-    
-    def decode(self, genome: "SCMGenome") -> DecodedSCM:
+
+    def decode(self, genome: SCMGenome) -> DecodedSCM:
         """
         Decode genome to SCM via stack machine execution.
-        
+
         Algorithm:
         1. Execute stack machine to extract equations
         2. Apply conflict resolution
         3. Build causal graph
         4. Detect cycles
         5. Compile metadata
-        
+
         Args:
             genome: SCMGenome to decode
-            
+
         Returns:
             DecodedSCM with equations, graph, and metadata
         """
         # Build ERC lookup
         erc_lookup = {idx: val for idx, val in genome.erc_values}
-        
+
         # Execute stack machine
-        raw_equations, junk_indices = self._execute_stack_machine(
-            genome.genes, erc_lookup
-        )
-        
+        raw_equations, junk_indices = self._execute_stack_machine(genome.genes, erc_lookup)
+
         # Resolve conflicts
         equations, conflicts, conflict_junk = self._resolve_conflicts(raw_equations)
         junk_indices = sorted(set(junk_indices) | set(conflict_junk))
-        
+
         # Build graph
         graph = self._build_graph(equations)
-        
+
         # Detect cycles
         is_cyclic, cycles = self._detect_cycles(graph)
-        
+
         # Find latent variables used
         latent_used = set()
         for var in equations.keys():
@@ -456,14 +458,11 @@ class SCMDecoder:
             for var in variables(expr):
                 if var.startswith("H"):
                     latent_used.add(var)
-        
+
         # Compute coverage
-        observed_with_eq = sum(
-            1 for var in self.config.observed_variables
-            if var in equations
-        )
+        observed_with_eq = sum(1 for var in self.config.observed_variables if var in equations)
         coverage = observed_with_eq / len(self.config.observed_variables)
-        
+
         # Compile metadata
         conflict_count = sum(1 for c in conflicts.values() if c > 1)
         metadata = SCMMetadata(
@@ -475,13 +474,13 @@ class SCMDecoder:
             coverage=coverage,
             conflicts=conflicts,
         )
-        
+
         return DecodedSCM(
             equations=equations,
             graph=graph,
             metadata=metadata,
         )
-    
+
     def _execute_stack_machine(
         self,
         genes: tuple[str | float, ...],
@@ -489,28 +488,28 @@ class SCMDecoder:
     ) -> tuple[dict[str, list[Expression]], list[int]]:
         """
         Execute genes on stack machine to extract equations.
-        
+
         Stack Machine Algorithm:
         ========================
         The decoder processes genes left-to-right, maintaining:
         - A stack of Expression objects (operands and sub-expressions)
         - A dictionary of raw equations {variable -> [expressions]}
         - A list of "junk" gene indices (invalid operations)
-        
+
         Gene Processing Rules:
         1. NUMERIC/CONSTANT: Push Const(value) onto stack
         2. ERC_n: Push Const(erc_values[n]) if slot exists, else mark junk
-        3. VARIABLE (A, B, H1, etc.): Push Var(name) onto stack  
+        3. VARIABLE (A, B, H1, etc.): Push Var(name) onto stack
         4. OPERATOR (+, -, *, /): Pop 2 operands, push BinOp result
            - If stack has < 2 items: mark operator as junk (underflow)
         5. STORE_X: Pop expression, emit equation X = expr
            - If stack empty: mark as junk
-        
+
         Junk Handling:
         - Genes that can't execute (underflow, unknown) are marked as junk
         - Junk genes are skipped; decoding continues with remaining genes
         - This "silent junk" strategy allows evolution to explore freely
-        
+
         Returns:
             Tuple of:
             - Raw equations (before conflict resolution): {var: [expr, ...]}
@@ -519,16 +518,16 @@ class SCMDecoder:
         stack: list[Expression] = []
         raw_equations: dict[str, list[Expression]] = {}
         junk_indices: list[int] = []
-        
+
         for i, gene in enumerate(genes):
             # Handle numeric gene (constant or ERC value)
             if isinstance(gene, (int, float)):
                 stack.append(Const(float(gene)))
                 continue
-            
+
             # Handle string gene
             gene_str = str(gene)
-            
+
             # Check for ERC slot
             if gene_str.startswith("ERC_"):
                 if i in erc_values:
@@ -537,7 +536,7 @@ class SCMDecoder:
                     # ERC without value - treat as junk
                     junk_indices.append(i)
                 continue
-            
+
             # Check for constant (string representation)
             try:
                 const_val = float(gene_str)
@@ -545,12 +544,12 @@ class SCMDecoder:
                 continue
             except ValueError:
                 pass
-            
+
             # Check for variable reference
             if gene_str in self._alphabet.variable_refs:
                 stack.append(Var(gene_str))
                 continue
-            
+
             # Check for operator
             if gene_str in self._alphabet.operators:
                 if len(stack) < 2:
@@ -561,7 +560,7 @@ class SCMDecoder:
                 left = stack.pop()
                 stack.append(BinOp(gene_str, left, right))
                 continue
-            
+
             # Check for STORE gene
             if gene_str.startswith("STORE_"):
                 var_name = gene_str[6:]  # Remove "STORE_" prefix
@@ -574,19 +573,19 @@ class SCMDecoder:
                     raw_equations[var_name] = []
                 raw_equations[var_name].append(expr)
                 continue
-            
+
             # Unknown gene - mark as junk
             junk_indices.append(i)
-        
+
         return raw_equations, junk_indices
-    
+
     def _resolve_conflicts(
         self,
         raw_equations: dict[str, list[Expression]],
     ) -> tuple[dict[str, Expression], dict[str, int], list[int]]:
         """
         Apply conflict resolution strategy.
-        
+
         Returns:
             Tuple of:
             - Final equations: {var: expr}
@@ -594,14 +593,14 @@ class SCMDecoder:
             - Additional junk indices from resolution
         """
         from evolve.representation.scm import ConflictResolution
-        
+
         equations: dict[str, Expression] = {}
         conflicts: dict[str, int] = {}
         junk_indices: list[int] = []
-        
+
         for var, exprs in raw_equations.items():
             conflicts[var] = len(exprs)
-            
+
             if len(exprs) == 1:
                 equations[var] = exprs[0]
             elif len(exprs) > 1:
@@ -613,67 +612,67 @@ class SCMDecoder:
                     case ConflictResolution.ALL_JUNK:
                         # Don't add any equation
                         pass
-        
+
         return equations, conflicts, junk_indices
-    
+
     def _build_graph(
         self,
         equations: dict[str, Expression],
     ) -> nx.DiGraph:
         """
         Build causal graph from equations.
-        
+
         Creates edge from each RHS variable to LHS variable.
         """
         graph = nx.DiGraph()
-        
+
         # Add all variables as nodes
-        for var in equations.keys():
+        for var in equations:
             graph.add_node(var)
-        
+
         # Add edges from dependencies
         for var, expr in equations.items():
             deps = variables(expr)
             for dep in deps:
                 graph.add_node(dep)  # Ensure dependency node exists
                 graph.add_edge(dep, var)
-        
+
         return graph
-    
+
     def _detect_cycles(
         self,
         graph: nx.DiGraph,
     ) -> tuple[bool, list[tuple[str, ...]]]:
         """
         Check for cycles and enumerate them.
-        
+
         Cycle Detection Algorithm:
         ==========================
         Uses NetworkX's optimized graph algorithms:
-        
+
         1. Quick Check (O(V+E)):
            - nx.is_directed_acyclic_graph uses DFS-based topological sort
            - Returns immediately if graph is DAG (most common case)
-        
+
         2. Cycle Enumeration (only if cyclic):
            - nx.simple_cycles uses Johnson's algorithm
            - Finds all elementary circuits in directed graph
            - Time complexity: O((V+E)(C+1)) where C = number of cycles
-        
+
         Note: Self-loops (A -> A) are detected as cycles of length 1.
-        
+
         Returns:
             Tuple of (is_cyclic, list of cycles as variable tuples)
         """
         is_acyclic = nx.is_directed_acyclic_graph(graph)
-        
+
         if is_acyclic:
             return False, []
-        
+
         # Enumerate cycles
         cycles = list(nx.simple_cycles(graph))
         return True, [tuple(c) for c in cycles]
-    
+
     def _validate_latent_ancestors(
         self,
         graph: nx.DiGraph,
@@ -682,16 +681,16 @@ class SCMDecoder:
     ) -> set[str]:
         """
         Find latent variables without observed ancestors.
-        
+
         Returns set of latent variables violating the constraint.
         """
         violations = set()
-        
+
         for latent in latent_used:
             if latent not in graph:
                 continue
             ancestors = nx.ancestors(graph, latent)
             if not ancestors & observed:
                 violations.add(latent)
-        
+
         return violations

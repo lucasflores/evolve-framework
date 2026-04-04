@@ -21,7 +21,7 @@ G = TypeVar("G")
 class IndividualMetadata:
     """
     Optional tracking information for an individual.
-    
+
     Attributes:
         age: Number of generations the individual has survived
         parent_ids: UUIDs of parent individuals (for lineage tracking)
@@ -39,22 +39,22 @@ class IndividualMetadata:
 class Fitness:
     """
     Vector-valued fitness with optional constraints.
-    
+
     Fitness values are stored as NumPy arrays to support multi-objective
     optimization. Single-objective problems use a 1D array.
-    
+
     Attributes:
         values: Array of objective values, shape (n_objectives,)
         constraints: Optional constraint violations, shape (n_constraints,).
                     Values ≤ 0 are considered feasible.
         metadata: Optional additional information (timing, diagnostics)
-    
+
     Example:
         >>> # Single objective
         >>> f = Fitness.scalar(0.5)
         >>> f.values
         array([0.5])
-        
+
         >>> # Multi-objective
         >>> f = Fitness(values=np.array([0.5, 0.3]))
         >>> len(f)  # number of objectives
@@ -111,51 +111,43 @@ class Fitness:
     def __lt__(self, other: Fitness) -> bool:
         """
         Less-than comparison for single-objective fitness.
-        
+
         For multi-objective, use dominates() instead.
         """
         if len(self.values) != 1 or len(other.values) != 1:
-            raise ValueError(
-                "Use dominates() for multi-objective comparison, not < operator"
-            )
+            raise ValueError("Use dominates() for multi-objective comparison, not < operator")
         return float(self.values[0]) < float(other.values[0])
 
     def __le__(self, other: Fitness) -> bool:
         """Less-than-or-equal for single-objective fitness."""
         if len(self.values) != 1 or len(other.values) != 1:
-            raise ValueError(
-                "Use dominates() for multi-objective comparison"
-            )
+            raise ValueError("Use dominates() for multi-objective comparison")
         return float(self.values[0]) <= float(other.values[0])
 
     def __gt__(self, other: Fitness) -> bool:
         """Greater-than for single-objective fitness."""
         if len(self.values) != 1 or len(other.values) != 1:
-            raise ValueError(
-                "Use dominates() for multi-objective comparison"
-            )
+            raise ValueError("Use dominates() for multi-objective comparison")
         return float(self.values[0]) > float(other.values[0])
 
     def __ge__(self, other: Fitness) -> bool:
         """Greater-than-or-equal for single-objective fitness."""
         if len(self.values) != 1 or len(other.values) != 1:
-            raise ValueError(
-                "Use dominates() for multi-objective comparison"
-            )
+            raise ValueError("Use dominates() for multi-objective comparison")
         return float(self.values[0]) >= float(other.values[0])
 
     def dominates(self, other: Fitness, minimize: bool = True) -> bool:
         """
         Pareto dominance check.
-        
+
         For single-objective: simple comparison.
         For multi-objective: dominates if better in at least one objective
         and not worse in any.
-        
+
         Args:
             other: Fitness to compare against
             minimize: If True, lower values are better
-            
+
         Returns:
             True if self dominates other
         """
@@ -196,11 +188,11 @@ class Fitness:
     def scalar(cls, value: float, metadata: dict[str, Any] | None = None) -> Fitness:
         """
         Create single-objective fitness.
-        
+
         Args:
             value: The fitness value
             metadata: Optional metadata dictionary
-            
+
         Returns:
             Fitness with single objective
         """
@@ -232,13 +224,13 @@ class Fitness:
 class Individual(Generic[G]):
     """
     A candidate solution in the population.
-    
+
     Individuals are the fundamental unit of evolution. They contain:
     - A genome (genetic representation)
     - Optional fitness (computed by evaluator)
     - Metadata for tracking lineage and age
     - Optional reproduction protocol (ERP feature)
-    
+
     Attributes:
         id: Unique identifier
         genome: Genetic representation (type parameter G)
@@ -246,7 +238,7 @@ class Individual(Generic[G]):
         metadata: Tracking information (age, parents, species)
         created_at: Generation when this individual was created
         protocol: Optional reproduction protocol (matchability, intent, crossover)
-        
+
     Example:
         >>> from evolve.representation.vector import VectorGenome
         >>> genome = VectorGenome(genes=np.array([1.0, 2.0]))
@@ -256,6 +248,7 @@ class Individual(Generic[G]):
         >>> ind.fitness.values
         array([0.5])
     """
+
     # Import here to avoid circular dependency
     from evolve.reproduction.protocol import ReproductionProtocol as _RP
 
@@ -264,15 +257,15 @@ class Individual(Generic[G]):
     fitness: Fitness | None = None
     metadata: IndividualMetadata = field(default_factory=IndividualMetadata)
     created_at: int = 0
-    protocol: "_RP | None" = None
+    protocol: _RP | None = None
 
     def with_fitness(self, fitness: Fitness) -> Individual[G]:
         """
         Return a copy with fitness set.
-        
+
         Args:
             fitness: The evaluated fitness value
-            
+
         Returns:
             New Individual with fitness assigned
         """
@@ -288,10 +281,10 @@ class Individual(Generic[G]):
     def with_metadata(self, **updates: Any) -> Individual[G]:
         """
         Return a copy with updated metadata.
-        
+
         Args:
             **updates: Metadata fields to update
-            
+
         Returns:
             New Individual with updated metadata
         """
@@ -312,13 +305,13 @@ class Individual(Generic[G]):
             protocol=self.protocol,
         )
 
-    def with_protocol(self, protocol: "_RP | None") -> "Individual[G]":
+    def with_protocol(self, protocol: _RP | None) -> Individual[G]:
         """
         Return a copy with protocol set.
-        
+
         Args:
             protocol: The reproduction protocol (or None)
-            
+
         Returns:
             New Individual with protocol assigned
         """

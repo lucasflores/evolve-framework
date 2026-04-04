@@ -22,7 +22,6 @@ from evolve.reproduction.intent import (
 from evolve.reproduction.protocol import IntentContext, ReproductionIntentPolicy
 from evolve.reproduction.sandbox import StepCounter
 
-
 # =============================================================================
 # Fixtures
 # =============================================================================
@@ -61,7 +60,9 @@ def basic_context() -> IntentContext:
 class TestAlwaysWillingIntent:
     """Tests for AlwaysWillingIntent evaluator."""
 
-    def test_always_returns_true(self, rng: Random, counter: StepCounter, basic_context: IntentContext):
+    def test_always_returns_true(
+        self, rng: Random, counter: StepCounter, basic_context: IntentContext
+    ):
         """Evaluator always returns True."""
         evaluator = AlwaysWillingIntent()
         policy = ReproductionIntentPolicy(type="always_willing")
@@ -70,7 +71,9 @@ class TestAlwaysWillingIntent:
 
         assert result is True
 
-    def test_increments_counter(self, rng: Random, counter: StepCounter, basic_context: IntentContext):
+    def test_increments_counter(
+        self, rng: Random, counter: StepCounter, basic_context: IntentContext
+    ):
         """Evaluation increments step counter."""
         evaluator = AlwaysWillingIntent()
         policy = ReproductionIntentPolicy(type="always_willing")
@@ -88,7 +91,9 @@ class TestAlwaysWillingIntent:
 class TestNeverWillingIntent:
     """Tests for NeverWillingIntent evaluator."""
 
-    def test_always_returns_false(self, rng: Random, counter: StepCounter, basic_context: IntentContext):
+    def test_always_returns_false(
+        self, rng: Random, counter: StepCounter, basic_context: IntentContext
+    ):
         """Evaluator always returns False."""
         evaluator = NeverWillingIntent()
         policy = ReproductionIntentPolicy(type="never_willing")
@@ -106,7 +111,9 @@ class TestNeverWillingIntent:
 class TestFitnessThresholdIntent:
     """Tests for FitnessThresholdIntent evaluator."""
 
-    def test_accepts_above_threshold(self, rng: Random, counter: StepCounter, basic_context: IntentContext):
+    def test_accepts_above_threshold(
+        self, rng: Random, counter: StepCounter, basic_context: IntentContext
+    ):
         """Returns True when fitness above threshold."""
         evaluator = FitnessThresholdIntent()
         params = {"threshold": 0.5}
@@ -115,7 +122,9 @@ class TestFitnessThresholdIntent:
 
         assert result == True  # fitness 0.7 >= 0.5
 
-    def test_rejects_below_threshold(self, rng: Random, counter: StepCounter, basic_context: IntentContext):
+    def test_rejects_below_threshold(
+        self, rng: Random, counter: StepCounter, basic_context: IntentContext
+    ):
         """Returns False when fitness below threshold."""
         evaluator = FitnessThresholdIntent()
         params = {"threshold": 0.8}
@@ -124,7 +133,9 @@ class TestFitnessThresholdIntent:
 
         assert result == False  # fitness 0.7 < 0.8
 
-    def test_default_threshold_zero(self, rng: Random, counter: StepCounter, basic_context: IntentContext):
+    def test_default_threshold_zero(
+        self, rng: Random, counter: StepCounter, basic_context: IntentContext
+    ):
         """Default threshold of 0 accepts all."""
         evaluator = FitnessThresholdIntent()
 
@@ -141,7 +152,9 @@ class TestFitnessThresholdIntent:
 class TestFitnessRankThresholdIntent:
     """Tests for FitnessRankThresholdIntent evaluator."""
 
-    def test_accepts_high_rank(self, rng: Random, counter: StepCounter, basic_context: IntentContext):
+    def test_accepts_high_rank(
+        self, rng: Random, counter: StepCounter, basic_context: IntentContext
+    ):
         """Returns True when rank is within threshold."""
         evaluator = FitnessRankThresholdIntent()
         params = {"max_rank": 5}
@@ -150,7 +163,9 @@ class TestFitnessRankThresholdIntent:
 
         assert result is True  # rank 3 <= 5
 
-    def test_rejects_low_rank(self, rng: Random, counter: StepCounter, basic_context: IntentContext):
+    def test_rejects_low_rank(
+        self, rng: Random, counter: StepCounter, basic_context: IntentContext
+    ):
         """Returns False when rank exceeds threshold."""
         evaluator = FitnessRankThresholdIntent()
         params = {"max_rank": 2}
@@ -168,7 +183,9 @@ class TestFitnessRankThresholdIntent:
 class TestResourceBudgetIntent:
     """Tests for ResourceBudgetIntent evaluator."""
 
-    def test_accepts_under_budget(self, rng: Random, counter: StepCounter, basic_context: IntentContext):
+    def test_accepts_under_budget(
+        self, rng: Random, counter: StepCounter, basic_context: IntentContext
+    ):
         """Returns True when under offspring budget."""
         evaluator = ResourceBudgetIntent()
         params = {"max_offspring": 3}
@@ -203,7 +220,9 @@ class TestResourceBudgetIntent:
 class TestAgeDependentIntent:
     """Tests for AgeDependentIntent evaluator."""
 
-    def test_accepts_within_age_range(self, rng: Random, counter: StepCounter, basic_context: IntentContext):
+    def test_accepts_within_age_range(
+        self, rng: Random, counter: StepCounter, basic_context: IntentContext
+    ):
         """Returns True when age is within range."""
         evaluator = AgeDependentIntent()
         params = {"min_age": 0, "max_age": 10}
@@ -212,7 +231,9 @@ class TestAgeDependentIntent:
 
         assert result is True  # age 5 in [0, 10]
 
-    def test_rejects_too_young(self, rng: Random, counter: StepCounter, basic_context: IntentContext):
+    def test_rejects_too_young(
+        self, rng: Random, counter: StepCounter, basic_context: IntentContext
+    ):
         """Returns False when too young."""
         evaluator = AgeDependentIntent()
         params = {"min_age": 10, "max_age": 20}
@@ -247,7 +268,9 @@ class TestAgeDependentIntent:
 class TestProbabilisticIntent:
     """Tests for ProbabilisticIntent evaluator."""
 
-    def test_always_willing_with_probability_one(self, counter: StepCounter, basic_context: IntentContext):
+    def test_always_willing_with_probability_one(
+        self, counter: StepCounter, basic_context: IntentContext
+    ):
         """Always returns True with p=1."""
         evaluator = ProbabilisticIntent()
         params = {"probability": 1.0}
@@ -257,7 +280,9 @@ class TestProbabilisticIntent:
 
         assert result is True
 
-    def test_never_willing_with_probability_zero(self, counter: StepCounter, basic_context: IntentContext):
+    def test_never_willing_with_probability_zero(
+        self, counter: StepCounter, basic_context: IntentContext
+    ):
         """Always returns False with p=0."""
         evaluator = ProbabilisticIntent()
         params = {"probability": 0.0}
@@ -328,7 +353,9 @@ class TestIntentRegistry:
 class TestEvaluateIntent:
     """Tests for evaluate_intent function."""
 
-    def test_evaluates_active_policy(self, rng: Random, counter: StepCounter, basic_context: IntentContext):
+    def test_evaluates_active_policy(
+        self, rng: Random, counter: StepCounter, basic_context: IntentContext
+    ):
         """Evaluates active policy correctly."""
         policy = ReproductionIntentPolicy(type="fitness_threshold", params={"threshold": 0.5})
 
@@ -336,7 +363,9 @@ class TestEvaluateIntent:
 
         assert result == True
 
-    def test_inactive_policy_returns_true(self, rng: Random, counter: StepCounter, basic_context: IntentContext):
+    def test_inactive_policy_returns_true(
+        self, rng: Random, counter: StepCounter, basic_context: IntentContext
+    ):
         """Inactive policy returns True (always willing)."""
         policy = ReproductionIntentPolicy(type="never_willing", active=False)
 
@@ -344,7 +373,9 @@ class TestEvaluateIntent:
 
         assert result is True
 
-    def test_unknown_type_raises_value_error(self, rng: Random, counter: StepCounter, basic_context: IntentContext):
+    def test_unknown_type_raises_value_error(
+        self, rng: Random, counter: StepCounter, basic_context: IntentContext
+    ):
         """Unknown policy type raises ValueError."""
         policy = ReproductionIntentPolicy(type="nonexistent")
 

@@ -1,5 +1,7 @@
 [build-system]
-requires = ["hatchling"]
+requires = [
+    "hatchling",
+]
 build-backend = "hatchling.build"
 
 [project]
@@ -10,7 +12,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "Evolve Framework Team" }
+    { name = "Evolve Framework Team" },
 ]
 keywords = [
     "evolutionary-algorithms",
@@ -19,7 +21,7 @@ keywords = [
     "optimization",
     "multi-objective",
     "NSGA-II",
-    "reinforcement-learning"
+    "reinforcement-learning",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -30,9 +32,8 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Typing :: Typed"
+    "Typing :: Typed",
 ]
-
 dependencies = [
     "numpy>=1.24.0",
     "networkx>=3.0",
@@ -62,7 +63,6 @@ rl = [
 tutorials = [
     "matplotlib>=3.7.0",
     "plotly>=5.15.0",
-    "beautiful-mermaid>=0.1.0",
     "gymnasium>=0.29.0",
     "papermill>=2.4.0",
     "pandas>=2.0.0",
@@ -78,6 +78,11 @@ dev = [
 all = [
     "evolve-framework[pytorch,jax,mlflow,wandb,ray,rl,tutorials,dev]",
 ]
+docs = [
+    "sphinx>=7.0",
+    "sphinx-autodoc-typehints>=2.0",
+    "myst-parser>=3.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/evolve-framework/evolve"
@@ -85,7 +90,9 @@ Documentation = "https://github.com/evolve-framework/evolve#readme"
 Repository = "https://github.com/evolve-framework/evolve"
 
 [tool.hatch.build.targets.wheel]
-packages = ["evolve"]
+packages = [
+    "evolve",
+]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
@@ -95,7 +102,9 @@ addopts = [
     "--strict-markers",
     "--strict-config",
 ]
-testpaths = ["tests"]
+testpaths = [
+    "tests",
+]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks integration tests",
@@ -109,7 +118,9 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["evolve"]
+source = [
+    "evolve",
+]
 branch = true
 omit = [
     "*/tests/*",
@@ -158,21 +169,41 @@ line-length = 100
 
 [tool.ruff.lint]
 select = [
-    "E",    # pycodestyle errors
-    "W",    # pycodestyle warnings
-    "F",    # Pyflakes
-    "I",    # isort
-    "B",    # flake8-bugbear
-    "C4",   # flake8-comprehensions
-    "UP",   # pyupgrade
-    "ARG",  # flake8-unused-arguments
-    "SIM",  # flake8-simplify
+    "E",
+    "W",
+    "F",
+    "I",
+    "B",
+    "C4",
+    "UP",
+    "ARG",
+    "SIM",
 ]
 ignore = [
-    "E501",   # line too long (handled by formatter)
-    "B008",   # do not perform function calls in argument defaults
-    "B905",   # zip without strict= (Python 3.10 compatibility)
+    "E501",
+    "B008",
+    "B905",
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["evolve"]
+known-first-party = [
+    "evolve",
+]
+
+[tool.dev-stack.hooks]
+commit-msg = true
+pre-push = true
+pre-commit = true
+
+[tool.dev-stack.branch]
+pattern = "^(main|master|develop|feature/.+|bugfix/.+|hotfix/.+|release/.+|\\d{3}-.+)$"
+exempt = [
+    "main",
+    "master",
+]
+
+[tool.dev-stack.signing]
+required = false
+
+[tool.dev-stack.pipeline]
+visualize = true

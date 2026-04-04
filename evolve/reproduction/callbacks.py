@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from evolve.core.population import Population
-    from evolve.reproduction.protocol import ReproductionEvent, ReproductionProtocol
+    from evolve.reproduction.protocol import ReproductionEvent
 
 
 # Define a minimal callback protocol to avoid importing core.callbacks
@@ -27,15 +27,11 @@ if TYPE_CHECKING:
 class Callback(Protocol):
     """Protocol for evolution callbacks."""
 
-    def on_generation_start(
-        self, generation: int, population: Any
-    ) -> None:
+    def on_generation_start(self, generation: int, population: Any) -> None:
         """Called at the start of each generation."""
         ...
 
-    def on_generation_end(
-        self, generation: int, population: Any, best_fitness: float
-    ) -> None:
+    def on_generation_end(self, generation: int, population: Any, best_fitness: float) -> None:
         """Called at the end of each generation."""
         ...
 
@@ -91,9 +87,7 @@ class ERPMetricsCallback(Callback):
         self._current_metrics: ERPMetrics = ERPMetrics()
         self._events: list[ReproductionEvent] = []
 
-    def on_generation_start(
-        self, generation: int, population: Population[Any]
-    ) -> None:
+    def on_generation_start(self, generation: int, population: Population[Any]) -> None:
         """Reset metrics at the start of each generation."""
         self._current_metrics = ERPMetrics(generation=generation)
         self._events = []
@@ -220,9 +214,7 @@ class ERPLoggerCallback(Callback):
         self._attempted = 0
         self._successful = 0
 
-    def on_generation_start(
-        self, generation: int, population: Population[Any]
-    ) -> None:
+    def on_generation_start(self, generation: int, population: Population[Any]) -> None:
         """Reset counters at generation start."""
         self._attempted = 0
         self._successful = 0

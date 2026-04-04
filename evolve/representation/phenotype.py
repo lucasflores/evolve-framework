@@ -21,12 +21,12 @@ P = TypeVar("P")
 class Phenotype(Protocol):
     """
     Decoded form of a genome that can be evaluated.
-    
+
     Phenotypes are what the evaluator actually evaluates.
     For simple cases (like continuous optimization), the phenotype
     may just be the genome's values. For complex cases (like
     neuroevolution), the phenotype is a neural network.
-    
+
     The only requirement is that phenotypes are callable,
     mapping inputs to outputs.
     """
@@ -34,10 +34,10 @@ class Phenotype(Protocol):
     def __call__(self, inputs: Any) -> Any:
         """
         Apply the phenotype to inputs.
-        
+
         Args:
             inputs: Input data (type depends on problem domain)
-            
+
         Returns:
             Output data (type depends on problem domain)
         """
@@ -48,15 +48,15 @@ class Phenotype(Protocol):
 class Decoder(Protocol[G, P]):
     """
     Transforms genomes into phenotypes.
-    
+
     The Decoder abstracts the genotype-phenotype mapping,
     allowing the same genome representation to be used
     with different evaluation contexts.
-    
+
     Type Parameters:
         G: Genome type (input)
         P: Phenotype type (output)
-    
+
     Example:
         >>> class NetworkDecoder:
         ...     def decode(self, genome: VectorGenome) -> NeuralNetwork:
@@ -67,10 +67,10 @@ class Decoder(Protocol[G, P]):
     def decode(self, genome: G) -> P:
         """
         Convert genome to phenotype.
-        
+
         Args:
             genome: The genetic representation
-            
+
         Returns:
             The expressed phenotype
         """
@@ -80,7 +80,7 @@ class Decoder(Protocol[G, P]):
 class IdentityDecoder(Generic[G]):
     """
     Decoder that returns the genome unchanged.
-    
+
     Used when the genome is directly evaluable (e.g., VectorGenome
     for function optimization where the genes ARE the inputs).
     """
@@ -93,17 +93,17 @@ class IdentityDecoder(Generic[G]):
 class CallableDecoder(Generic[G, P]):
     """
     Decoder wrapping a callable.
-    
+
     Convenience class for creating decoders from functions.
-    
+
     Example:
         >>> decoder = CallableDecoder(lambda g: g.genes)
     """
 
-    def __init__(self, decode_fn: "Callable[[G], P]") -> None:  # type: ignore[name-defined]
+    def __init__(self, decode_fn: Callable[[G], P]) -> None:  # type: ignore[name-defined]
         """
         Create decoder from function.
-        
+
         Args:
             decode_fn: Function that transforms genome to phenotype
         """

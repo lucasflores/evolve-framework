@@ -9,7 +9,8 @@ NO ML FRAMEWORK IMPORTS ALLOWED.
 
 from __future__ import annotations
 
-from typing import Sequence, TypeVar
+from collections.abc import Sequence
+from typing import TypeVar
 
 import numpy as np
 
@@ -37,8 +38,8 @@ class EvaluatorEquivalenceError(AssertionError):
 
 
 def assert_evaluator_equivalence(
-    reference: "Evaluator[G]",
-    accelerated: "Evaluator[G]",
+    reference: Evaluator[G],
+    accelerated: Evaluator[G],
     test_individuals: Sequence[Individual[G]],
     seed: int,
     rtol: float = 1e-5,
@@ -46,11 +47,11 @@ def assert_evaluator_equivalence(
 ) -> None:
     """
     Verify accelerated evaluator matches CPU reference.
-    
+
     Compares fitness values between a reference (CPU) evaluator
     and an accelerated (GPU/JIT) evaluator. Uses relative tolerance
     for numerical comparison.
-    
+
     Args:
         reference: CPU reference evaluator
         accelerated: GPU/JIT accelerated evaluator
@@ -58,10 +59,10 @@ def assert_evaluator_equivalence(
         seed: Random seed for reproducibility
         rtol: Relative tolerance (default: 1e-5)
         atol: Absolute tolerance for near-zero values (default: 1e-10)
-        
+
     Raises:
         EvaluatorEquivalenceError: If results differ beyond tolerance
-        
+
     Example:
         >>> assert_evaluator_equivalence(
         ...     cpu_evaluator, gpu_evaluator, population, seed=42
@@ -69,38 +70,36 @@ def assert_evaluator_equivalence(
     """
     if not test_individuals:
         return
-    
+
     # Evaluate with both
     ref_fitness = reference.evaluate(test_individuals, seed)
     acc_fitness = accelerated.evaluate(test_individuals, seed)
-    
+
     # Check lengths match
     if len(ref_fitness) != len(acc_fitness):
         raise EvaluatorEquivalenceError(
-            f"Output length mismatch: reference={len(ref_fitness)}, "
-            f"accelerated={len(acc_fitness)}",
+            f"Output length mismatch: reference={len(ref_fitness)}, accelerated={len(acc_fitness)}",
             index=-1,
             ref_values=np.array([]),
             acc_values=np.array([]),
             max_rel_diff=float("inf"),
         )
-    
+
     # Compare each fitness value
     for i, (ref, acc) in enumerate(zip(ref_fitness, acc_fitness)):
         ref_vals = np.asarray(ref.values)
         acc_vals = np.asarray(acc.values)
-        
+
         # Check shapes match
         if ref_vals.shape != acc_vals.shape:
             raise EvaluatorEquivalenceError(
-                f"Shape mismatch at index {i}: ref={ref_vals.shape}, "
-                f"acc={acc_vals.shape}",
+                f"Shape mismatch at index {i}: ref={ref_vals.shape}, acc={acc_vals.shape}",
                 index=i,
                 ref_values=ref_vals,
                 acc_values=acc_vals,
                 max_rel_diff=float("inf"),
             )
-        
+
         # Check for NaN
         if np.any(np.isnan(ref_vals)):
             raise EvaluatorEquivalenceError(
@@ -110,7 +109,7 @@ def assert_evaluator_equivalence(
                 acc_values=acc_vals,
                 max_rel_diff=float("nan"),
             )
-        
+
         if np.any(np.isnan(acc_vals)):
             raise EvaluatorEquivalenceError(
                 f"NaN in accelerated fitness at index {i}",
@@ -119,14 +118,14 @@ def assert_evaluator_equivalence(
                 acc_values=acc_vals,
                 max_rel_diff=float("nan"),
             )
-        
+
         # Relative tolerance check
         # Use atol as minimum denominator for near-zero values
         denom = np.maximum(np.abs(ref_vals), np.abs(acc_vals))
         denom = np.maximum(denom, atol)
         rel_diff = np.abs(ref_vals - acc_vals) / denom
         max_rel_diff = float(rel_diff.max())
-        
+
         if max_rel_diff > rtol:
             raise EvaluatorEquivalenceError(
                 f"Equivalence failed at index {i}: "
@@ -146,19 +145,19 @@ def assert_fitness_close(
 ) -> None:
     """
     Assert two Fitness objects are numerically close.
-    
+
     Args:
         actual: Actual fitness value
         expected: Expected fitness value
         rtol: Relative tolerance
         atol: Absolute tolerance
-        
+
     Raises:
         AssertionError: If values differ beyond tolerance
     """
     actual_vals = np.asarray(actual.values)
     expected_vals = np.asarray(expected.values)
-    
+
     np.testing.assert_allclose(
         actual_vals,
         expected_vals,
@@ -175,20 +174,18 @@ def assert_fitness_batch_close(
 ) -> None:
     """
     Assert two sequences of Fitness objects are numerically close.
-    
+
     Args:
         actual: Actual fitness values
         expected: Expected fitness values
         rtol: Relative tolerance
         atol: Absolute tolerance
-        
+
     Raises:
         AssertionError: If values differ beyond tolerance
     """
-    assert len(actual) == len(expected), (
-        f"Length mismatch: {len(actual)} vs {len(expected)}"
-    )
-    
+    assert len(actual) == len(expected), f"Length mismatch: {len(actual)} vs {len(expected)}"
+
     for i, (a, e) in enumerate(zip(actual, expected)):
         try:
             assert_fitness_close(a, e, rtol=rtol, atol=atol)
@@ -199,10 +196,10 @@ def assert_fitness_batch_close(
 class EvaluatorTester:
     """
     Comprehensive evaluator testing helper.
-    
+
     Provides utilities for testing evaluator implementations
     across different scenarios.
-    
+
     Example:
         >>> tester = EvaluatorTester(reference_evaluator)
         >>> tester.test_determinism(population, seed=42)
@@ -211,13 +208,13 @@ class EvaluatorTester:
 
     def __init__(
         self,
-        reference: "Evaluator[G]",
+        reference: Evaluator[G],
         rtol: float = 1e-5,
         atol: float = 1e-10,
     ) -> None:
         """
         Create evaluator tester.
-        
+
         Args:
             reference: Reference evaluator for comparison
             rtol: Default relative tolerance
@@ -235,23 +232,23 @@ class EvaluatorTester:
     ) -> None:
         """
         Test that evaluator produces deterministic results.
-        
+
         Runs evaluation multiple times with same seed and
         verifies identical results.
-        
+
         Args:
             individuals: Test individuals
             seed: Random seed
             n_trials: Number of repetitions
-            
+
         Raises:
             AssertionError: If results differ between trials
         """
         if not individuals:
             return
-        
+
         first_results = self._reference.evaluate(individuals, seed)
-        
+
         for trial in range(1, n_trials):
             results = self._reference.evaluate(individuals, seed)
             assert_fitness_batch_close(
@@ -263,18 +260,18 @@ class EvaluatorTester:
 
     def test_equivalence(
         self,
-        accelerated: "Evaluator[G]",
+        accelerated: Evaluator[G],
         individuals: Sequence[Individual[G]],
         seed: int = 42,
     ) -> None:
         """
         Test accelerated evaluator matches reference.
-        
+
         Args:
             accelerated: Accelerated evaluator to test
             individuals: Test individuals
             seed: Random seed
-            
+
         Raises:
             EvaluatorEquivalenceError: If results differ
         """
@@ -294,28 +291,28 @@ class EvaluatorTester:
     ) -> None:
         """
         Test that batch evaluation matches individual evaluation.
-        
+
         Compares results from evaluating all at once vs one at a time.
-        
+
         Args:
             individuals: Test individuals
             seed: Random seed
-            
+
         Raises:
             AssertionError: If batch and individual results differ
         """
         if not individuals:
             return
-        
+
         # Evaluate all at once
         batch_results = self._reference.evaluate(individuals, seed)
-        
+
         # Evaluate one at a time
         individual_results = []
         for ind in individuals:
             result = self._reference.evaluate([ind], seed)
             individual_results.append(result[0])
-        
+
         assert_fitness_batch_close(
             batch_results,
             individual_results,
@@ -327,7 +324,7 @@ class EvaluatorTester:
 # Type hint for protocol
 class Evaluator:
     """Evaluator protocol stub for type hints."""
-    
+
     def evaluate(
         self,
         individuals: Sequence[Individual[G]],

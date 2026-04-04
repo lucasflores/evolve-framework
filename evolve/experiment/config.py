@@ -20,12 +20,12 @@ from typing import Any, Self
 class ExperimentConfig:
     """
     Complete configuration for an evolutionary experiment.
-    
+
     Designed for:
     - Reproducibility (all parameters explicit)
     - Serialization (JSON-compatible)
     - Hashing (for deduplication)
-    
+
     Example:
         >>> config = ExperimentConfig(
         ...     name="sphere_optimization",
@@ -103,7 +103,7 @@ class ExperimentConfig:
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to JSON-serializable dict.
-        
+
         Returns:
             Dictionary representation of config
         """
@@ -113,10 +113,10 @@ class ExperimentConfig:
     def from_dict(cls, data: dict[str, Any]) -> Self:
         """
         Create from dict.
-        
+
         Args:
             data: Dictionary with config values
-            
+
         Returns:
             ExperimentConfig instance
         """
@@ -125,7 +125,7 @@ class ExperimentConfig:
     def to_json(self, path: Path | str) -> None:
         """
         Save to JSON file.
-        
+
         Args:
             path: Output file path
         """
@@ -136,10 +136,10 @@ class ExperimentConfig:
     def from_json(cls, path: Path | str) -> Self:
         """
         Load from JSON file.
-        
+
         Args:
             path: Input file path
-            
+
         Returns:
             ExperimentConfig instance
         """
@@ -149,9 +149,9 @@ class ExperimentConfig:
     def hash(self) -> str:
         """
         Deterministic hash of configuration.
-        
+
         Useful for detecting duplicate experiments.
-        
+
         Returns:
             16-character hex hash
         """
@@ -162,7 +162,7 @@ class ExperimentConfig:
     def validate(self) -> list[str]:
         """
         Validate configuration.
-        
+
         Returns:
             List of validation errors (empty if valid)
         """
@@ -200,7 +200,7 @@ class ExperimentConfig:
     def is_valid(self) -> bool:
         """
         Check if configuration is valid.
-        
+
         Returns:
             True if no validation errors
         """
@@ -209,10 +209,10 @@ class ExperimentConfig:
     def copy(self, **overrides: Any) -> Self:
         """
         Create a copy with optional overrides.
-        
+
         Args:
             **overrides: Values to override in the copy
-            
+
         Returns:
             New config with overrides applied
         """
@@ -241,10 +241,10 @@ class ConfigValidationError(Exception):
 def validate_config(config: ExperimentConfig) -> None:
     """
     Validate config and raise if invalid.
-    
+
     Args:
         config: Config to validate
-        
+
     Raises:
         ConfigValidationError: If validation fails
     """

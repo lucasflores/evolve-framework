@@ -27,6 +27,7 @@ _JAX_AVAILABLE = False
 # Try importing torch backend
 try:
     from evolve.backends.accelerated.torch_evaluator import TorchBackend, TorchEvaluator
+
     _TORCH_AVAILABLE = True
 except ImportError:
     TorchBackend = None  # type: ignore
@@ -35,6 +36,7 @@ except ImportError:
 # Try importing jax backend
 try:
     from evolve.backends.accelerated.jax_evaluator import JaxBackend, JaxEvaluator
+
     _JAX_AVAILABLE = True
 except ImportError:
     JaxBackend = None  # type: ignore

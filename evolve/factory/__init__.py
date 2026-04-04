@@ -11,9 +11,9 @@ Public API:
 """
 
 from evolve.factory.engine import (
+    OperatorCompatibilityError,
     create_engine,
     create_initial_population,
-    OperatorCompatibilityError,
 )
 
 __all__ = [

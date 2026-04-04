@@ -21,7 +21,6 @@ from typing import Protocol, runtime_checkable
 from evolve.reproduction.protocol import IntentContext, ReproductionIntentPolicy
 from evolve.reproduction.sandbox import StepCounter, StepLimitExceeded
 
-
 # =============================================================================
 # Protocol Interface
 # =============================================================================

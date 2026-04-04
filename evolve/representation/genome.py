@@ -21,13 +21,13 @@ except ImportError:
 class Genome(Protocol):
     """
     Framework-neutral genetic representation.
-    
+
     Genomes MUST:
     - Be immutable (return new instances on modification)
     - Be serializable (pickle or custom)
     - Support equality and hashing
     - NOT contain PyTorch/JAX types
-    
+
     All evolutionary operators work with this protocol.
     Concrete implementations include:
     - VectorGenome: Fixed-length real-valued vectors
@@ -38,7 +38,7 @@ class Genome(Protocol):
     def copy(self) -> Self:
         """
         Create deep copy of genome.
-        
+
         Returns:
             A new genome instance with copied data
         """
@@ -47,7 +47,7 @@ class Genome(Protocol):
     def __eq__(self, other: object) -> bool:
         """
         Structural equality.
-        
+
         Two genomes are equal if they represent the same genetic information.
         """
         ...
@@ -55,7 +55,7 @@ class Genome(Protocol):
     def __hash__(self) -> int:
         """
         Hash for set/dict membership.
-        
+
         Must be consistent with __eq__: equal genomes must have equal hashes.
         """
         ...
@@ -65,7 +65,7 @@ class Genome(Protocol):
 class SerializableGenome(Genome, Protocol):
     """
     Genome with portable serialization.
-    
+
     Extends Genome with JSON-compatible serialization methods
     for checkpointing and experiment logging.
     """
@@ -73,10 +73,10 @@ class SerializableGenome(Genome, Protocol):
     def to_dict(self) -> dict[str, Any]:
         """
         Convert to JSON-serializable dict.
-        
+
         The returned dict should contain only basic Python types
         (str, int, float, list, dict, None) for JSON compatibility.
-        
+
         Returns:
             Dictionary representation of the genome
         """
@@ -86,10 +86,10 @@ class SerializableGenome(Genome, Protocol):
     def from_dict(cls, data: dict[str, Any]) -> Self:
         """
         Reconstruct from dict.
-        
+
         Args:
             data: Dictionary from to_dict()
-            
+
         Returns:
             Reconstructed genome instance
         """
@@ -100,7 +100,7 @@ class SerializableGenome(Genome, Protocol):
 class MutableGenome(Protocol):
     """
     Protocol for genomes that support in-place mutation.
-    
+
     This is an optimization for mutation operators that want
     to avoid copying. Most genomes should be immutable.
     """
@@ -108,7 +108,7 @@ class MutableGenome(Protocol):
     def mutate_inplace(self, **kwargs: Any) -> None:
         """
         Mutate this genome in-place.
-        
+
         Args:
             **kwargs: Mutation parameters
         """

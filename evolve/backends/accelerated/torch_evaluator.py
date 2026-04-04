@@ -12,22 +12,21 @@ Example:
 
 from __future__ import annotations
 
-from typing import Any, Callable, Sequence, TypeVar
+from collections.abc import Callable, Sequence
+from typing import Any, TypeVar
 
 try:
     import torch
     import torch.nn as nn
+
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
-    raise ImportError(
-        "PyTorch is required for TorchBackend. "
-        "Install with: pip install torch"
-    )
+    raise ImportError("PyTorch is required for TorchBackend. Install with: pip install torch")
 
 import numpy as np
 
-from evolve.backends.base import BackendCapabilities, derive_seed
+from evolve.backends.base import BackendCapabilities
 from evolve.core.types import Fitness, Individual
 
 G = TypeVar("G")
@@ -37,7 +36,7 @@ def _get_device(device: str | None) -> torch.device:
     """Get torch device, defaulting to best available."""
     if device is not None:
         return torch.device(device)
-    
+
     if torch.cuda.is_available():
         return torch.device("cuda")
     elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
@@ -49,11 +48,11 @@ def _get_device(device: str | None) -> torch.device:
 class TorchEvaluator:
     """
     GPU-accelerated evaluator using PyTorch.
-    
+
     Wraps a fitness function to run efficiently on GPU.
     The fitness function should accept torch tensors
     and return fitness values.
-    
+
     Example:
         >>> def sphere_torch(x: torch.Tensor) -> torch.Tensor:
         ...     return torch.sum(x ** 2, dim=1)
@@ -70,7 +69,7 @@ class TorchEvaluator:
     ) -> None:
         """
         Create PyTorch evaluator.
-        
+
         Args:
             fitness_fn: Function mapping (N, D) tensor → (N,) or (N, M) tensor
             device: Device to use ('cpu', 'cuda', 'cuda:0', 'mps', etc.)
@@ -104,43 +103,38 @@ class TorchEvaluator:
     ) -> Sequence[Fitness]:
         """
         Evaluate individuals using PyTorch.
-        
+
         Converts genomes to a batched tensor, runs evaluation
         on the device, and converts back to Fitness objects.
-        
+
         Args:
             individuals: Individuals to evaluate
             seed: Random seed (sets torch seed)
-            
+
         Returns:
             Fitness values
         """
         if not individuals:
             return []
-        
+
         # Set seed if provided
         if seed is not None:
             torch.manual_seed(seed)
             if torch.cuda.is_available():
                 torch.cuda.manual_seed_all(seed)
-        
+
         # Extract genes and convert to tensor
-        genes_list = [
-            np.asarray(getattr(ind.genome, "genes", ind.genome))
-            for ind in individuals
-        ]
+        genes_list = [np.asarray(getattr(ind.genome, "genes", ind.genome)) for ind in individuals]
         genes_np = np.vstack(genes_list)
-        genes_tensor = torch.tensor(
-            genes_np, device=self._device, dtype=self._dtype
-        )
-        
+        genes_tensor = torch.tensor(genes_np, device=self._device, dtype=self._dtype)
+
         # Evaluate
         with torch.no_grad():
             fitness_tensor = self._fitness_fn(genes_tensor)
-        
+
         # Convert back to Fitness objects
         fitness_np = fitness_tensor.cpu().numpy()
-        
+
         if fitness_np.ndim == 1:
             return [Fitness.scalar(float(v)) for v in fitness_np]
         else:
@@ -153,10 +147,10 @@ class TorchEvaluator:
 class TorchBackend:
     """
     PyTorch execution backend.
-    
+
     Uses PyTorch for GPU-accelerated batch evaluation.
     Automatically handles data transfer between CPU and GPU.
-    
+
     Example:
         >>> backend = TorchBackend(device='cuda')
         >>> results = backend.map_evaluate(evaluator, population)
@@ -170,14 +164,14 @@ class TorchBackend:
     ) -> None:
         """
         Create PyTorch backend.
-        
+
         Args:
             device: Device to use (None = auto-detect)
             dtype: Data type for tensors
         """
         self._device = _get_device(device)
         self._dtype = dtype
-        
+
         self._capabilities = BackendCapabilities(
             parallel=True,
             gpu=self._device.type in ("cuda", "mps"),
@@ -208,25 +202,25 @@ class TorchBackend:
     ) -> Sequence[Fitness]:
         """
         Evaluate using PyTorch acceleration.
-        
+
         If evaluator is a TorchEvaluator, uses its GPU path.
         Otherwise, falls back to standard evaluation.
-        
+
         Args:
             evaluator: Evaluator to use
             individuals: Individuals to evaluate
             seed: Random seed
-            
+
         Returns:
             Fitness values
         """
         if isinstance(evaluator, TorchEvaluator):
             return evaluator.evaluate(individuals, seed=seed)
-        
+
         # Set seed for reproducibility
         if seed is not None:
             torch.manual_seed(seed)
-        
+
         # Fall back to standard evaluation
         return evaluator.evaluate(individuals, seed=seed)
 
@@ -242,13 +236,13 @@ class TorchBackend:
 # Standard torch implementations of benchmark functions
 def sphere_torch(x: torch.Tensor) -> torch.Tensor:
     """Sphere function in PyTorch."""
-    return torch.sum(x ** 2, dim=1)
+    return torch.sum(x**2, dim=1)
 
 
 def rastrigin_torch(x: torch.Tensor, A: float = 10.0) -> torch.Tensor:
     """Rastrigin function in PyTorch."""
     n = x.shape[1]
-    return A * n + torch.sum(x ** 2 - A * torch.cos(2 * np.pi * x), dim=1)
+    return A * n + torch.sum(x**2 - A * torch.cos(2 * np.pi * x), dim=1)
 
 
 def rosenbrock_torch(x: torch.Tensor) -> torch.Tensor:
@@ -264,7 +258,7 @@ def ackley_torch(
 ) -> torch.Tensor:
     """Ackley function in PyTorch."""
     n = x.shape[1]
-    sum1 = torch.sum(x ** 2, dim=1)
+    sum1 = torch.sum(x**2, dim=1)
     sum2 = torch.sum(torch.cos(c * x), dim=1)
     return -a * torch.exp(-b * torch.sqrt(sum1 / n)) - torch.exp(sum2 / n) + a + np.e
 

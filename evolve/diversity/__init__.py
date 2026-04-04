@@ -11,33 +11,21 @@ NO ML FRAMEWORK IMPORTS ALLOWED (except NumPy).
 """
 
 from evolve.diversity.islands import (
-    Island,
-    MigrationPolicy,
     BestMigration,
-    RandomMigration,
-    MigrationController,
+    Island,
     IslandEvolutionEngine,
-    ring_topology,
+    MigrationController,
+    MigrationPolicy,
+    RandomMigration,
     fully_connected_topology,
     hypercube_topology,
-)
-from evolve.diversity.speciation import (
-    DistanceFunction,
-    euclidean_distance,
-    hamming_distance,
-    manhattan_distance,
-    cosine_distance,
-    neat_distance,
-    Species,
-    Speciator,
-    ThresholdSpeciator,
-    KMeansSpeciator,
+    ring_topology,
 )
 from evolve.diversity.niching import (
-    explicit_fitness_sharing,
-    crowding_distance,
     clearing,
+    crowding_distance,
     deterministic_crowding_pairing,
+    explicit_fitness_sharing,
 )
 from evolve.diversity.novelty import (
     BehaviorCharacterization,
@@ -46,6 +34,18 @@ from evolve.diversity.novelty import (
     NoveltyArchive,
     QDArchive,
     novelty_fitness,
+)
+from evolve.diversity.speciation import (
+    DistanceFunction,
+    KMeansSpeciator,
+    Speciator,
+    Species,
+    ThresholdSpeciator,
+    cosine_distance,
+    euclidean_distance,
+    hamming_distance,
+    manhattan_distance,
+    neat_distance,
 )
 
 __all__ = [

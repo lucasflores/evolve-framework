@@ -1,0 +1,27 @@
+{
+  "version": "1.0",
+  "created": "2026-03-26T00:54:03.949614+00:00",
+  "updated": "2026-03-26T00:54:03.949614+00:00",
+  "hooks": {
+    "commit-msg": {
+      "checksum": "64e338c6bdd29170465239333de6e6ea3d6e599549a8e8a8e70c75446e9f86d0",
+      "installed_at": "2026-03-26T00:54:03.949614+00:00",
+      "template_version": "0.1.0"
+    },
+    "pre-push": {
+      "checksum": "973ba24ff300899fc60c67ddd3f659379a26a5f2add93102850461126e609482",
+      "installed_at": "2026-03-26T00:54:03.949614+00:00",
+      "template_version": "0.1.0"
+    },
+    "pre-commit": {
+      "checksum": "07d12e68cb9f67ae8ecf4f44eab7a7b9a7e236b5b1a0cc5e88feeccf46103bf3",
+      "installed_at": "2026-03-26T00:54:03.949614+00:00",
+      "template_version": "0.1.0"
+    },
+    "prepare-commit-msg": {
+      "checksum": "b325078f5a85e36be70bffdab524d85b0bc91d3c1ffa01d892ccccb3c4ad6a81",
+      "installed_at": "2026-03-26T00:54:03.949614+00:00",
+      "template_version": "0.1.0"
+    }
+  }
+}

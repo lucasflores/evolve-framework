@@ -23,14 +23,14 @@ from evolve.experiment.config import ExperimentConfig
 class MetricTracker(Protocol):
     """
     Abstract interface for experiment tracking.
-    
+
     Implementations may log to:
     - Local files (default)
     - MLflow
     - Weights & Biases
     - TensorBoard
     - Custom backends
-    
+
     Example:
         >>> tracker = LocalTracker()
         >>> tracker.start_run(config)
@@ -41,7 +41,7 @@ class MetricTracker(Protocol):
     def start_run(self, config: ExperimentConfig) -> None:
         """
         Start tracking a new experiment run.
-        
+
         Args:
             config: Experiment configuration
         """
@@ -54,13 +54,13 @@ class MetricTracker(Protocol):
     ) -> None:
         """
         Log metrics for a generation.
-        
+
         Standard metrics:
         - best_fitness
         - mean_fitness
         - std_fitness
         - diversity
-        
+
         Args:
             generation: Generation number
             metrics: Dictionary of metric values
@@ -70,7 +70,7 @@ class MetricTracker(Protocol):
     def log_params(self, params: dict[str, Any]) -> None:
         """
         Log hyperparameters.
-        
+
         Args:
             params: Parameter dictionary
         """
@@ -79,7 +79,7 @@ class MetricTracker(Protocol):
     def log_artifact(self, path: Path | str, name: str | None = None) -> None:
         """
         Log file as artifact.
-        
+
         Args:
             path: Path to file
             name: Optional artifact name (defaults to filename)
@@ -95,9 +95,9 @@ class MetricTracker(Protocol):
 class LocalTracker:
     """
     Simple local file-based tracking.
-    
+
     Creates CSV files and JSON logs in the output directory.
-    
+
     Output structure:
         output_dir/
             config.json
@@ -106,7 +106,7 @@ class LocalTracker:
             summary.json
             artifacts/
                 ...
-    
+
     Example:
         >>> tracker = LocalTracker()
         >>> tracker.start_run(config)
@@ -133,10 +133,17 @@ class LocalTracker:
         self.metrics_file = self.output_dir / "metrics.csv"
         self._metrics_file_handle = open(self.metrics_file, "w", newline="")
         self._metrics_writer = csv.writer(self._metrics_file_handle)
-        self._metrics_writer.writerow([
-            "generation", "best_fitness", "mean_fitness", "std_fitness",
-            "min_fitness", "max_fitness", "diversity"
-        ])
+        self._metrics_writer.writerow(
+            [
+                "generation",
+                "best_fitness",
+                "mean_fitness",
+                "std_fitness",
+                "min_fitness",
+                "max_fitness",
+                "diversity",
+            ]
+        )
 
         # Create artifacts directory
         (self.output_dir / "artifacts").mkdir(exist_ok=True)
@@ -152,15 +159,17 @@ class LocalTracker:
         if not self._started:
             raise RuntimeError("Call start_run() before logging")
 
-        self._metrics_writer.writerow([
-            generation,
-            metrics.get("best_fitness", 0),
-            metrics.get("mean_fitness", 0),
-            metrics.get("std_fitness", 0),
-            metrics.get("min_fitness", 0),
-            metrics.get("max_fitness", 0),
-            metrics.get("diversity", 0),
-        ])
+        self._metrics_writer.writerow(
+            [
+                generation,
+                metrics.get("best_fitness", 0),
+                metrics.get("mean_fitness", 0),
+                metrics.get("std_fitness", 0),
+                metrics.get("min_fitness", 0),
+                metrics.get("max_fitness", 0),
+                metrics.get("diversity", 0),
+            ]
+        )
         # Flush to ensure data is written
         self._metrics_file_handle.flush()
 
@@ -184,7 +193,7 @@ class LocalTracker:
     def log_dict(self, filename: str, data: dict[str, Any]) -> None:
         """
         Log arbitrary dictionary to JSON file.
-        
+
         Args:
             filename: Output filename
             data: Data to save
@@ -221,7 +230,7 @@ class LocalTracker:
 class CompositeTracker:
     """
     Tracker that logs to multiple backends.
-    
+
     Example:
         >>> tracker = CompositeTracker([
         ...     LocalTracker(),
@@ -295,20 +304,20 @@ def compute_generation_metrics(
 ) -> dict[str, float]:
     """
     Compute standard generation metrics from fitness values.
-    
+
     Args:
         fitness_values: List of fitness values
         diversity: Optional diversity measure
         extended: Whether to include extended population stats (FR-006)
         minimize: Whether optimization is minimization (affects worst_fitness)
-        
+
     Returns:
         Dictionary of computed metrics
     """
     import numpy as np
-    
+
     values = np.array(fitness_values)
-    
+
     # Core metrics (always included)
     metrics = {
         "best_fitness": float(np.max(values)),
@@ -317,25 +326,23 @@ def compute_generation_metrics(
         "std_fitness": float(np.std(values)),
         "max_fitness": float(np.max(values)),
     }
-    
+
     # Extended population stats (FR-006)
     if extended:
         # worst_fitness depends on optimization direction
-        metrics["worst_fitness"] = (
-            float(np.max(values)) if minimize else float(np.min(values))
-        )
+        metrics["worst_fitness"] = float(np.max(values)) if minimize else float(np.min(values))
         metrics["median_fitness"] = float(np.median(values))
-        
+
         # Quartiles
         metrics["fitness_q1"] = float(np.percentile(values, 25))
         metrics["fitness_q3"] = float(np.percentile(values, 75))
-        
+
         # Fitness range (FR-025)
         metrics["fitness_range"] = float(np.max(values) - np.min(values))
-    
+
     if diversity is not None:
         metrics["diversity"] = diversity
-    
+
     return metrics
 
 
@@ -347,19 +354,19 @@ def compute_diversity_score(
 ) -> float:
     """
     Compute population diversity score (FR-007).
-    
+
     Computes average pairwise distance between individuals.
     For large populations, uses sampling to reduce computational cost.
-    
+
     Args:
         genomes: List of genome vectors or sequences
         distance_fn: Distance function (defaults to Euclidean for vectors)
         sample_size: Maximum number of individuals to sample (for performance)
         rng: Random number generator for deterministic sampling
-        
+
     Returns:
         Diversity score (average pairwise distance)
-    
+
     Example:
         >>> import numpy as np
         >>> genomes = [np.array([1, 2]), np.array([3, 4]), np.array([5, 6])]
@@ -367,17 +374,17 @@ def compute_diversity_score(
         >>> assert score > 0
     """
     import numpy as np
-    
+
     if len(genomes) < 2:
         return 0.0
-    
+
     # Convert to numpy arrays if needed
     try:
         genome_array = np.array(genomes)
     except (ValueError, TypeError):
         # Non-uniform genomes (e.g., variable-length sequences)
         genome_array = None
-    
+
     # Sample if population is large
     if sample_size is not None and len(genomes) > sample_size:
         if rng is None:
@@ -386,12 +393,12 @@ def compute_diversity_score(
         else:
             # Use provided RNG for determinism
             indices = rng.choice(len(genomes), sample_size, replace=False)
-        
+
         if genome_array is not None:
             genome_array = genome_array[indices]
         else:
             genomes = [genomes[i] for i in indices]
-    
+
     # Compute pairwise distances
     if distance_fn is not None:
         # Use provided distance function
@@ -404,22 +411,22 @@ def compute_diversity_score(
                 total_distance += distance_fn(sample[i], sample[j])
                 count += 1
         return total_distance / count if count > 0 else 0.0
-    
+
     # Default: Euclidean distance for vector genomes
     if genome_array is not None:
         # Efficient computation using broadcasting
         n = len(genome_array)
         if n < 2:
             return 0.0
-        
+
         # Compute pairwise Euclidean distances
         diff = genome_array[:, np.newaxis] - genome_array[np.newaxis, :]
-        distances = np.sqrt(np.sum(diff ** 2, axis=-1))
-        
+        distances = np.sqrt(np.sum(diff**2, axis=-1))
+
         # Extract upper triangle (excluding diagonal)
         upper_tri = distances[np.triu_indices(n, k=1)]
         return float(np.mean(upper_tri))
-    
+
     # Fallback for non-vector genomes without distance function
     raise ValueError(
         "Non-vector genomes require a distance_fn. "
@@ -433,18 +440,18 @@ def compute_elite_turnover_rate(
 ) -> float:
     """
     Compute elite turnover rate (FR-009).
-    
+
     Measures how much the elite population changes between generations.
     High turnover indicates rapid exploration; low turnover indicates
     convergence or stagnation.
-    
+
     Args:
         previous_elite_ids: Set of individual IDs from previous elite
         current_elite_ids: Set of individual IDs for current elite
-        
+
     Returns:
         Turnover rate between 0.0 (no change) and 1.0 (complete replacement)
-    
+
     Example:
         >>> prev = {1, 2, 3, 4, 5}
         >>> curr = {1, 2, 6, 7, 8}  # 3 new elites
@@ -453,10 +460,10 @@ def compute_elite_turnover_rate(
     """
     if not previous_elite_ids or not current_elite_ids:
         return 0.0
-    
+
     # Count how many current elites were NOT in previous elite
     new_elites = current_elite_ids - previous_elite_ids
-    
+
     return len(new_elites) / len(current_elite_ids)
 
 

@@ -13,8 +13,8 @@ import pytest
 from evolve.reproduction.sandbox import (
     StepCounter,
     StepLimitExceeded,
-    sandboxed_execute,
     safe_execute,
+    sandboxed_execute,
 )
 
 
@@ -165,6 +165,7 @@ class TestStepLimitEnforcement:
         Verify that a malicious evaluation that would loop forever
         is terminated by the step counter.
         """
+
         def infinite_loop(counter: StepCounter) -> bool:
             while True:
                 counter.step()
@@ -182,6 +183,7 @@ class TestStepLimitEnforcement:
         """
         Verify that a complex but bounded evaluation completes.
         """
+
         def complex_eval(counter: StepCounter) -> float:
             total = 0.0
             for i in range(50):

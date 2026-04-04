@@ -9,11 +9,11 @@ NO ML FRAMEWORK IMPORTS ALLOWED.
 
 from __future__ import annotations
 
-from typing import Sequence, TypeVar
+from collections.abc import Sequence
+from typing import TypeVar
 
 from evolve.backends.base import (
     BackendCapabilities,
-    ExecutionBackend,
     Evaluator,
 )
 from evolve.core.types import Fitness, Individual
@@ -24,22 +24,22 @@ G = TypeVar("G")
 class SequentialBackend:
     """
     Sequential execution backend (default).
-    
+
     Runs evaluations one at a time on the CPU.
     This is the simplest backend with no parallelism.
-    
+
     Advantages:
     - Always available
     - Easiest to debug
     - Deterministic ordering
     - No serialization overhead
-    
+
     Use this backend when:
     - Debugging evaluation issues
     - Evaluation is already fast
     - Population is small
     - Reproducibility is critical
-    
+
     Example:
         >>> backend = SequentialBackend()
         >>> results = backend.map_evaluate(evaluator, population)
@@ -74,14 +74,14 @@ class SequentialBackend:
     ) -> Sequence[Fitness]:
         """
         Evaluate individuals sequentially.
-        
+
         Simply calls evaluator.evaluate() directly.
-        
+
         Args:
             evaluator: Evaluator to use
             individuals: Individuals to evaluate
             seed: Random seed (passed to evaluator)
-            
+
         Returns:
             Fitness values in same order
         """

@@ -5,29 +5,29 @@ Contains selection, crossover, and mutation operators.
 All operators use explicit RNG for deterministic reproduction.
 """
 
-from evolve.core.operators.selection import (
-    SelectionOperator,
-    ElitistSelection,
-    TournamentSelection,
-    RouletteSelection,
-    RankSelection,
-)
 from evolve.core.operators.crossover import (
+    BlendCrossover,
     CrossoverOperator,
-    UniformCrossover,
+    NEATCrossover,
+    SimulatedBinaryCrossover,
     SinglePointCrossover,
     TwoPointCrossover,
-    BlendCrossover,
-    SimulatedBinaryCrossover,
-    NEATCrossover,
+    UniformCrossover,
 )
 from evolve.core.operators.mutation import (
-    MutationOperator,
-    GaussianMutation,
-    UniformMutation,
-    PolynomialMutation,
     CreepMutation,
+    GaussianMutation,
+    MutationOperator,
     NEATMutation,
+    PolynomialMutation,
+    UniformMutation,
+)
+from evolve.core.operators.selection import (
+    ElitistSelection,
+    RankSelection,
+    RouletteSelection,
+    SelectionOperator,
+    TournamentSelection,
 )
 
 __all__ = [

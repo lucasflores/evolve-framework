@@ -7,16 +7,17 @@ for the entire test suite.
 
 from __future__ import annotations
 
-import numpy as np
-import pytest
 from random import Random
 
-from evolve.utils.random import create_rng
+import numpy as np
+import pytest
 
+from evolve.utils.random import create_rng
 
 # ============================================================================
 # Random/Determinism Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def seed() -> int:
@@ -40,6 +41,7 @@ def np_rng(seed: int) -> np.random.Generator:
 # Genome Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def vector_bounds() -> tuple[np.ndarray, np.ndarray]:
     """Standard bounds for 10-dimensional vector optimization."""
@@ -49,7 +51,9 @@ def vector_bounds() -> tuple[np.ndarray, np.ndarray]:
 
 
 @pytest.fixture
-def random_genes(np_rng: np.random.Generator, vector_bounds: tuple[np.ndarray, np.ndarray]) -> np.ndarray:
+def random_genes(
+    np_rng: np.random.Generator, vector_bounds: tuple[np.ndarray, np.ndarray]
+) -> np.ndarray:
     """Random genes within bounds."""
     lower, upper = vector_bounds
     return np_rng.uniform(lower, upper)
@@ -58,6 +62,7 @@ def random_genes(np_rng: np.random.Generator, vector_bounds: tuple[np.ndarray, n
 # ============================================================================
 # Population Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def population_size() -> int:
@@ -69,30 +74,23 @@ def population_size() -> int:
 # Pytest Hooks
 # ============================================================================
 
+
 def pytest_configure(config: pytest.Config) -> None:
     """Register custom markers."""
     config.addinivalue_line(
         "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
     )
-    config.addinivalue_line(
-        "markers", "integration: marks integration tests"
-    )
-    config.addinivalue_line(
-        "markers", "property: marks property-based tests"
-    )
-    config.addinivalue_line(
-        "markers", "benchmark: marks benchmark tests"
-    )
-    config.addinivalue_line(
-        "markers", "gpu: marks tests requiring GPU"
-    )
+    config.addinivalue_line("markers", "integration: marks integration tests")
+    config.addinivalue_line("markers", "property: marks property-based tests")
+    config.addinivalue_line("markers", "benchmark: marks benchmark tests")
+    config.addinivalue_line("markers", "gpu: marks tests requiring GPU")
 
 
 # ============================================================================
 # Hypothesis Settings
 # ============================================================================
 
-from hypothesis import settings, Verbosity
+from hypothesis import Verbosity, settings
 
 # Register slower profile for CI
 settings.register_profile("ci", max_examples=200, deadline=None)

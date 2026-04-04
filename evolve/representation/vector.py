@@ -14,24 +14,22 @@ from typing import Any
 try:
     from typing import Self
 except ImportError:
-    from typing_extensions import Self
+    pass
 
 import numpy as np
-
-from evolve.representation.genome import Genome, SerializableGenome
 
 
 @dataclass(frozen=True)
 class VectorGenome:
     """
     Fixed-length real-valued vector genome.
-    
+
     Common for continuous optimization, neuroevolution weights.
-    
+
     Attributes:
         genes: NumPy array of gene values, shape (n_genes,)
         bounds: Optional (lower, upper) bounds for each gene
-        
+
     Example:
         >>> genome = VectorGenome(
         ...     genes=np.array([1.0, 2.0, 3.0]),
@@ -50,14 +48,14 @@ class VectorGenome:
         # Convert to numpy array if needed
         if not isinstance(self.genes, np.ndarray):
             object.__setattr__(self, "genes", np.asarray(self.genes, dtype=np.float64))
-        
+
         # Ensure 1D
         if self.genes.ndim != 1:
             object.__setattr__(self, "genes", self.genes.flatten())
-        
+
         # Make immutable
         self.genes.flags.writeable = False
-        
+
         # Validate and freeze bounds
         if self.bounds is not None:
             lower, upper = self.bounds
@@ -65,12 +63,12 @@ class VectorGenome:
                 lower = np.asarray(lower, dtype=np.float64)
             if not isinstance(upper, np.ndarray):
                 upper = np.asarray(upper, dtype=np.float64)
-            
+
             lower.flags.writeable = False
             upper.flags.writeable = False
-            
+
             object.__setattr__(self, "bounds", (lower, upper))
-            
+
             # Validate dimensions match
             if len(lower) != len(self.genes) or len(upper) != len(self.genes):
                 raise ValueError(
@@ -106,13 +104,13 @@ class VectorGenome:
     def clip_to_bounds(self) -> VectorGenome:
         """
         Return genome with genes clipped to bounds.
-        
+
         Returns:
             New VectorGenome with genes within bounds
         """
         if self.bounds is None:
             return self
-        
+
         lower, upper = self.bounds
         clipped = np.clip(self.genes, lower, upper)
         return VectorGenome(genes=clipped, bounds=self.bounds)
@@ -152,29 +150,30 @@ class VectorGenome:
     ) -> VectorGenome:
         """
         Create random genome within bounds.
-        
+
         Args:
             n_genes: Number of genes
             bounds: (lower, upper) bounds arrays
             rng: Random number generator
-            
+
         Returns:
             Random VectorGenome
         """
         lower, upper = bounds
-        genes = np.array([
-            rng.uniform(float(lower[i]), float(upper[i]))
-            for i in range(n_genes)
-        ])
+        genes = np.array([rng.uniform(float(lower[i]), float(upper[i])) for i in range(n_genes)])
         return cls(genes=genes, bounds=bounds)
 
     @classmethod
-    def zeros(cls, n_genes: int, bounds: tuple[np.ndarray, np.ndarray] | None = None) -> VectorGenome:
+    def zeros(
+        cls, n_genes: int, bounds: tuple[np.ndarray, np.ndarray] | None = None
+    ) -> VectorGenome:
         """Create genome with all zeros."""
         return cls(genes=np.zeros(n_genes), bounds=bounds)
 
     @classmethod
-    def ones(cls, n_genes: int, bounds: tuple[np.ndarray, np.ndarray] | None = None) -> VectorGenome:
+    def ones(
+        cls, n_genes: int, bounds: tuple[np.ndarray, np.ndarray] | None = None
+    ) -> VectorGenome:
         """Create genome with all ones."""
         return cls(genes=np.ones(n_genes), bounds=bounds)
 
@@ -182,7 +181,7 @@ class VectorGenome:
 class VectorIdentityDecoder:
     """
     Decoder that returns genome genes as phenotype.
-    
+
     For direct function optimization where genes are
     the input to the fitness function.
     """

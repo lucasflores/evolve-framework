@@ -7,17 +7,17 @@ and selection operators for multi-objective optimization.
 NO ML FRAMEWORK IMPORTS ALLOWED.
 """
 
-from evolve.multiobjective.fitness import MultiObjectiveFitness
-from evolve.multiobjective.dominance import dominates, pareto_front
-from evolve.multiobjective.ranking import fast_non_dominated_sort, RankedIndividual
 from evolve.multiobjective.crowding import crowding_distance
-from evolve.multiobjective.selection import (
-    NSGA2Selector,
-    CrowdedTournamentSelection,
-)
+from evolve.multiobjective.dominance import dominates, pareto_front
+from evolve.multiobjective.fitness import MultiObjectiveFitness
 from evolve.multiobjective.metrics import (
     hypervolume_2d,
     hypervolume_contribution,
+)
+from evolve.multiobjective.ranking import RankedIndividual, fast_non_dominated_sort
+from evolve.multiobjective.selection import (
+    CrowdedTournamentSelection,
+    NSGA2Selector,
 )
 
 __all__ = [

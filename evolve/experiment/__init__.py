@@ -10,7 +10,7 @@ Provides:
 
 Example:
     >>> from evolve.experiment import ExperimentConfig, ExperimentRunner
-    >>> 
+    >>>
     >>> config = ExperimentConfig(
     ...     name="my_experiment",
     ...     seed=42,

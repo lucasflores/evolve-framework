@@ -11,32 +11,28 @@ Covers:
 - T025b: BenchmarkResult.speedup_vs() method
 """
 
+# Import all components under test - add project root to sys.path dynamically
+import sys
+from pathlib import Path
+
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
-from pathlib import Path
-# Import all components under test - add project root to sys.path dynamically
-import sys
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from docs.tutorials.utils.tutorial_utils import (
-    # Dataclasses
-    BenchmarkFunction,
-    BenchmarkResult,
-    CausalDAGData,
-    EvolutionHistory,
-    IslandConfig,
-    MigrationEvent,
-    ParetoFront,
-    SpeciesHistory,
-    SymbolicRegressionData,
-    TerminologyEntry,
     # Constants
     EVOLUTIONARY_LOOP_DIAGRAM,
     GENOME_PHENOTYPE_DIAGRAM,
     ISLAND_MODEL_DIAGRAM,
-    TERMINOLOGY_GLOSSARY,
-    # Functions
+    # Dataclasses
+    BenchmarkResult,
+    EvolutionHistory,
+    IslandConfig,
+    ParetoFront,
+    SpeciesHistory,
+    TerminologyEntry,
     ackley_function,
     check_gpu_available,
     compare_runs_statistical,
@@ -56,11 +52,9 @@ from docs.tutorials.utils.tutorial_utils import (
     plot_pareto_2d_projections,
     plot_population_diversity,
     rastrigin_function,
-    render_mermaid,
     rosenbrock_function,
     sphere_function,
 )
-
 
 # =============================================================================
 # FIXTURES (T021)
@@ -99,13 +93,15 @@ def sample_species_history():
 def sample_pareto_front():
     """Fixture providing a sample ParetoFront."""
     # 2-objective Pareto front
-    objectives = np.array([
-        [1.0, 5.0],
-        [2.0, 3.0],
-        [3.0, 2.0],
-        [4.0, 1.5],
-        [5.0, 1.0],
-    ])
+    objectives = np.array(
+        [
+            [1.0, 5.0],
+            [2.0, 3.0],
+            [3.0, 2.0],
+            [4.0, 1.5],
+            [5.0, 1.0],
+        ]
+    )
     return ParetoFront(
         objectives=objectives,
         objective_names=["Obj A", "Obj B"],
@@ -244,7 +240,7 @@ class TestPolynomialDataGenerator:
         """Higher noise should increase y variance."""
         data_low = generate_polynomial_data(noise_level=0.0, seed=42)
         data_high = generate_polynomial_data(noise_level=0.5, seed=42)
-        
+
         # Same X values, different noise
         # Higher noise should mean higher residual variance
         # (Note: seed makes X same, so we can compare)
@@ -318,7 +314,7 @@ class TestCausalDAGGenerator:
         """Generated adjacency matrix should be acyclic (DAG)."""
         data = generate_causal_dag_data(n_variables=5, seed=42)
         adj = data.adjacency_matrix
-        
+
         # Lower triangular means acyclic (topological order)
         # Check no cycles: adjacency^n should have zero diagonal for all n < n_vars
         powered = adj.copy()
@@ -348,7 +344,7 @@ class TestCausalDAGGenerator:
     def test_dag_edge_accuracy_method(self):
         """edge_accuracy() should compute correct metrics."""
         data = generate_causal_dag_data(n_variables=4, seed=42)
-        
+
         # Perfect prediction
         accuracy = data.edge_accuracy(data.adjacency_matrix)
         assert accuracy["precision"] == 1.0
@@ -369,14 +365,14 @@ class TestChainDAGGenerator:
         """Chain should have exactly n-1 edges in sequence."""
         data = generate_chain_dag_data(n_variables=5, seed=42)
         adj = data.adjacency_matrix
-        
+
         # Count edges
         n_edges = np.count_nonzero(adj)
         assert n_edges == 4  # 5 nodes = 4 edges in chain
 
         # Each node i should connect to i+1
         for i in range(4):
-            assert adj[i, i + 1] != 0, f"Missing edge {i} -> {i+1}"
+            assert adj[i, i + 1] != 0, f"Missing edge {i} -> {i + 1}"
 
     def test_chain_no_hidden_variables(self):
         """Chain generator should have no hidden variables."""
@@ -399,7 +395,7 @@ class TestEvolutionHistory:
             {"generation": 1, "best": 90, "mean": 140, "worst": 190, "std": 18, "diversity": 0.75},
         ]
         history = EvolutionHistory.from_callback_logs(logs)
-        
+
         assert history.generations == [0, 1]
         assert history.best_fitness == [100, 90]
         assert history.mean_fitness == [150, 140]
@@ -408,7 +404,7 @@ class TestEvolutionHistory:
         """callback() should return a callable that appends metrics."""
         history = EvolutionHistory()
         cb = history.callback()
-        
+
         cb({"generation": 0, "best": 50, "mean": 100})
         assert len(history.generations) == 1
         assert history.best_fitness[0] == 50
@@ -420,7 +416,7 @@ class TestSpeciesHistory:
     def test_to_stacked_area_data(self, sample_species_history):
         """Should convert to stackplot-compatible format."""
         data, labels = sample_species_history.to_stacked_area_data()
-        
+
         assert data.shape == (2, 10)  # 2 species, 10 generations
         assert len(labels) == 2
 
@@ -443,7 +439,7 @@ class TestParetoFront:
     def test_crowding_distances(self, sample_pareto_front):
         """crowding_distances() should compute valid distances."""
         distances = sample_pareto_front.crowding_distances()
-        
+
         assert len(distances) == 5
         # Boundary points should have infinite distance
         assert np.isinf(distances[0])
@@ -493,7 +489,7 @@ class TestBenchmarkResult:
             population_size=100,
             final_best_fitness=0.1,
         )
-        
+
         speedup = faster.speedup_vs(baseline)
         assert speedup == 4.0  # 100 / 25
 
@@ -509,7 +505,7 @@ class TestVisualizationSmoke:
     def test_plot_fitness_history_returns_figure(self, sample_evolution_history):
         """plot_fitness_history should return a matplotlib Figure."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_fitness_history(sample_evolution_history)
         assert fig is not None
         assert isinstance(fig, plt.Figure)
@@ -518,7 +514,7 @@ class TestVisualizationSmoke:
     def test_plot_fitness_comparison_returns_figure(self, sample_evolution_history):
         """plot_fitness_comparison should return a matplotlib Figure."""
         import matplotlib.pyplot as plt
-        
+
         histories = {
             "Config A": sample_evolution_history,
             "Config B": sample_evolution_history,
@@ -531,11 +527,11 @@ class TestVisualizationSmoke:
     def test_plot_population_diversity_returns_figure(self):
         """plot_population_diversity should return a matplotlib Figure."""
         import matplotlib.pyplot as plt
-        
+
         # Generate sample population
         population = np.random.randn(50, 10)
         fitness = np.random.randn(50)
-        
+
         fig = plot_population_diversity(population, fitness_values=fitness)
         assert fig is not None
         assert isinstance(fig, plt.Figure)
@@ -544,7 +540,7 @@ class TestVisualizationSmoke:
     def test_plot_diversity_over_generations_returns_figure(self, sample_evolution_history):
         """plot_diversity_over_generations should return a matplotlib Figure."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_diversity_over_generations(sample_evolution_history)
         assert fig is not None
         assert isinstance(fig, plt.Figure)
@@ -553,7 +549,7 @@ class TestVisualizationSmoke:
     def test_plot_pareto_2d_projections_returns_figure(self, sample_pareto_front):
         """plot_pareto_2d_projections should return a matplotlib Figure."""
         import matplotlib.pyplot as plt
-        
+
         fig = plot_pareto_2d_projections(sample_pareto_front)
         assert fig is not None
         assert isinstance(fig, plt.Figure)
@@ -599,7 +595,7 @@ class TestComputePopulationStats:
         """Should return all expected keys."""
         fitness = np.array([1, 2, 3, 4, 5])
         stats = compute_population_stats(fitness)
-        
+
         expected_keys = {"mean", "std", "min", "max", "median", "q25", "q75"}
         assert set(stats.keys()) == expected_keys
 
@@ -607,7 +603,7 @@ class TestComputePopulationStats:
         """Should compute correct values."""
         fitness = np.array([1, 2, 3, 4, 5])
         stats = compute_population_stats(fitness)
-        
+
         assert stats["mean"] == 3.0
         assert stats["min"] == 1.0
         assert stats["max"] == 5.0
@@ -633,7 +629,7 @@ class TestConvergenceTest:
         for i in range(20):
             history.generations.append(i)
             history.best_fitness.append(50.0)  # Flat
-        
+
         converged, gen = convergence_test(history, window=5, threshold=0.01)
         assert converged
         assert gen is not None
@@ -643,7 +639,7 @@ class TestConvergenceTest:
         history = EvolutionHistory()
         history.generations = [0, 1]
         history.best_fitness = [100, 99]
-        
+
         converged, gen = convergence_test(history, window=10)
         assert not converged
         assert gen is None
@@ -656,7 +652,7 @@ class TestCompareRunsStatistical:
         """Should detect significant difference."""
         runs_a = [10, 11, 12, 10, 11]
         runs_b = [90, 91, 92, 90, 91]  # Very different
-        
+
         result = compare_runs_statistical(runs_a, runs_b, test="ttest")
         assert result["significant"]
         assert result["p_value"] < 0.05
@@ -665,7 +661,7 @@ class TestCompareRunsStatistical:
         """Should not detect difference for similar runs."""
         runs_a = [10, 11, 12, 10, 11, 12, 10]
         runs_b = [10.1, 10.9, 12.1, 10.2, 11.1, 11.9, 10.1]  # Very similar
-        
+
         result = compare_runs_statistical(runs_a, runs_b, test="ttest")
         # May or may not be significant depending on exact values
         assert "p_value" in result
@@ -683,7 +679,7 @@ class TestCheckGPUAvailable:
     def test_returns_dict_structure(self):
         """Should return dict with expected keys."""
         result = check_gpu_available()
-        
+
         assert "available" in result
         assert "backend" in result
         assert "device_name" in result
@@ -712,7 +708,7 @@ class TestGlossary:
     def test_glossary_entries_complete(self):
         """Each entry should have all required fields."""
         glossary = get_glossary()
-        
+
         for term, entry in glossary.items():
             assert isinstance(entry, TerminologyEntry)
             assert entry.ea_term
@@ -723,7 +719,7 @@ class TestGlossary:
     def test_core_terms_present(self):
         """Core EA terms should be in glossary."""
         glossary = get_glossary()
-        
+
         core_terms = ["genome", "phenotype", "fitness", "population", "generation"]
         for term in core_terms:
             assert term in glossary, f"Missing core term: {term}"
@@ -740,7 +736,7 @@ class TestCreateIslandConfig:
     def test_default_config(self):
         """Should create config with default values."""
         config = create_island_config()
-        
+
         assert config.num_islands == 4
         assert config.population_per_island == 50
         assert config.topology == "ring"
@@ -753,7 +749,7 @@ class TestCreateIslandConfig:
             population_per_island=25,
             topology="star",
         )
-        
+
         assert config.num_islands == 8
         assert config.population_per_island == 25
         assert config.topology == "star"

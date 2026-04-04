@@ -20,21 +20,25 @@ Note: Import this module directly (not via __init__) to avoid circular imports:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from random import Random
-from typing import TYPE_CHECKING, Any, Callable, Generic, Sequence, TypeVar
+from typing import Any, TypeVar
 from uuid import UUID, uuid4
 
 import numpy as np
 
+# Import core modules here (not in __init__ to avoid circular imports)
+from evolve.core.engine import EvolutionConfig, EvolutionEngine
+from evolve.core.population import Population
+from evolve.core.types import Individual, IndividualMetadata
 from evolve.reproduction.crossover_protocol import (
-    execute_crossover,
     inherit_protocol,
     safe_execute_crossover,
     validate_offspring,
 )
-from evolve.reproduction.intent import evaluate_intent, safe_evaluate_intent
-from evolve.reproduction.matchability import evaluate_matchability, safe_evaluate_matchability
+from evolve.reproduction.intent import safe_evaluate_intent
+from evolve.reproduction.matchability import safe_evaluate_matchability
 from evolve.reproduction.mutation import MutationConfig, ProtocolMutator
 from evolve.reproduction.protocol import (
     IntentContext,
@@ -43,12 +47,6 @@ from evolve.reproduction.protocol import (
     ReproductionProtocol,
 )
 from evolve.reproduction.recovery import ImmigrationRecovery, RecoveryStrategy
-from evolve.reproduction.sandbox import StepCounter
-
-# Import core modules here (not in __init__ to avoid circular imports)
-from evolve.core.engine import EvolutionConfig, EvolutionEngine
-from evolve.core.population import Population
-from evolve.core.types import Individual, IndividualMetadata
 
 G = TypeVar("G")
 
@@ -255,7 +253,7 @@ class ERPEngine(EvolutionEngine[G]):
             parent = parents[self.rng.randint(0, len(parents) - 1)]
             clone = Individual(
                 id=uuid4(),
-                genome=parent.genome.copy() if hasattr(parent.genome, 'copy') else parent.genome,
+                genome=parent.genome.copy() if hasattr(parent.genome, "copy") else parent.genome,
                 protocol=parent.protocol,
                 metadata=IndividualMetadata(
                     parent_ids=(parent.id,),
@@ -312,7 +310,9 @@ class ERPEngine(EvolutionEngine[G]):
 
             if not intent1 or not intent2:
                 self._emit_event(
-                    parent1, parent2, False,
+                    parent1,
+                    parent2,
+                    False,
                     "Intent failed",
                     matchability_result=(False, False),
                     intent_result=(intent1, intent2),
@@ -327,7 +327,9 @@ class ERPEngine(EvolutionEngine[G]):
 
         if not match1 or not match2:
             self._emit_event(
-                parent1, parent2, False,
+                parent1,
+                parent2,
+                False,
                 "Matchability failed",
                 matchability_result=(match1, match2),
                 intent_result=(intent1, intent2),
@@ -356,9 +358,13 @@ class ERPEngine(EvolutionEngine[G]):
         valid2, _ = validate_offspring(child2_genome, parent1.genome, parent2.genome)
 
         if not valid1:
-            child1_genome = parent1.genome.copy() if hasattr(parent1.genome, 'copy') else parent1.genome
+            child1_genome = (
+                parent1.genome.copy() if hasattr(parent1.genome, "copy") else parent1.genome
+            )
         if not valid2:
-            child2_genome = parent2.genome.copy() if hasattr(parent2.genome, 'copy') else parent2.genome
+            child2_genome = (
+                parent2.genome.copy() if hasattr(parent2.genome, "copy") else parent2.genome
+            )
 
         # Apply genome mutation
         if self.rng.random() < self.config.mutation_rate:
@@ -400,7 +406,9 @@ class ERPEngine(EvolutionEngine[G]):
 
         self._successful_matings += 1
         self._emit_event(
-            parent1, parent2, True,
+            parent1,
+            parent2,
+            True,
             None,
             matchability_result=(match1, match2),
             intent_result=(intent1, intent2),
@@ -431,7 +439,9 @@ class ERPEngine(EvolutionEngine[G]):
         if fitness is None:
             fitness_values = np.array([0.0])
         else:
-            fitness_values = fitness.values if hasattr(fitness, 'values') else np.array([float(fitness.value)])
+            fitness_values = (
+                fitness.values if hasattr(fitness, "values") else np.array([float(fitness.value)])
+            )
 
         # Calculate fitness rank
         fitness_ranks = self._compute_fitness_ranks(population)
@@ -477,7 +487,7 @@ class ERPEngine(EvolutionEngine[G]):
 
         # Build mate context
         # Compute genetic distance
-        if hasattr(self_ind.genome, '__sub__'):
+        if hasattr(self_ind.genome, "__sub__"):
             distance = float(np.linalg.norm(self_ind.genome - partner.genome))
         else:
             distance = 0.0
@@ -489,18 +499,26 @@ class ERPEngine(EvolutionEngine[G]):
         if self_fitness is None:
             self_fitness_values = np.array([0.0])
         else:
-            self_fitness_values = self_fitness.values if hasattr(self_fitness, 'values') else np.array([float(self_fitness.value)])
+            self_fitness_values = (
+                self_fitness.values
+                if hasattr(self_fitness, "values")
+                else np.array([float(self_fitness.value)])
+            )
 
         if partner_fitness is None:
             partner_fitness_values = np.array([0.0])
         else:
-            partner_fitness_values = partner_fitness.values if hasattr(partner_fitness, 'values') else np.array([float(partner_fitness.value)])
+            partner_fitness_values = (
+                partner_fitness.values
+                if hasattr(partner_fitness, "values")
+                else np.array([float(partner_fitness.value)])
+            )
 
         # Compute fitness ratio
         self_f = float(self_fitness_values[0]) if len(self_fitness_values) > 0 else 1.0
         partner_f = float(partner_fitness_values[0]) if len(partner_fitness_values) > 0 else 1.0
         if self_f == 0:
-            fitness_ratio = float('inf') if partner_f != 0 else 1.0
+            fitness_ratio = float("inf") if partner_f != 0 else 1.0
         else:
             fitness_ratio = partner_f / self_f
 
@@ -533,16 +551,16 @@ class ERPEngine(EvolutionEngine[G]):
         """Compute fitness rankings for all individuals."""
         # Sort by fitness (handle None fitness)
         individuals = list(population.individuals)
-        
+
         def get_fitness_value(ind: Individual[G]) -> float:
             if ind.fitness is None:
-                return float('inf') if self.config.minimize else float('-inf')
-            if hasattr(ind.fitness, 'values'):
+                return float("inf") if self.config.minimize else float("-inf")
+            if hasattr(ind.fitness, "values"):
                 return float(ind.fitness.values[0])
             return float(ind.fitness.value)
 
         individuals.sort(key=get_fitness_value, reverse=not self.config.minimize)
-        
+
         return {ind.id: rank for rank, ind in enumerate(individuals)}
 
     def _compute_population_diversity(self, population: Population[G]) -> float:
@@ -554,7 +572,7 @@ class ERPEngine(EvolutionEngine[G]):
         fitness_values = []
         for ind in population.individuals:
             if ind.fitness is not None:
-                if hasattr(ind.fitness, 'values'):
+                if hasattr(ind.fitness, "values"):
                     fitness_values.append(float(ind.fitness.values[0]))
                 else:
                     fitness_values.append(float(ind.fitness.value))
@@ -564,7 +582,7 @@ class ERPEngine(EvolutionEngine[G]):
 
         std = float(np.std(fitness_values))
         mean = float(np.mean(fitness_values))
-        
+
         # Coefficient of variation, clamped to [0, 1]
         if mean == 0:
             return min(1.0, std)
@@ -604,7 +622,7 @@ class ERPEngine(EvolutionEngine[G]):
 
         # Notify callbacks
         for cb in self._callbacks:
-            if hasattr(cb, 'on_reproduction_event'):
+            if hasattr(cb, "on_reproduction_event"):
                 cb.on_reproduction_event(event)
 
     @property
@@ -622,10 +640,10 @@ class ERPEngine(EvolutionEngine[G]):
     def _compute_metrics(self, population: Population[G]) -> dict[str, Any]:
         """Compute generation metrics including ERP mating statistics."""
         metrics = super()._compute_metrics(population)
-        
+
         # Add ERP mating statistics
         metrics["attempted_matings"] = self._attempted_matings
         metrics["successful_matings"] = self._successful_matings
         metrics["mating_success_rate"] = self.success_rate
-        
+
         return metrics

@@ -5,8 +5,8 @@ This module contains NO ML framework imports (PyTorch, JAX, TensorFlow).
 All types use NumPy and Python stdlib only.
 """
 
-from evolve.core.types import Fitness, Individual, IndividualMetadata
 from evolve.core.population import Population
+from evolve.core.types import Fitness, Individual, IndividualMetadata
 
 __all__ = [
     "Fitness",

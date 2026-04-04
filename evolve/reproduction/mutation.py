@@ -29,7 +29,6 @@ from evolve.reproduction.protocol import (
     ReproductionProtocol,
 )
 
-
 # =============================================================================
 # Configuration
 # =============================================================================
@@ -122,9 +121,7 @@ def mutate_params(
             noise = rng.gauss(0, mutation_strength)
             new_value = value + noise
             # Clamp to reasonable range for probability-like params
-            if key.endswith("_prob") or key == "probability":
-                new_value = max(0.0, min(1.0, new_value))
-            elif key.endswith("_ratio"):
+            if key.endswith("_prob") or key == "probability" or key.endswith("_ratio"):
                 new_value = max(0.0, min(1.0, new_value))
             new_params[key] = new_value
     return new_params
@@ -473,9 +470,7 @@ class ProtocolMutator:
                     active=new_matchability.active,
                 )
             elif choice < 0.67:
-                new_junk, new_params = promote_junk_to_param(
-                    new_junk, dict(new_intent.params), rng
-                )
+                new_junk, new_params = promote_junk_to_param(new_junk, dict(new_intent.params), rng)
                 new_intent = ReproductionIntentPolicy(
                     type=new_intent.type,
                     params=new_params,

@@ -8,9 +8,9 @@ NO ML FRAMEWORK IMPORTS ALLOWED.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from random import Random
-from typing import Any, Callable, Generic, Protocol, Sequence, TypeVar
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import Protocol, TypeVar
 
 from evolve.core.types import Fitness, Individual
 
@@ -21,7 +21,7 @@ G = TypeVar("G")
 class BackendCapabilities:
     """
     Describes capabilities of an execution backend.
-    
+
     Attributes:
         parallel: Can run evaluations in parallel
         gpu: Can use GPU acceleration
@@ -43,7 +43,7 @@ class BackendCapabilities:
 class BackendConfig:
     """
     Configuration for execution backend.
-    
+
     Attributes:
         n_workers: Number of parallel workers (None = auto)
         device: Device to use ('cpu', 'cuda', 'cuda:0', etc.)
@@ -62,18 +62,18 @@ class BackendConfig:
 class ExecutionBackend(Protocol):
     """
     Protocol for execution backends.
-    
+
     Execution backends control HOW evaluations are performed:
     - Sequential vs parallel
     - CPU vs GPU
     - Local vs distributed
-    
+
     The backend is responsible for:
     - Managing worker processes/threads
     - Handling device placement (GPU)
     - Seed derivation for parallel execution
     - Resource cleanup
-    
+
     Example:
         >>> backend = ParallelBackend(n_workers=4)
         >>> results = backend.map_evaluate(evaluator, population, seed=42)
@@ -91,18 +91,18 @@ class ExecutionBackend(Protocol):
 
     def map_evaluate(
         self,
-        evaluator: "Evaluator[G]",
+        evaluator: Evaluator[G],
         individuals: Sequence[Individual[G]],
         seed: int | None = None,
     ) -> Sequence[Fitness]:
         """
         Evaluate individuals using this backend.
-        
+
         Args:
             evaluator: Evaluator to use
             individuals: Individuals to evaluate
             seed: Base seed for reproducibility
-            
+
         Returns:
             Fitness values in same order as individuals
         """
@@ -111,7 +111,7 @@ class ExecutionBackend(Protocol):
     def shutdown(self) -> None:
         """
         Release backend resources.
-        
+
         Called when backend is no longer needed.
         Should be idempotent.
         """
@@ -133,20 +133,20 @@ class Evaluator(Protocol[G]):
 def derive_seed(base_seed: int, index: int) -> int:
     """
     Derive a reproducible seed from base seed and index.
-    
+
     Used for parallel execution where each worker needs
     a unique but reproducible seed.
-    
+
     Uses a simple hash-based approach that produces
     well-distributed seeds.
-    
+
     Args:
         base_seed: Base random seed
         index: Worker/batch index
-        
+
     Returns:
         Derived seed for this index
-        
+
     Example:
         >>> seeds = [derive_seed(42, i) for i in range(4)]
         >>> len(set(seeds))  # All unique

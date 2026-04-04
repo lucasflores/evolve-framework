@@ -14,26 +14,26 @@ Key components:
 """
 
 from evolve.rl.environment import (
-    Space,
     Environment,
-    VectorizedEnvironment,
     GymAdapter,
-)
-from evolve.rl.policy import (
-    Policy,
-    StatefulPolicy,
-    LinearPolicy,
-    MLPPolicy,
-    RecurrentPolicy,
-)
-from evolve.rl.rollout import (
-    RolloutResult,
-    AggregatedResult,
-    StandardRollout,
-    evaluate_policy,
+    Space,
+    VectorizedEnvironment,
 )
 from evolve.rl.evaluator import (
     RLEvaluator,
+)
+from evolve.rl.policy import (
+    LinearPolicy,
+    MLPPolicy,
+    Policy,
+    RecurrentPolicy,
+    StatefulPolicy,
+)
+from evolve.rl.rollout import (
+    AggregatedResult,
+    RolloutResult,
+    StandardRollout,
+    evaluate_policy,
 )
 
 __all__ = [

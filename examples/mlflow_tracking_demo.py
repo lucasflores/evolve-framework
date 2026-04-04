@@ -11,21 +11,22 @@ Run this script, then view results in MLflow UI:
 Go to: http://localhost:5000
 """
 
-import numpy as np
 from random import Random
 
+import numpy as np
+
+from evolve.config.tracking import TrackingConfig
 from evolve.config.unified import UnifiedConfig
-from evolve.config.tracking import TrackingConfig, MetricCategory
-from evolve.factory import create_engine
 from evolve.core.population import Population
 from evolve.core.types import Individual
-from evolve.representation.vector import VectorGenome
 from evolve.experiment.tracking.callback import TrackingCallback
-
+from evolve.factory import create_engine
+from evolve.representation.vector import VectorGenome
 
 # -----------------------------------------------------------------------------
 # Fitness Functions (receive decoded phenotype - numpy array)
 # -----------------------------------------------------------------------------
+
 
 def rastrigin(genes: np.ndarray) -> float:
     """
@@ -52,13 +53,14 @@ def rosenbrock(genes: np.ndarray) -> float:
     """
     total = 0.0
     for i in range(len(genes) - 1):
-        total += 100.0 * (genes[i + 1] - genes[i]**2)**2 + (1 - genes[i])**2
+        total += 100.0 * (genes[i + 1] - genes[i] ** 2) ** 2 + (1 - genes[i]) ** 2
     return total
 
 
 # -----------------------------------------------------------------------------
 # Initial Population Creator
 # -----------------------------------------------------------------------------
+
 
 def create_initial_population(
     size: int,
@@ -69,15 +71,12 @@ def create_initial_population(
     """Create random initial population."""
     rng = Random(seed)
     individuals = []
-    
+
     for _ in range(size):
-        genes = np.array([
-            rng.uniform(bounds[0], bounds[1]) 
-            for _ in range(dimensions)
-        ])
+        genes = np.array([rng.uniform(bounds[0], bounds[1]) for _ in range(dimensions)])
         genome = VectorGenome(genes=genes)
         individuals.append(Individual(genome=genome))
-    
+
     return Population(individuals=individuals)
 
 
@@ -85,35 +84,36 @@ def create_initial_population(
 # Main Demo
 # -----------------------------------------------------------------------------
 
+
 def run_comprehensive_tracking_demo():
     """Run evolution with comprehensive MLflow tracking."""
-    
+
     print("=" * 70)
     print("MLflow Metrics Tracking Demo")
     print("=" * 70)
-    
+
     # Configuration parameters
     SEED = 42
     DIMENSIONS = 10
     BOUNDS = (-5.12, 5.12)
     POPULATION_SIZE = 100
     GENERATIONS = 50
-    
+
     # Create comprehensive tracking config with all metrics enabled
     tracking = TrackingConfig.comprehensive("evolve_live_demo")
-    
+
     # Show what categories are enabled
     print("\n📊 Enabled Metric Categories:")
     for cat in sorted(tracking.categories, key=lambda c: c.value):
         print(f"   - {cat.value}")
-    
-    print(f"\n📋 Tracking Configuration:")
+
+    print("\n📋 Tracking Configuration:")
     print(f"   Backend: {tracking.backend}")
     print(f"   Experiment: {tracking.experiment_name}")
     print(f"   Buffer size: {tracking.buffer_size}")
     print(f"   Log interval: {tracking.log_interval}")
     print(f"   Diversity sample: {tracking.diversity_sample_size}")
-    
+
     # Create UnifiedConfig with tracking
     config = UnifiedConfig(
         name="comprehensive_tracking_demo",
@@ -123,21 +123,17 @@ def run_comprehensive_tracking_demo():
         population_size=POPULATION_SIZE,
         max_generations=GENERATIONS,
         elitism=2,
-        
         # Selection
         selection="tournament",
         selection_params={"tournament_size": 5},
-        
         # Crossover
         crossover="sbx",
         crossover_rate=0.9,
         crossover_params={"eta": 20.0},
-        
         # Mutation
         mutation="gaussian",
         mutation_rate=0.1,
         mutation_params={"sigma": 0.5},
-        
         # Representation
         genome_type="vector",
         genome_params={
@@ -145,27 +141,26 @@ def run_comprehensive_tracking_demo():
             "bounds": BOUNDS,
         },
         minimize=True,  # Minimizing fitness functions
-        
         # Enable comprehensive tracking
         tracking=tracking,
     )
-    
-    print(f"\n🧬 Evolution Configuration:")
+
+    print("\n🧬 Evolution Configuration:")
     print(f"   Population: {config.population_size}")
     print(f"   Generations: {config.max_generations}")
     print(f"   Selection: {config.selection}")
     print(f"   Crossover: {config.crossover} (rate={config.crossover_rate})")
     print(f"   Mutation: {config.mutation} (rate={config.mutation_rate})")
     print(f"   Genome: {config.genome_type} ({DIMENSIONS}D)")
-    
+
     # Create engine
     print("\n🔧 Creating evolution engine...")
     engine = create_engine(config, rastrigin)
-    
+
     # Create tracking callback with unified config and description
     # Note: For pure math functions like Rastrigin/Sphere, there's no evaluation
     # dataset - fitness is computed directly from the candidate solution.
-    # 
+    #
     # If your fitness function evaluates solutions against data (e.g., evolving
     # a neural network, symbolic regression, or trading strategy), pass the data:
     #
@@ -180,7 +175,7 @@ def run_comprehensive_tracking_demo():
         unified_config_dict=config.to_dict(),
         description=config.description,
     )
-    
+
     # Create initial population
     print("🌱 Generating initial population...")
     initial_pop = create_initial_population(
@@ -189,31 +184,31 @@ def run_comprehensive_tracking_demo():
         bounds=BOUNDS,
         seed=SEED,
     )
-    
+
     # Run evolution with tracking callback
     print(f"\n🚀 Running evolution for {GENERATIONS} generations...")
     print("-" * 70)
-    
+
     result = engine.run(initial_pop, callbacks=[tracking_callback])
-    
+
     print("-" * 70)
-    print(f"\n✅ Evolution Complete!")
+    print("\n✅ Evolution Complete!")
     print(f"   Best fitness: {result.best.fitness.values[0]:.6f}")
     print(f"   Generations: {result.generations}")
     print(f"   Stop reason: {result.stop_reason}")
-    
+
     # Show best solution
-    print(f"\n🏆 Best Solution:")
+    print("\n🏆 Best Solution:")
     best_genes = result.best.genome.genes
     print(f"   Genes (first 5): {best_genes[:5]}")
     print(f"   Gene norm: {np.linalg.norm(best_genes):.6f}")
-    
+
     print("\n" + "=" * 70)
     print("📈 View metrics in MLflow UI:")
     print("   mlflow ui --port 5000")
     print("   Then open: http://localhost:5000")
     print("=" * 70)
-    
+
     return result
 
 

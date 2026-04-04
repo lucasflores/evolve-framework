@@ -15,11 +15,11 @@ from typing import Any, Literal
 class CallbackConfig:
     """
     Built-in callback configuration.
-    
+
     Configures logging and checkpointing callbacks that can be
     instantiated declaratively. Custom callbacks must be passed
     to the factory function separately.
-    
+
     Attributes:
         enable_logging: Whether to enable progress logging callback.
         log_level: Logging verbosity level (DEBUG, INFO, WARNING).
@@ -27,7 +27,7 @@ class CallbackConfig:
         enable_checkpointing: Whether to enable checkpoint saving.
         checkpoint_dir: Directory for checkpoint files.
         checkpoint_frequency: Save checkpoint every N generations.
-    
+
     Example:
         >>> config = CallbackConfig(
         ...     enable_logging=True,
@@ -37,27 +37,27 @@ class CallbackConfig:
         ...     checkpoint_frequency=10,
         ... )
     """
-    
+
     # Logging (FR-041)
     enable_logging: bool = True
     """Whether to enable progress logging callback."""
-    
+
     log_level: Literal["DEBUG", "INFO", "WARNING"] = "INFO"
     """Log verbosity level (FR-041)."""
-    
+
     log_destination: str = "console"
     """Where to log: 'console', 'file', or a file path (FR-041)."""
-    
+
     # Checkpointing (FR-042)
     enable_checkpointing: bool = False
     """Whether to enable checkpoint saving."""
-    
+
     checkpoint_dir: str | None = None
     """Directory for checkpoint files (FR-042)."""
-    
+
     checkpoint_frequency: int = 10
     """Save checkpoint every N generations (FR-042)."""
-    
+
     def __post_init__(self) -> None:
         """Validate callback configuration."""
         if self.enable_checkpointing and self.checkpoint_dir is None:
@@ -65,10 +65,8 @@ class CallbackConfig:
         if self.checkpoint_frequency <= 0:
             raise ValueError("checkpoint_frequency must be positive")
         if self.log_level not in ("DEBUG", "INFO", "WARNING"):
-            raise ValueError(
-                f"log_level must be DEBUG, INFO, or WARNING, got {self.log_level}"
-            )
-    
+            raise ValueError(f"log_level must be DEBUG, INFO, or WARNING, got {self.log_level}")
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
@@ -79,9 +77,9 @@ class CallbackConfig:
             "checkpoint_dir": self.checkpoint_dir,
             "checkpoint_frequency": self.checkpoint_frequency,
         }
-    
+
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "CallbackConfig":
+    def from_dict(cls, data: dict[str, Any]) -> CallbackConfig:
         """Create from dictionary."""
         return cls(
             enable_logging=data.get("enable_logging", True),

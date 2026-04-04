@@ -7,23 +7,22 @@ best configuration, solution, and export capabilities.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
-from typing import Any, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from evolve.config.unified import UnifiedConfig
-    from evolve.core.population import Population
 
 
 @dataclass(frozen=True)
 class MetaEvolutionResult:
     """
     Result of a meta-evolution run (T068).
-    
+
     Contains the best configuration found and the solution(s)
     discovered using that configuration.
-    
+
     Attributes:
         best_config: Best configuration found.
         best_fitness: Fitness achieved by best configuration.
@@ -31,45 +30,45 @@ class MetaEvolutionResult:
         final_population: Final outer population of configurations.
         history: History of outer evolution (fitness per generation).
         trials_run: Total number of inner evolution trials run.
-    
+
     Example:
         >>> result = run_meta_evolution(...)
         >>> result.export_best_config("best_config.json")
         >>> print(f"Best fitness: {result.best_fitness}")
     """
-    
-    best_config: "UnifiedConfig"
+
+    best_config: UnifiedConfig
     """Best configuration found."""
-    
+
     best_fitness: float
     """Fitness achieved by best configuration."""
-    
+
     best_solution: Any | None
     """Best individual found with best configuration."""
-    
-    final_population: list[tuple["UnifiedConfig", float]]
+
+    final_population: list[tuple[UnifiedConfig, float]]
     """Final outer population: list of (config, fitness) tuples."""
-    
+
     history: list[dict[str, Any]]
     """History of outer evolution metrics."""
-    
+
     trials_run: int
     """Total number of inner evolution trials run."""
-    
+
     def get_pareto_configs(
         self,
         objectives: list[str] | None = None,
-    ) -> list[tuple["UnifiedConfig", dict[str, float]]]:
+    ) -> list[tuple[UnifiedConfig, dict[str, float]]]:
         """
         Get Pareto-optimal configurations (T069).
-        
+
         For multi-objective meta-evolution, filters to non-dominated
         configurations. For single-objective, returns sorted by fitness.
-        
+
         Args:
             objectives: Objective names for multi-objective filtering.
                 None for single-objective (returns all sorted).
-                
+
         Returns:
             List of (config, fitness_dict) tuples on Pareto front.
         """
@@ -80,11 +79,8 @@ class MetaEvolutionResult:
                 key=lambda x: x[1],
                 reverse=not _should_minimize(self.best_config),
             )
-            return [
-                (cfg, {"fitness": fit})
-                for cfg, fit in sorted_pop
-            ]
-        
+            return [(cfg, {"fitness": fit}) for cfg, fit in sorted_pop]
+
         # Multi-objective: extract Pareto front
         configs_with_objectives = []
         for cfg, fit in self.final_population:
@@ -93,7 +89,7 @@ class MetaEvolutionResult:
             # This is a simplified implementation
             obj_values["primary"] = fit
             configs_with_objectives.append((cfg, obj_values))
-        
+
         # Filter non-dominated (simple implementation)
         pareto_front = []
         for i, (cfg_i, obj_i) in enumerate(configs_with_objectives):
@@ -105,9 +101,9 @@ class MetaEvolutionResult:
                         break
             if not dominated:
                 pareto_front.append((cfg_i, obj_i))
-        
+
         return pareto_front
-    
+
     def export_best_config(
         self,
         path: str,
@@ -115,7 +111,7 @@ class MetaEvolutionResult:
     ) -> None:
         """
         Export best configuration to JSON file (T070).
-        
+
         Args:
             path: Output file path.
             include_solution: Whether to include solution in output.
@@ -125,17 +121,17 @@ class MetaEvolutionResult:
             "fitness": self.best_fitness,
             "trials_run": self.trials_run,
         }
-        
+
         if include_solution and self.best_solution is not None:
             # Attempt to serialize solution
             try:
                 data["solution"] = _serialize_solution(self.best_solution)
             except Exception:
                 data["solution"] = str(self.best_solution)
-        
+
         with open(path, "w") as f:
             json.dump(data, f, indent=2)
-    
+
     def summarize(self) -> str:
         """Get human-readable summary."""
         lines = [
@@ -147,17 +143,23 @@ class MetaEvolutionResult:
             "",
             "Best Configuration:",
         ]
-        
+
         config_dict = self.best_config.to_dict()
-        for key in ["population_size", "crossover_rate", "mutation_rate", 
-                    "selection", "crossover", "mutation"]:
+        for key in [
+            "population_size",
+            "crossover_rate",
+            "mutation_rate",
+            "selection",
+            "crossover",
+            "mutation",
+        ]:
             if key in config_dict:
                 lines.append(f"  {key}: {config_dict[key]}")
-        
+
         return "\n".join(lines)
 
 
-def _should_minimize(config: "UnifiedConfig") -> bool:
+def _should_minimize(config: UnifiedConfig) -> bool:
     """Check if configuration minimizes fitness."""
     return config.minimize
 
@@ -166,7 +168,7 @@ def _dominates(a: dict[str, float], b: dict[str, float]) -> bool:
     """Check if a dominates b (Pareto dominance)."""
     all_keys = set(a.keys()) | set(b.keys())
     at_least_one_better = False
-    
+
     for key in all_keys:
         val_a = a.get(key, float("inf"))
         val_b = b.get(key, float("inf"))
@@ -174,7 +176,7 @@ def _dominates(a: dict[str, float], b: dict[str, float]) -> bool:
             return False
         if val_a < val_b:
             at_least_one_better = True
-    
+
     return at_least_one_better
 
 

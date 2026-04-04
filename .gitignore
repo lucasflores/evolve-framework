@@ -95,3 +95,21 @@ mlruns/
 wandb/
 outputs/
 experiments/
+*.pyc
+*.pyo
+.mypy_cache/
+.ruff_cache/
+.venv/
+.codeboarding/cache/
+.codeboarding/logs/
+
+
+# APM dependencies
+apm_modules/
+# === DEV-STACK:BEGIN:GITIGNORE ===
+.dev-stack/pipeline/
+.dev-stack/viz/
+.dev-stack/pipeline-skipped
+!.dev-stack/hooks-manifest.json
+!.dev-stack/instructions.md
+# === DEV-STACK:END:GITIGNORE ===

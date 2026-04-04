@@ -15,13 +15,11 @@ Key Components:
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from random import Random
-from typing import Any, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from evolve.reproduction.protocol import MatchabilityFunction, MateContext
 from evolve.reproduction.sandbox import StepCounter, StepLimitExceeded
-
 
 # =============================================================================
 # Protocol Interface
@@ -206,7 +204,7 @@ class ProbabilisticMatchability:
         counter.step()
         base_prob = params.get("base_prob", 0.5)
         distance_weight = params.get("distance_weight", 0.0)
-        
+
         # Probability increases with distance (promotes diversity)
         prob = base_prob + distance_weight * context.partner_distance
         # Clamp to [0, 1]
@@ -232,15 +230,15 @@ class DiversitySeekingMatchability:
         counter.step()
         crowding_threshold = params.get("crowding_threshold", 0.5)
         fallback_prob = params.get("fallback_prob", 0.3)
-        
+
         # If no crowding info, use fallback
         if context.crowding_distance is None:
             return fallback_prob
-        
+
         # Accept with high probability if above threshold
         if context.crowding_distance >= crowding_threshold:
             return 1.0
-        
+
         # Below threshold, probability scales with crowding distance
         return fallback_prob + (1.0 - fallback_prob) * (
             context.crowding_distance / crowding_threshold
@@ -331,12 +329,12 @@ def evaluate_matchability(
         raise ValueError(f"Unknown matchability type: {func.type}")
 
     result = evaluator.evaluate(context, func.params, rng, counter)
-    
+
     # If result is probability, resolve to boolean
     if isinstance(result, float):
         counter.step()
         return rng.random() < result
-    
+
     return result
 
 

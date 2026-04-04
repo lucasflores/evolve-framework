@@ -14,12 +14,10 @@ Key Components:
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from random import Random
-from typing import Any, Callable, Generic, Protocol, TypeVar, runtime_checkable
-
-import numpy as np
+from typing import Any, Protocol, TypeVar, runtime_checkable
 
 from evolve.reproduction.protocol import ReproductionProtocol
 

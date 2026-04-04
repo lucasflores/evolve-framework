@@ -17,7 +17,7 @@ Key Components:
 from __future__ import annotations
 
 from random import Random
-from typing import Any, Generic, Protocol, TypeVar, runtime_checkable
+from typing import Any, Protocol, TypeVar, runtime_checkable
 
 import numpy as np
 
@@ -95,7 +95,7 @@ class SinglePointCrossoverExecutor:
         counter: StepCounter,
     ) -> tuple[np.ndarray, np.ndarray]:
         counter.step()
-        
+
         # Handle different genome lengths
         min_len = min(len(parent1), len(parent2))
         if min_len == 0:
@@ -106,11 +106,11 @@ class SinglePointCrossoverExecutor:
         point = max(0, min(point, min_len))  # Clamp
 
         counter.step()
-        
+
         # Create offspring
         offspring1 = np.concatenate([parent1[:point], parent2[point:min_len]])
         offspring2 = np.concatenate([parent2[:point], parent1[point:min_len]])
-        
+
         return offspring1, offspring2
 
 
@@ -134,37 +134,33 @@ class TwoPointCrossoverExecutor:
         counter: StepCounter,
     ) -> tuple[np.ndarray, np.ndarray]:
         counter.step()
-        
+
         min_len = min(len(parent1), len(parent2))
         if min_len == 0:
             return parent1.copy(), parent2.copy()
 
         point1_ratio = params.get("point1_ratio", 0.33)
         point2_ratio = params.get("point2_ratio", 0.67)
-        
+
         point1 = int(point1_ratio * min_len)
         point2 = int(point2_ratio * min_len)
-        
+
         # Ensure point1 < point2
         if point1 > point2:
             point1, point2 = point2, point1
-        
+
         point1 = max(0, min(point1, min_len))
         point2 = max(0, min(point2, min_len))
-        
+
         counter.step()
-        
-        offspring1 = np.concatenate([
-            parent1[:point1],
-            parent2[point1:point2],
-            parent1[point2:min_len]
-        ])
-        offspring2 = np.concatenate([
-            parent2[:point1],
-            parent1[point1:point2],
-            parent2[point2:min_len]
-        ])
-        
+
+        offspring1 = np.concatenate(
+            [parent1[:point1], parent2[point1:point2], parent1[point2:min_len]]
+        )
+        offspring2 = np.concatenate(
+            [parent2[:point1], parent1[point1:point2], parent2[point2:min_len]]
+        )
+
         return offspring1, offspring2
 
 
@@ -187,21 +183,21 @@ class UniformCrossoverExecutor:
         counter: StepCounter,
     ) -> tuple[np.ndarray, np.ndarray]:
         counter.step()
-        
+
         min_len = min(len(parent1), len(parent2))
         if min_len == 0:
             return parent1.copy(), parent2.copy()
 
         swap_prob = params.get("swap_prob", 0.5)
-        
+
         offspring1 = parent1[:min_len].copy()
         offspring2 = parent2[:min_len].copy()
-        
+
         for i in range(min_len):
             counter.step()
             if rng.random() < swap_prob:
                 offspring1[i], offspring2[i] = offspring2[i], offspring1[i]
-        
+
         return offspring1, offspring2
 
 
@@ -225,29 +221,29 @@ class BlendCrossoverExecutor:
         counter: StepCounter,
     ) -> tuple[np.ndarray, np.ndarray]:
         counter.step()
-        
+
         min_len = min(len(parent1), len(parent2))
         if min_len == 0:
             return parent1.copy(), parent2.copy()
 
         alpha = params.get("alpha", 0.5)
-        
+
         offspring1 = np.zeros(min_len)
         offspring2 = np.zeros(min_len)
-        
+
         for i in range(min_len):
             counter.step()
             p1, p2 = parent1[i], parent2[i]
             min_val, max_val = min(p1, p2), max(p1, p2)
             range_val = max_val - min_val
-            
+
             # Extend range by alpha on each side
             low = min_val - alpha * range_val
             high = max_val + alpha * range_val
-            
+
             offspring1[i] = low + rng.random() * (high - low)
             offspring2[i] = low + rng.random() * (high - low)
-        
+
         return offspring1, offspring2
 
 
@@ -464,13 +460,13 @@ def validate_offspring(
     # For numpy arrays, check for invalid values
     if isinstance(offspring, np.ndarray):
         # Check shape matches
-        if hasattr(parent1, 'shape') and offspring.shape != parent1.shape:
+        if hasattr(parent1, "shape") and offspring.shape != parent1.shape:
             return False, f"Shape mismatch: {offspring.shape} vs {parent1.shape}"
-        
+
         # Check for numeric dtype
         if not np.issubdtype(offspring.dtype, np.number):
             return False, f"Non-numeric dtype: {offspring.dtype}"
-        
+
         if not np.all(np.isfinite(offspring)):
             return False, "Offspring contains NaN or inf values"
 

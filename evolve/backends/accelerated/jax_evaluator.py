@@ -12,23 +12,22 @@ Example:
 
 from __future__ import annotations
 
-from typing import Any, Callable, Sequence, TypeVar
+from collections.abc import Callable, Sequence
+from typing import Any, TypeVar
 
 try:
     import jax
     import jax.numpy as jnp
     from jax import jit, vmap
+
     JAX_AVAILABLE = True
 except ImportError:
     JAX_AVAILABLE = False
-    raise ImportError(
-        "JAX is required for JaxBackend. "
-        "Install with: pip install jax jaxlib"
-    )
+    raise ImportError("JAX is required for JaxBackend. Install with: pip install jax jaxlib")
 
 import numpy as np
 
-from evolve.backends.base import BackendCapabilities, derive_seed
+from evolve.backends.base import BackendCapabilities
 from evolve.core.types import Fitness, Individual
 
 G = TypeVar("G")
@@ -47,10 +46,10 @@ def _get_device_info() -> tuple[str, int]:
 class JaxEvaluator:
     """
     JIT-compiled evaluator using JAX.
-    
+
     Wraps a fitness function with JAX's JIT compilation
     and vmap vectorization for efficient batch evaluation.
-    
+
     Example:
         >>> def sphere_jax(x: jnp.ndarray) -> float:
         ...     return jnp.sum(x ** 2)
@@ -66,7 +65,7 @@ class JaxEvaluator:
     ) -> None:
         """
         Create JAX evaluator.
-        
+
         Args:
             fitness_fn: Function mapping (D,) array → scalar or (D,) → (M,)
             jit_compile: Whether to JIT-compile the function
@@ -75,14 +74,14 @@ class JaxEvaluator:
         self._raw_fn = fitness_fn
         self._n_objectives = n_objectives
         self._jit_compile = jit_compile
-        
+
         # Vectorize and optionally JIT compile
         vmapped = vmap(fitness_fn)
         if jit_compile:
             self._fitness_fn = jit(vmapped)
         else:
             self._fitness_fn = vmapped
-        
+
         # Compile once to avoid first-call latency during evolution
         self._compiled = False
 
@@ -111,37 +110,34 @@ class JaxEvaluator:
     ) -> Sequence[Fitness]:
         """
         Evaluate individuals using JAX.
-        
+
         Converts genomes to a JAX array, runs JIT-compiled
         vectorized evaluation, and converts back to Fitness objects.
-        
+
         Args:
             individuals: Individuals to evaluate
             seed: Random seed (sets JAX PRNG key)
-            
+
         Returns:
             Fitness values
         """
         if not individuals:
             return []
-        
+
         # Extract genes and convert to JAX array
-        genes_list = [
-            np.asarray(getattr(ind.genome, "genes", ind.genome))
-            for ind in individuals
-        ]
+        genes_list = [np.asarray(getattr(ind.genome, "genes", ind.genome)) for ind in individuals]
         genes_np = np.vstack(genes_list)
         genes_jax = jnp.array(genes_np)
-        
+
         # Ensure compiled
         self._ensure_compiled(genes_jax[:1])
-        
+
         # Evaluate (deterministic - JAX functions should use passed keys)
         fitness_jax = self._fitness_fn(genes_jax)
-        
+
         # Convert back to Fitness objects
         fitness_np = np.asarray(fitness_jax)
-        
+
         if fitness_np.ndim == 1:
             return [Fitness.scalar(float(v)) for v in fitness_np]
         else:
@@ -154,10 +150,10 @@ class JaxEvaluator:
 class JaxBackend:
     """
     JAX execution backend.
-    
+
     Uses JAX for JIT-compiled, GPU-accelerated batch evaluation.
     Supports CPU, GPU, and TPU execution.
-    
+
     Example:
         >>> backend = JaxBackend()
         >>> results = backend.map_evaluate(evaluator, population)
@@ -166,7 +162,7 @@ class JaxBackend:
     def __init__(self) -> None:
         """Create JAX backend."""
         device_type, device_count = _get_device_info()
-        
+
         self._capabilities = BackendCapabilities(
             parallel=True,
             gpu=device_type in ("gpu", "tpu"),
@@ -198,21 +194,21 @@ class JaxBackend:
     ) -> Sequence[Fitness]:
         """
         Evaluate using JAX acceleration.
-        
+
         If evaluator is a JaxEvaluator, uses its JIT path.
         Otherwise, falls back to standard evaluation.
-        
+
         Args:
             evaluator: Evaluator to use
             individuals: Individuals to evaluate
             seed: Random seed
-            
+
         Returns:
             Fitness values
         """
         if isinstance(evaluator, JaxEvaluator):
             return evaluator.evaluate(individuals, seed=seed)
-        
+
         # Fall back to standard evaluation
         return evaluator.evaluate(individuals, seed=seed)
 
@@ -227,13 +223,13 @@ class JaxBackend:
 # Standard JAX implementations of benchmark functions
 def sphere_jax(x: jnp.ndarray) -> jnp.ndarray:
     """Sphere function in JAX (single input)."""
-    return jnp.sum(x ** 2)
+    return jnp.sum(x**2)
 
 
 def rastrigin_jax(x: jnp.ndarray, A: float = 10.0) -> jnp.ndarray:
     """Rastrigin function in JAX (single input)."""
     n = len(x)
-    return A * n + jnp.sum(x ** 2 - A * jnp.cos(2 * jnp.pi * x))
+    return A * n + jnp.sum(x**2 - A * jnp.cos(2 * jnp.pi * x))
 
 
 def rosenbrock_jax(x: jnp.ndarray) -> jnp.ndarray:
@@ -246,7 +242,7 @@ def ackley_jax(
 ) -> jnp.ndarray:
     """Ackley function in JAX (single input)."""
     n = len(x)
-    sum1 = jnp.sum(x ** 2)
+    sum1 = jnp.sum(x**2)
     sum2 = jnp.sum(jnp.cos(c * x))
     return -a * jnp.exp(-b * jnp.sqrt(sum1 / n)) - jnp.exp(sum2 / n) + a + jnp.e
 

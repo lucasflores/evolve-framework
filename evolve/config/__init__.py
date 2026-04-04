@@ -16,16 +16,16 @@ Public API:
     MetricCategory: Metric category enum
 """
 
-from evolve.config.stopping import StoppingConfig
 from evolve.config.callbacks import CallbackConfig
 from evolve.config.erp import ERPSettings
+from evolve.config.meta import MetaEvolutionConfig, ParameterSpec
 from evolve.config.multiobjective import (
-    ObjectiveSpec,
     ConstraintSpec,
     MultiObjectiveConfig,
+    ObjectiveSpec,
 )
-from evolve.config.meta import ParameterSpec, MetaEvolutionConfig
 from evolve.config.schema import SchemaVersion, validate_schema_version
+from evolve.config.stopping import StoppingConfig
 from evolve.config.tracking import MetricCategory, TrackingConfig
 from evolve.config.unified import UnifiedConfig
 

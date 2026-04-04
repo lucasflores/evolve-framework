@@ -1,0 +1,49 @@
+# Research Assistant Configuration
+# This file is created during initial setup
+
+mlflow:
+  # Local SQLite database (default)
+  tracking_uri: "sqlite:///mlflow.db"
+  
+  # Default experiment name pattern
+  experiment_name_pattern: "research-{date}"
+
+# External toolkits this research project depends on
+# The agent traverses into these to understand experiment patterns
+toolkits: []
+  # Example:
+  # - name: evolve-framework
+  #   path: ../evolve-framework      # Relative or absolute path
+  #   # OR: url: https://github.com/org/repo  # Clone if not present
+  #   scope:                          # Limit analysis to these modules (optional)
+  #     - causal
+  #     - optimization
+
+notebooklm:
+  # NotebookLM notebooks for literature grounding
+  # Add notebooks relevant to your research domain
+  notebooks:
+    - name: "EA, GP, NE, and Causal Discovery Resources"
+      id: "ea,-gp,-ne,-and-causal-discovery-resources"
+  # Example additional notebooks:
+  # - name: "Optimization Theory"
+  #   id: "optimization-theory"
+
+framework:
+  # Populated during framework discovery
+  last_analyzed: null
+  git_sha: null
+  
+  # Custom commands (discovered or user-provided)
+  commands:
+    run_experiment: null  # e.g., "python -m evolve run"
+    
+preferences:
+  # How many hypotheses to propose at once
+  hypothesis_batch_size: 3
+  
+  # Auto-approve experiments (not recommended for initial use)
+  auto_approve_experiments: false
+  
+  # Verbose logging
+  verbose: true

@@ -6,24 +6,24 @@ Evaluators may use GPU/JIT but must have CPU reference implementations.
 """
 
 from evolve.evaluation.evaluator import (
+    BatchEvaluator,
+    DiagnosticEvaluator,
+    EvaluationError,
     Evaluator,
     EvaluatorCapabilities,
-    EvaluationError,
-    DiagnosticEvaluator,
     FunctionEvaluator,
-    BatchEvaluator,
-)
-from evolve.evaluation.testing import (
-    assert_evaluator_equivalence,
-    assert_fitness_close,
-    assert_fitness_batch_close,
-    EvaluatorEquivalenceError,
-    EvaluatorTester,
 )
 from evolve.evaluation.scm_evaluator import (
-    SCMFitnessConfig,
     SCMEvaluationResult,
     SCMEvaluator,
+    SCMFitnessConfig,
+)
+from evolve.evaluation.testing import (
+    EvaluatorEquivalenceError,
+    EvaluatorTester,
+    assert_evaluator_equivalence,
+    assert_fitness_batch_close,
+    assert_fitness_close,
 )
 
 __all__ = [

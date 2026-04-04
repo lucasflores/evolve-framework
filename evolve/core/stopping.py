@@ -16,7 +16,7 @@ from evolve.core.population import Population
 class GenerationLimitStopping:
     """
     Stop after a fixed number of generations.
-    
+
     Attributes:
         max_generations: Maximum generations to run
     """
@@ -46,7 +46,7 @@ class GenerationLimitStopping:
 class FitnessThresholdStopping:
     """
     Stop when fitness reaches a target threshold.
-    
+
     Attributes:
         threshold: Target fitness value
         minimize: If True, stop when fitness <= threshold
@@ -66,9 +66,9 @@ class FitnessThresholdStopping:
         stats = population.statistics
         if stats.best_fitness is None:
             return False
-        
+
         best = float(stats.best_fitness.values[0])
-        
+
         if self.minimize:
             if best <= self.threshold:
                 self._reason = f"Fitness {best:.6f} <= threshold {self.threshold}"
@@ -77,7 +77,7 @@ class FitnessThresholdStopping:
             if best >= self.threshold:
                 self._reason = f"Fitness {best:.6f} >= threshold {self.threshold}"
                 return True
-        
+
         return False
 
     @property
@@ -90,9 +90,9 @@ class FitnessThresholdStopping:
 class StagnationStopping:
     """
     Stop when fitness doesn't improve for N generations.
-    
+
     Detects convergence/stagnation.
-    
+
     Attributes:
         patience: Number of generations without improvement
         min_delta: Minimum improvement to count as progress
@@ -116,25 +116,25 @@ class StagnationStopping:
         stats = population.statistics
         if stats.best_fitness is None:
             return False
-        
+
         current = float(stats.best_fitness.values[0])
-        
+
         # Check for improvement
         if self.minimize:
             improved = current < self._best_fitness - self.min_delta
         else:
             improved = current > self._best_fitness + self.min_delta
-        
+
         if improved:
             self._best_fitness = current
             self._stagnant_gens = 0
         else:
             self._stagnant_gens += 1
-        
+
         if self._stagnant_gens >= self.patience:
             self._reason = f"No improvement for {self.patience} generations"
             return True
-        
+
         return False
 
     @property
@@ -152,7 +152,7 @@ class StagnationStopping:
 class TimeLimitStopping:
     """
     Stop after a time limit.
-    
+
     Attributes:
         max_seconds: Maximum runtime in seconds
     """
@@ -169,15 +169,15 @@ class TimeLimitStopping:
     ) -> bool:
         """Check if time limit exceeded."""
         import time
-        
+
         if self._start_time is None:
             self._start_time = time.time()
-        
+
         elapsed = time.time() - self._start_time
         if elapsed >= self.max_seconds:
             self._reason = f"Time limit ({self.max_seconds}s) exceeded"
             return True
-        
+
         return False
 
     @property
@@ -194,7 +194,7 @@ class TimeLimitStopping:
 class CompositeStoppingCriterion:
     """
     Combines multiple stopping criteria (any triggers stop).
-    
+
     Attributes:
         criteria: List of stopping criteria
     """
@@ -222,7 +222,7 @@ class CompositeStoppingCriterion:
             return self._triggered.reason
         return "No criterion triggered"
 
-    def add(self, criterion: Any) -> "CompositeStoppingCriterion":
+    def add(self, criterion: Any) -> CompositeStoppingCriterion:
         """Add a criterion and return self."""
         self.criteria.append(criterion)
         return self

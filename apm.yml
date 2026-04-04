@@ -1,0 +1,9 @@
+name: "evolve-framework"
+version: "1.0.0"
+dependencies:
+  mcp:
+    - io.github.upstash/context7
+    - io.github.github/github-mcp-server
+    - huggingface/hf-mcp-server
+  apm:
+    - lucasflores/agent-skills

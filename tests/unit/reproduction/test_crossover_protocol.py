@@ -28,7 +28,6 @@ from evolve.reproduction.protocol import (
 )
 from evolve.reproduction.sandbox import StepCounter
 
-
 # =============================================================================
 # Fixtures
 # =============================================================================
@@ -87,19 +86,29 @@ class TestSinglePointCrossoverExecutor:
     """Tests for SinglePointCrossoverExecutor."""
 
     def test_execute_produces_offspring(
-        self, rng: Random, counter: StepCounter, parent1_genome: np.ndarray, parent2_genome: np.ndarray
+        self,
+        rng: Random,
+        counter: StepCounter,
+        parent1_genome: np.ndarray,
+        parent2_genome: np.ndarray,
     ):
         """Executor produces offspring of correct shape."""
         executor = SinglePointCrossoverExecutor()
         params = {}
 
-        offspring1, offspring2 = executor.execute(parent1_genome, parent2_genome, params, rng, counter)
+        offspring1, offspring2 = executor.execute(
+            parent1_genome, parent2_genome, params, rng, counter
+        )
 
         assert offspring1.shape == parent1_genome.shape
         assert offspring2.shape == parent2_genome.shape
 
     def test_execute_uses_step_counter(
-        self, rng: Random, counter: StepCounter, parent1_genome: np.ndarray, parent2_genome: np.ndarray
+        self,
+        rng: Random,
+        counter: StepCounter,
+        parent1_genome: np.ndarray,
+        parent2_genome: np.ndarray,
     ):
         """Execution increments step counter."""
         executor = SinglePointCrossoverExecutor()
@@ -110,13 +119,19 @@ class TestSinglePointCrossoverExecutor:
         assert counter.count > 0
 
     def test_execute_mixes_genes(
-        self, rng: Random, counter: StepCounter, parent1_genome: np.ndarray, parent2_genome: np.ndarray
+        self,
+        rng: Random,
+        counter: StepCounter,
+        parent1_genome: np.ndarray,
+        parent2_genome: np.ndarray,
     ):
         """Offspring contains genes from both parents."""
         executor = SinglePointCrossoverExecutor()
         params = {"point_ratio": 0.5}
 
-        offspring1, offspring2 = executor.execute(parent1_genome, parent2_genome, params, rng, counter)
+        offspring1, offspring2 = executor.execute(
+            parent1_genome, parent2_genome, params, rng, counter
+        )
 
         # Should have some zeros and some ones
         has_zeros = np.any(offspring1 == 0.0)
@@ -134,19 +149,29 @@ class TestTwoPointCrossoverExecutor:
     """Tests for TwoPointCrossoverExecutor."""
 
     def test_execute_produces_offspring(
-        self, rng: Random, counter: StepCounter, parent1_genome: np.ndarray, parent2_genome: np.ndarray
+        self,
+        rng: Random,
+        counter: StepCounter,
+        parent1_genome: np.ndarray,
+        parent2_genome: np.ndarray,
     ):
         """Executor produces offspring of correct shape."""
         executor = TwoPointCrossoverExecutor()
         params = {}
 
-        offspring1, offspring2 = executor.execute(parent1_genome, parent2_genome, params, rng, counter)
+        offspring1, offspring2 = executor.execute(
+            parent1_genome, parent2_genome, params, rng, counter
+        )
 
         assert offspring1.shape == parent1_genome.shape
         assert offspring2.shape == parent2_genome.shape
 
     def test_execute_uses_step_counter(
-        self, rng: Random, counter: StepCounter, parent1_genome: np.ndarray, parent2_genome: np.ndarray
+        self,
+        rng: Random,
+        counter: StepCounter,
+        parent1_genome: np.ndarray,
+        parent2_genome: np.ndarray,
     ):
         """Execution increments step counter."""
         executor = TwoPointCrossoverExecutor()
@@ -166,38 +191,56 @@ class TestUniformCrossoverExecutor:
     """Tests for UniformCrossoverExecutor."""
 
     def test_execute_produces_offspring(
-        self, rng: Random, counter: StepCounter, parent1_genome: np.ndarray, parent2_genome: np.ndarray
+        self,
+        rng: Random,
+        counter: StepCounter,
+        parent1_genome: np.ndarray,
+        parent2_genome: np.ndarray,
     ):
         """Executor produces offspring of correct shape."""
         executor = UniformCrossoverExecutor()
         params = {}
 
-        offspring1, offspring2 = executor.execute(parent1_genome, parent2_genome, params, rng, counter)
+        offspring1, offspring2 = executor.execute(
+            parent1_genome, parent2_genome, params, rng, counter
+        )
 
         assert offspring1.shape == parent1_genome.shape
         assert offspring2.shape == parent2_genome.shape
 
     def test_execute_respects_probability(
-        self, rng: Random, counter: StepCounter, parent1_genome: np.ndarray, parent2_genome: np.ndarray
+        self,
+        rng: Random,
+        counter: StepCounter,
+        parent1_genome: np.ndarray,
+        parent2_genome: np.ndarray,
     ):
         """Probability parameter affects gene mixing."""
         executor = UniformCrossoverExecutor()
         # swap_prob=1.0 should always swap (offspring1 gets parent2 genes, offspring2 gets parent1)
         params = {"swap_prob": 1.0}
 
-        offspring1, offspring2 = executor.execute(parent1_genome, parent2_genome, params, rng, counter)
+        offspring1, offspring2 = executor.execute(
+            parent1_genome, parent2_genome, params, rng, counter
+        )
 
         np.testing.assert_array_equal(offspring1, parent2_genome)
         np.testing.assert_array_equal(offspring2, parent1_genome)
 
     def test_execute_probability_zero(
-        self, rng: Random, counter: StepCounter, parent1_genome: np.ndarray, parent2_genome: np.ndarray
+        self,
+        rng: Random,
+        counter: StepCounter,
+        parent1_genome: np.ndarray,
+        parent2_genome: np.ndarray,
     ):
         """swap_prob=0 should never swap."""
         executor = UniformCrossoverExecutor()
         params = {"swap_prob": 0.0}
 
-        offspring1, offspring2 = executor.execute(parent1_genome, parent2_genome, params, rng, counter)
+        offspring1, offspring2 = executor.execute(
+            parent1_genome, parent2_genome, params, rng, counter
+        )
 
         np.testing.assert_array_equal(offspring1, parent1_genome)
         np.testing.assert_array_equal(offspring2, parent2_genome)
@@ -212,25 +255,37 @@ class TestBlendCrossoverExecutor:
     """Tests for BlendCrossoverExecutor."""
 
     def test_execute_produces_offspring(
-        self, rng: Random, counter: StepCounter, parent1_genome: np.ndarray, parent2_genome: np.ndarray
+        self,
+        rng: Random,
+        counter: StepCounter,
+        parent1_genome: np.ndarray,
+        parent2_genome: np.ndarray,
     ):
         """Executor produces offspring of correct shape."""
         executor = BlendCrossoverExecutor()
         params = {}
 
-        offspring1, offspring2 = executor.execute(parent1_genome, parent2_genome, params, rng, counter)
+        offspring1, offspring2 = executor.execute(
+            parent1_genome, parent2_genome, params, rng, counter
+        )
 
         assert offspring1.shape == parent1_genome.shape
         assert offspring2.shape == parent2_genome.shape
 
     def test_execute_blends_values(
-        self, rng: Random, counter: StepCounter, parent1_genome: np.ndarray, parent2_genome: np.ndarray
+        self,
+        rng: Random,
+        counter: StepCounter,
+        parent1_genome: np.ndarray,
+        parent2_genome: np.ndarray,
     ):
         """Offspring values are interpolated from parents."""
         executor = BlendCrossoverExecutor()
         params = {"alpha": 0.0}
 
-        offspring1, offspring2 = executor.execute(parent1_genome, parent2_genome, params, rng, counter)
+        offspring1, offspring2 = executor.execute(
+            parent1_genome, parent2_genome, params, rng, counter
+        )
 
         # With alpha=0, should be between parent values (0 and 1)
         assert np.all(offspring1 >= 0.0)
@@ -246,25 +301,37 @@ class TestCloneCrossoverExecutor:
     """Tests for CloneCrossoverExecutor."""
 
     def test_execute_clones_parents(
-        self, rng: Random, counter: StepCounter, parent1_genome: np.ndarray, parent2_genome: np.ndarray
+        self,
+        rng: Random,
+        counter: StepCounter,
+        parent1_genome: np.ndarray,
+        parent2_genome: np.ndarray,
     ):
         """Clone executor returns copies of parents."""
         executor = CloneCrossoverExecutor()
         params = {}
 
-        offspring1, offspring2 = executor.execute(parent1_genome, parent2_genome, params, rng, counter)
+        offspring1, offspring2 = executor.execute(
+            parent1_genome, parent2_genome, params, rng, counter
+        )
 
         np.testing.assert_array_equal(offspring1, parent1_genome)
         np.testing.assert_array_equal(offspring2, parent2_genome)
 
     def test_execute_returns_copies(
-        self, rng: Random, counter: StepCounter, parent1_genome: np.ndarray, parent2_genome: np.ndarray
+        self,
+        rng: Random,
+        counter: StepCounter,
+        parent1_genome: np.ndarray,
+        parent2_genome: np.ndarray,
     ):
         """Clone returns copies, not references."""
         executor = CloneCrossoverExecutor()
         params = {}
 
-        offspring1, offspring2 = executor.execute(parent1_genome, parent2_genome, params, rng, counter)
+        offspring1, offspring2 = executor.execute(
+            parent1_genome, parent2_genome, params, rng, counter
+        )
 
         assert offspring1 is not parent1_genome
         assert offspring2 is not parent2_genome
@@ -317,29 +384,45 @@ class TestExecuteCrossover:
     """Tests for execute_crossover function."""
 
     def test_execute_with_valid_spec(
-        self, rng: Random, counter: StepCounter, parent1_genome: np.ndarray, parent2_genome: np.ndarray
+        self,
+        rng: Random,
+        counter: StepCounter,
+        parent1_genome: np.ndarray,
+        parent2_genome: np.ndarray,
     ):
         """Crossover executes with valid specification."""
         spec = CrossoverProtocolSpec(type=CrossoverType.UNIFORM)
 
-        offspring1, offspring2 = execute_crossover(spec, parent1_genome, parent2_genome, rng, counter)
+        offspring1, offspring2 = execute_crossover(
+            spec, parent1_genome, parent2_genome, rng, counter
+        )
 
         assert offspring1.shape == parent1_genome.shape
         assert offspring2.shape == parent2_genome.shape
 
     def test_execute_inactive_spec_clones(
-        self, rng: Random, counter: StepCounter, parent1_genome: np.ndarray, parent2_genome: np.ndarray
+        self,
+        rng: Random,
+        counter: StepCounter,
+        parent1_genome: np.ndarray,
+        parent2_genome: np.ndarray,
     ):
         """Inactive spec defaults to cloning."""
         spec = CrossoverProtocolSpec(type=CrossoverType.UNIFORM, active=False)
 
-        offspring1, offspring2 = execute_crossover(spec, parent1_genome, parent2_genome, rng, counter)
+        offspring1, offspring2 = execute_crossover(
+            spec, parent1_genome, parent2_genome, rng, counter
+        )
 
         np.testing.assert_array_equal(offspring1, parent1_genome)
         np.testing.assert_array_equal(offspring2, parent2_genome)
 
     def test_execute_unknown_type_raises(
-        self, rng: Random, counter: StepCounter, parent1_genome: np.ndarray, parent2_genome: np.ndarray
+        self,
+        rng: Random,
+        counter: StepCounter,
+        parent1_genome: np.ndarray,
+        parent2_genome: np.ndarray,
     ):
         """Unknown crossover type raises ValueError."""
         # Create a spec with invalid type by modifying after creation
@@ -358,22 +441,30 @@ class TestExecuteCrossover:
 class TestSafeExecuteCrossover:
     """Tests for safe_execute_crossover function."""
 
-    def test_returns_offspring_and_success(self, rng: Random, parent1_genome: np.ndarray, parent2_genome: np.ndarray):
+    def test_returns_offspring_and_success(
+        self, rng: Random, parent1_genome: np.ndarray, parent2_genome: np.ndarray
+    ):
         """Safe execute returns offspring and success flag."""
         spec = CrossoverProtocolSpec(type=CrossoverType.UNIFORM)
 
-        (offspring1, offspring2), success = safe_execute_crossover(spec, parent1_genome, parent2_genome, rng)
+        (offspring1, offspring2), success = safe_execute_crossover(
+            spec, parent1_genome, parent2_genome, rng
+        )
 
         assert offspring1.shape == parent1_genome.shape
         assert offspring2.shape == parent2_genome.shape
         assert success is True
 
-    def test_handles_errors_gracefully(self, rng: Random, parent1_genome: np.ndarray, parent2_genome: np.ndarray):
+    def test_handles_errors_gracefully(
+        self, rng: Random, parent1_genome: np.ndarray, parent2_genome: np.ndarray
+    ):
         """Returns clones and False on error."""
         spec = CrossoverProtocolSpec(type=CrossoverType.UNIFORM)
         object.__setattr__(spec, "type", "nonexistent")
 
-        (offspring1, offspring2), success = safe_execute_crossover(spec, parent1_genome, parent2_genome, rng)
+        (offspring1, offspring2), success = safe_execute_crossover(
+            spec, parent1_genome, parent2_genome, rng
+        )
 
         np.testing.assert_array_equal(offspring1, parent1_genome)
         np.testing.assert_array_equal(offspring2, parent2_genome)
@@ -385,7 +476,9 @@ class TestSafeExecuteCrossover:
         rng = Random(42)
 
         # Step limit of 0 should fail immediately
-        (offspring1, offspring2), success = safe_execute_crossover(spec, parent1_genome, parent2_genome, rng, step_limit=0)
+        (offspring1, offspring2), success = safe_execute_crossover(
+            spec, parent1_genome, parent2_genome, rng, step_limit=0
+        )
 
         # May or may not fail depending on implementation, but should not crash
         assert offspring1.shape == parent1_genome.shape
@@ -400,7 +493,9 @@ class TestSafeExecuteCrossover:
 class TestInheritProtocol:
     """Tests for inherit_protocol function."""
 
-    def test_inherits_from_one_parent(self, protocol_a: ReproductionProtocol, protocol_b: ReproductionProtocol):
+    def test_inherits_from_one_parent(
+        self, protocol_a: ReproductionProtocol, protocol_b: ReproductionProtocol
+    ):
         """Offspring protocol is inherited from one parent."""
         rng = Random(42)
 
@@ -409,7 +504,9 @@ class TestInheritProtocol:
         # Should be equal to one of the parents
         assert offspring_protocol == protocol_a or offspring_protocol == protocol_b
 
-    def test_deterministic_with_same_seed(self, protocol_a: ReproductionProtocol, protocol_b: ReproductionProtocol):
+    def test_deterministic_with_same_seed(
+        self, protocol_a: ReproductionProtocol, protocol_b: ReproductionProtocol
+    ):
         """Same seed produces same inheritance."""
         rng1 = Random(42)
         rng2 = Random(42)

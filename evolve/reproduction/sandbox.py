@@ -12,9 +12,10 @@ Key Components:
 
 from __future__ import annotations
 
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Callable, Generator, TypeVar
+from typing import Any, TypeVar
 
 T = TypeVar("T")
 
@@ -89,7 +90,7 @@ class StepCounter:
         """Number of steps remaining before limit."""
         return max(0, self.limit - self.count)
 
-    def __enter__(self) -> "StepCounter":
+    def __enter__(self) -> StepCounter:
         """Context manager entry - reset counter."""
         self.reset()
         return self
@@ -165,8 +166,7 @@ def safe_execute(
     try:
         # Inject counter into kwargs if func expects it
         if "counter" in kwargs or (
-            hasattr(func, "__code__")
-            and "counter" in func.__code__.co_varnames
+            hasattr(func, "__code__") and "counter" in func.__code__.co_varnames
         ):
             kwargs["counter"] = counter
             result = func(*args, **kwargs)

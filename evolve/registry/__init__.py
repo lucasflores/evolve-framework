@@ -11,15 +11,15 @@ Public API:
     reset_genome_registry(): Reset genome registry (for testing)
 """
 
-from evolve.registry.operators import (
-    OperatorRegistry,
-    get_operator_registry,
-    reset_operator_registry,
-)
 from evolve.registry.genomes import (
     GenomeRegistry,
     get_genome_registry,
     reset_genome_registry,
+)
+from evolve.registry.operators import (
+    OperatorRegistry,
+    get_operator_registry,
+    reset_operator_registry,
 )
 
 __all__ = [

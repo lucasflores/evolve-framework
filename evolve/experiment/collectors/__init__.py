@@ -15,8 +15,8 @@ All collectors implement the MetricCollector protocol.
 
 from evolve.experiment.collectors.base import (
     CollectionContext,
-    MetricCollector,
     MatingStats,
+    MetricCollector,
 )
 from evolve.experiment.collectors.derived import DerivedAnalyticsCollector
 from evolve.experiment.collectors.erp import ERPMetricCollector
