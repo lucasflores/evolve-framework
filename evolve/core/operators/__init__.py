@@ -29,6 +29,8 @@ from evolve.core.operators.selection import (
     SelectionOperator,
     TournamentSelection,
 )
+from evolve.core.operators.token_crossover import TokenLevelCrossover
+from evolve.core.operators.token_mutation import TokenAwareMutator
 
 __all__ = [
     # Selection
@@ -52,4 +54,7 @@ __all__ = [
     "PolynomialMutation",
     "CreepMutation",
     "NEATMutation",
+    # Token operators (ESPO)
+    "TokenAwareMutator",
+    "TokenLevelCrossover",
 ]

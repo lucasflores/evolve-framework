@@ -9,6 +9,11 @@ from evolve.representation.decoder import (
     GraphToMLPDecoder,
     GraphToNetworkDecoder,
 )
+from evolve.representation.embedding import EmbeddingGenome
+from evolve.representation.embedding_config import (
+    DimensionalityStrategy,
+    EmbeddingGenomeConfig,
+)
 from evolve.representation.genome import (
     Genome,
     SerializableGenome,
@@ -112,4 +117,8 @@ __all__ = [
     "scm_sequence_distance",
     "scm_structural_distance",
     "scm_distance",
+    # Embedding genome (ESPO)
+    "EmbeddingGenome",
+    "EmbeddingGenomeConfig",
+    "DimensionalityStrategy",
 ]

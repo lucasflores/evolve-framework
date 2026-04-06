@@ -60,6 +60,51 @@ def random_genes(
 
 
 # ============================================================================
+# ESPO Fixtures
+# ============================================================================
+
+
+@pytest.fixture
+def embedding_genome_config():
+    """Standard EmbeddingGenomeConfig for tests."""
+    from evolve.representation.embedding_config import EmbeddingGenomeConfig
+
+    return EmbeddingGenomeConfig(
+        n_tokens=4,
+        embed_dim=16,
+        model_id="test-model",
+    )
+
+
+@pytest.fixture
+def sample_embedding_genome(np_rng: np.random.Generator):
+    """A small EmbeddingGenome for tests (4 tokens x 16 dim)."""
+    from evolve.representation.embedding import EmbeddingGenome
+
+    embeddings = np_rng.standard_normal((4, 16)).astype(np.float32)
+    return EmbeddingGenome(
+        embeddings=embeddings,
+        model_id="test-model",
+        seed_text="test prompt",
+    )
+
+
+@pytest.fixture
+def sample_task_spec():
+    """A minimal TaskSpec for tests."""
+    from evolve.evaluation.task_spec import TaskSpec
+
+    return TaskSpec(
+        task_type="qa",
+        inputs=(
+            {"input": "What is 2+2?"},
+            {"input": "What is the capital of France?"},
+        ),
+        ground_truth=("4", "Paris"),
+    )
+
+
+# ============================================================================
 # Population Fixtures
 # ============================================================================
 

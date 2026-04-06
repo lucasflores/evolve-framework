@@ -3,20 +3,25 @@
 <!--
 Sync Impact Report - Constitution Update
 ─────────────────────────────────────────
-Version Change: (initial) → 1.0.0
-Change Type: MAJOR - Initial constitution ratification
+Version Change: 1.0.0 → 1.1.0
+Change Type: MINOR - New principle added
 
-Modified Principles: N/A (initial version)
+Modified Principles:
+  - III. Acceleration as Optional Execution Detail → IV (renumbered)
+  - IV. Determinism and Reproducibility → V (renumbered)
+  - V. Extensibility Over Premature Optimization → VI (renumbered)
+  - VI. Multi-Domain Algorithm Support → VII (renumbered)
+  - VII. Observability and Experiment Tracking → VIII (renumbered)
+
 Added Sections:
-  - Core Principles (7 principles)
-  - Development Practices
-  - Quality & Validation
-  - Governance
+  - III. Declarative Completeness (NON-NEGOTIABLE)
+
+Removed Sections: None
 
 Templates Requiring Updates:
-  ✅ plan-template.md - Constitution Check section aligned
-  ✅ spec-template.md - Requirements validation aligned
-  ✅ tasks-template.md - Task categorization aligned
+  ✅ plan-template.md - No principle numbers hardcoded; no update needed
+  ✅ spec-template.md - No principle numbers hardcoded; no update needed
+  ✅ tasks-template.md - No principle numbers hardcoded; no update needed
 
 Follow-up TODOs: None
 ─────────────────────────────────────────
@@ -48,7 +53,44 @@ Evolutionary logic, representation, evaluation, and execution backends MUST be d
 
 ---
 
-### III. Acceleration as Optional Execution Detail (NON-NEGOTIABLE)
+### III. Declarative Completeness (NON-NEGOTIABLE)
+
+`UnifiedConfig` is the single source of truth for experiment specification.
+Every component that affects experimental outcomes — operators, genomes,
+evaluators, callbacks, initialization strategies — MUST be expressible
+declaratively through `UnifiedConfig` and MUST be fully functional when
+resolved by the factory. The `create_engine` factory and associated
+factories MUST produce a ready-to-run system from a `UnifiedConfig` alone
+(plus any non-serializable runtime overrides passed explicitly).
+
+**Rationale**: A "complete experiment specification" that omits the fitness
+function, requires manual callback wiring, or silently ignores declared
+configuration parameters is incomplete by definition. If a parameter appears
+in `genome_params`, `evaluator_params`, or `callback_params`, the
+corresponding factory MUST honor it. "Could work" is a design defect;
+"does work" is the standard. Incomplete declarative coverage forces users
+into imperative orchestration, defeats reproducibility (JSON configs can't
+capture the missing pieces), breaks experiment hashing (two experiments
+differing only in their evaluator produce identical hashes), and prevents
+meta-evolution from exploring the full parameter space.
+
+**Enforcement**:
+- Every behavioral component type (operators, genomes, evaluators,
+  callbacks, initializers) MUST have a corresponding registry
+- Registries MUST support runtime registration of user-defined
+  implementations
+- `UnifiedConfig` MUST carry a string name + parameter dict for each
+  component type, resolved by the factory through the appropriate registry
+- `compute_hash()` MUST incorporate all fields that affect experimental
+  outcomes
+- Adding a new behavioral component type without a registry entry and
+  config surface is a spec violation
+- Integration tests MUST verify that any component expressible in config
+  works end-to-end through the factory without manual wiring
+
+---
+
+### IV. Acceleration as Optional Execution Detail (NON-NEGOTIABLE)
 
 GPU acceleration, JIT compilation, and vectorization are execution optimizations, never core dependencies.
 
@@ -63,7 +105,7 @@ GPU acceleration, JIT compilation, and vectorization are execution optimizations
 
 ---
 
-### IV. Determinism and Reproducibility (NON-NEGOTIABLE)
+### V. Determinism and Reproducibility (NON-NEGOTIABLE)
 
 All experiments MUST be reproducible from a seed value. Non-deterministic behavior MUST be explicitly flagged.
 
@@ -78,7 +120,7 @@ All experiments MUST be reproducible from a seed value. Non-deterministic behavi
 
 ---
 
-### V. Extensibility Over Premature Optimization
+### VI. Extensibility Over Premature Optimization
 
 The framework prioritizes clear extension points over performance optimization. Optimize only when empirical profiling justifies the complexity cost.
 
@@ -92,7 +134,7 @@ The framework prioritizes clear extension points over performance optimization. 
 
 ---
 
-### VI. Multi-Domain Algorithm Support
+### VII. Multi-Domain Algorithm Support
 
 The framework MUST support classical evolutionary algorithms, neuroevolution, causal discovery, multi-objective optimization, and reinforcement learning through composable abstractions.
 
@@ -106,7 +148,7 @@ The framework MUST support classical evolutionary algorithms, neuroevolution, ca
 
 ---
 
-### VII. Observability and Experiment Tracking
+### VIII. Observability and Experiment Tracking
 
 The system MUST provide structured logging, metrics collection, and experiment tracking suitable for academic benchmarking.
 

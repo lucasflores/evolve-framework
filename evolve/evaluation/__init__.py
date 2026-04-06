@@ -5,6 +5,7 @@ This is the PRIMARY ACCELERATION BOUNDARY.
 Evaluators may use GPU/JIT but must have CPU reference implementations.
 """
 
+from evolve.evaluation.benchmark import GroundTruthEvaluator
 from evolve.evaluation.evaluator import (
     BatchEvaluator,
     DiagnosticEvaluator,
@@ -13,11 +14,13 @@ from evolve.evaluation.evaluator import (
     EvaluatorCapabilities,
     FunctionEvaluator,
 )
+from evolve.evaluation.llm_judge import LLMJudgeEvaluator
 from evolve.evaluation.scm_evaluator import (
     SCMEvaluationResult,
     SCMEvaluator,
     SCMFitnessConfig,
 )
+from evolve.evaluation.task_spec import RubricCriterion, TaskSpec
 from evolve.evaluation.testing import (
     EvaluatorEquivalenceError,
     EvaluatorTester,
@@ -44,4 +47,9 @@ __all__ = [
     "SCMFitnessConfig",
     "SCMEvaluationResult",
     "SCMEvaluator",
+    # ESPO evaluation
+    "TaskSpec",
+    "RubricCriterion",
+    "GroundTruthEvaluator",
+    "LLMJudgeEvaluator",
 ]

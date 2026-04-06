@@ -315,6 +315,31 @@ def _register_builtin_operators(registry: OperatorRegistry) -> None:
         compatible_genomes={"graph"},
     )
 
+    # -----------------------------------------
+    # Embedding (token-aware) operators
+    # -----------------------------------------
+    from evolve.core.operators.token_crossover import TokenLevelCrossover
+    from evolve.core.operators.token_mutation import TokenAwareMutator
+
+    registry.register(
+        "mutation",
+        "token_gaussian",
+        TokenAwareMutator,
+        compatible_genomes={"embedding"},
+    )
+    registry.register(
+        "crossover",
+        "token_single_point",
+        TokenLevelCrossover,
+        compatible_genomes={"embedding"},
+    )
+    registry.register(
+        "crossover",
+        "token_two_point",
+        lambda: TokenLevelCrossover(crossover_type="two_point"),
+        compatible_genomes={"embedding"},
+    )
+
 
 # -----------------------------------------------------------------------------
 # Module-level singleton

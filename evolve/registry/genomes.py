@@ -263,6 +263,36 @@ def _register_builtin_genomes(registry: GenomeRegistry) -> None:
         default_params={"num_variables": 5},
     )
 
+    # -----------------------------------------
+    # Embedding genome factory
+    # -----------------------------------------
+    def create_embedding_genome(
+        n_tokens: int = 8,
+        embed_dim: int = 768,
+        model_id: str = "default",
+        rng: Random | None = None,
+        **_kwargs: Any,
+    ) -> EmbeddingGenome:  # type: ignore[name-not-defined]  # noqa: F821
+        """Create a random EmbeddingGenome."""
+        from evolve.representation.embedding import EmbeddingGenome
+
+        if rng is None:
+            rng = Random()
+
+        np_rng = np.random.default_rng(rng.getrandbits(64))
+        embeddings = np_rng.standard_normal((n_tokens, embed_dim)).astype(np.float32)
+
+        return EmbeddingGenome(
+            embeddings=embeddings,
+            model_id=model_id,
+        )
+
+    registry.register(
+        "embedding",
+        create_embedding_genome,
+        default_params={"n_tokens": 8, "embed_dim": 768, "model_id": "default"},
+    )
+
 
 # -----------------------------------------------------------------------------
 # Module-level singleton
