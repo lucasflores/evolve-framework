@@ -173,6 +173,19 @@ class UnifiedConfig:
     """If True, lower fitness is better."""
 
     # -------------------------------------------------------------------------
+    # Evaluator & Callback declarative fields
+    # -------------------------------------------------------------------------
+
+    evaluator: str | None = None
+    """Evaluator registry name (resolved via EvaluatorRegistry)."""
+
+    evaluator_params: dict[str, Any] = field(default_factory=dict)
+    """Parameters passed to evaluator factory."""
+
+    custom_callbacks: tuple[dict[str, Any], ...] = ()
+    """Declarative callback entries: each dict has 'name' (str) and optional 'params' (dict)."""
+
+    # -------------------------------------------------------------------------
     # Nested configurations (None = disabled)
     # -------------------------------------------------------------------------
 
@@ -225,6 +238,29 @@ class UnifiedConfig:
         # Genome type
         if not self.genome_type:
             raise ValueError("genome_type required")
+
+        # Evaluator declarative fields
+        if self.evaluator is not None and not self.evaluator:
+            raise ValueError("evaluator must be a non-empty string when set")
+
+        if self.evaluator_params and self.evaluator is None:
+            import warnings
+
+            warnings.warn(
+                "evaluator_params set without evaluator name; "
+                "params will be ignored unless an evaluator is specified",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        # Validate custom_callbacks structure
+        for i, entry in enumerate(self.custom_callbacks):
+            if not isinstance(entry, dict):
+                raise ValueError(
+                    f"custom_callbacks[{i}] must be a dict, got {type(entry).__name__}"
+                )
+            if "name" not in entry:
+                raise ValueError(f"custom_callbacks[{i}] must have a 'name' key")
 
     # -------------------------------------------------------------------------
     # Properties
@@ -281,6 +317,9 @@ class UnifiedConfig:
             "genome_type": self.genome_type,
             "genome_params": dict(self.genome_params),
             "minimize": self.minimize,
+            "evaluator": self.evaluator,
+            "evaluator_params": dict(self.evaluator_params),
+            "custom_callbacks": [dict(cb) for cb in self.custom_callbacks],
         }
 
         # Nested configs
@@ -342,6 +381,13 @@ class UnifiedConfig:
         if isinstance(tags, list):
             tags = tuple(tags)
 
+        # Handle custom_callbacks as list → tuple
+        custom_callbacks_raw = data.get("custom_callbacks", ())
+        if isinstance(custom_callbacks_raw, list):
+            custom_callbacks = tuple(custom_callbacks_raw)
+        else:
+            custom_callbacks = custom_callbacks_raw
+
         return cls(
             schema_version=version,
             name=data.get("name", ""),
@@ -362,6 +408,9 @@ class UnifiedConfig:
             genome_type=data.get("genome_type", "vector"),
             genome_params=data.get("genome_params", {}),
             minimize=data.get("minimize", True),
+            evaluator=data.get("evaluator"),
+            evaluator_params=data.get("evaluator_params", {}),
+            custom_callbacks=custom_callbacks,
             stopping=stopping,
             callbacks=callbacks,
             erp=erp,
@@ -436,12 +485,22 @@ class UnifiedConfig:
         Note:
             Hash is based on all configuration parameters except name,
             description, and tags (which don't affect experiment behavior).
+            New fields (evaluator, evaluator_params, custom_callbacks) are
+            only included when non-default to preserve backward compatibility.
         """
         # Create dict excluding non-behavioral fields
         data = self.to_dict()
         data.pop("name", None)
         data.pop("description", None)
         data.pop("tags", None)
+
+        # Exclude new fields when at defaults (backward compat)
+        if data.get("evaluator") is None:
+            data.pop("evaluator", None)
+        if not data.get("evaluator_params"):
+            data.pop("evaluator_params", None)
+        if not data.get("custom_callbacks"):
+            data.pop("custom_callbacks", None)
 
         # Sort for determinism
         json_str = json.dumps(data, sort_keys=True)

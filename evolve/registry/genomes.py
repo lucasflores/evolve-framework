@@ -7,6 +7,7 @@ for creating genome instances.
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Callable
 from random import Random
 from typing import Any, TypeVar
@@ -92,6 +93,9 @@ class GenomeRegistry:
         """
         Create a genome instance.
 
+        Validates params against the factory's signature before invocation.
+        Factories accepting **kwargs skip strict validation.
+
         Args:
             name: Registered genome type name.
             rng: Random number generator.
@@ -99,6 +103,9 @@ class GenomeRegistry:
 
         Returns:
             New genome instance.
+
+        Raises:
+            ValueError: If unrecognized parameters are provided.
         """
         self._ensure_initialized()
 
@@ -110,6 +117,9 @@ class GenomeRegistry:
 
         if rng is not None:
             merged_params["rng"] = rng
+
+        # Validate params against factory signature
+        _validate_factory_params(name, factory, merged_params)
 
         return factory(**merged_params)
 
@@ -150,6 +160,44 @@ class GenomeRegistry:
         return dict(self._default_params.get(name, {}))
 
 
+def _validate_factory_params(
+    genome_type: str,
+    factory: GenomeFactory,
+    params: dict[str, Any],
+) -> None:
+    """
+    Validate params against the factory's signature using inspect.signature().
+
+    Skips validation if the factory accepts **kwargs (VAR_KEYWORD).
+
+    Args:
+        genome_type: Genome type name (for error messages).
+        factory: Factory callable.
+        params: Merged params dict (including injected 'rng').
+
+    Raises:
+        ValueError: If unrecognized parameter names are found.
+    """
+    try:
+        sig = inspect.signature(factory)
+    except (ValueError, TypeError):
+        return  # Can't introspect — skip validation
+
+    # Check if factory accepts **kwargs → skip strict validation
+    has_var_keyword = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
+    if has_var_keyword:
+        return
+
+    accepted = set(sig.parameters.keys())
+    unknown = set(params.keys()) - accepted
+
+    if unknown:
+        raise ValueError(
+            f"Unrecognized genome_params for '{genome_type}': {sorted(unknown)}. "
+            f"Accepted parameters: {sorted(accepted)}"
+        )
+
+
 def _register_builtin_genomes(registry: GenomeRegistry) -> None:
     """
     Register all built-in genome types (FR-024).
@@ -171,7 +219,6 @@ def _register_builtin_genomes(registry: GenomeRegistry) -> None:
         dimensions: int = 10,
         bounds: tuple[float, float] = (-1.0, 1.0),
         rng: Random | None = None,
-        **_kwargs: Any,
     ) -> VectorGenome:
         """Create a random VectorGenome."""
         if rng is None:
@@ -199,7 +246,6 @@ def _register_builtin_genomes(registry: GenomeRegistry) -> None:
         length: int = 10,
         alphabet: tuple = (0, 1),
         rng: Random | None = None,
-        **_kwargs: Any,
     ) -> SequenceGenome:
         """Create a random SequenceGenome."""
         if rng is None:
@@ -221,7 +267,6 @@ def _register_builtin_genomes(registry: GenomeRegistry) -> None:
         input_nodes: int = 2,
         output_nodes: int = 1,
         rng: Random | None = None,
-        **_kwargs: Any,
     ) -> GraphGenome:
         """Create a minimal GraphGenome (inputs -> outputs directly)."""
         if rng is None:
@@ -246,7 +291,6 @@ def _register_builtin_genomes(registry: GenomeRegistry) -> None:
     def create_scm_genome(
         num_variables: int = 5,
         rng: Random | None = None,
-        **_kwargs: Any,
     ) -> SCMGenome:
         """Create a random SCMGenome."""
         if rng is None:
@@ -271,7 +315,6 @@ def _register_builtin_genomes(registry: GenomeRegistry) -> None:
         embed_dim: int = 768,
         model_id: str = "default",
         rng: Random | None = None,
-        **_kwargs: Any,
     ) -> EmbeddingGenome:  # type: ignore[name-not-defined]  # noqa: F821
         """Create a random EmbeddingGenome."""
         from evolve.representation.embedding import EmbeddingGenome

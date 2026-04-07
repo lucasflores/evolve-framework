@@ -24,6 +24,8 @@ from evolve.core.stopping import (
     TimeLimitStopping,
 )
 from evolve.evaluation.evaluator import Evaluator
+from evolve.registry.callbacks import get_callback_registry
+from evolve.registry.evaluators import get_evaluator_registry
 from evolve.registry.genomes import get_genome_registry
 from evolve.registry.operators import get_operator_registry
 
@@ -56,9 +58,10 @@ class OperatorCompatibilityError(Exception):
 
 def create_engine(
     config: UnifiedConfig,
-    evaluator: Evaluator | Callable[[Any], float],
+    evaluator: Evaluator | Callable[[Any], float] | None = None,
     seed: int | None = None,
     callbacks: list[Callback] | None = None,
+    runtime_overrides: dict[str, Any] | None = None,
 ) -> EvolutionEngine:
     """
     Create a ready-to-run engine from unified configuration (FR-027).
@@ -66,11 +69,17 @@ def create_engine(
     This factory resolves operators from registries, validates compatibility,
     and produces either EvolutionEngine or ERPEngine based on configuration.
 
+    Evaluator resolution order:
+        1. Explicit ``evaluator`` argument (overrides config).
+        2. ``config.evaluator`` resolved from EvaluatorRegistry.
+        3. Neither → ValueError.
+
     Args:
         config: Unified experiment configuration.
-        evaluator: Fitness evaluator or callable fitness function (FR-032).
+        evaluator: Fitness evaluator, callable, or None for declarative resolution.
         seed: Random seed override (default: use config.seed).
         callbacks: Additional custom callbacks (FR-040).
+        runtime_overrides: Non-serializable params merged with evaluator_params.
 
     Returns:
         Configured EvolutionEngine or ERPEngine ready to run.
@@ -78,7 +87,7 @@ def create_engine(
     Raises:
         OperatorCompatibilityError: If operator incompatible with genome (FR-031).
         KeyError: If operator or genome type not found in registry.
-        ValueError: If configuration is invalid.
+        ValueError: If no evaluator provided and config.evaluator is not set.
 
     Example:
         >>> config = UnifiedConfig(
@@ -87,8 +96,10 @@ def create_engine(
         ...     crossover="sbx",
         ...     mutation="gaussian",
         ...     genome_type="vector",
+        ...     evaluator="benchmark",
+        ...     evaluator_params={"function_name": "sphere"},
         ... )
-        >>> engine = create_engine(config, fitness_fn)
+        >>> engine = create_engine(config)
         >>> result = engine.run(initial_population)
     """
     # Resolve seed
@@ -96,11 +107,28 @@ def create_engine(
     if effective_seed is None:
         effective_seed = Random().randint(0, 2**31)
 
-    # Wrap callable as evaluator if needed (FR-032)
-    if not isinstance(evaluator, Evaluator):
-        from evolve.evaluation.evaluator import FunctionEvaluator
+    # --- Evaluator resolution ---
+    if evaluator is not None:
+        # Explicit evaluator argument: wrap callable if needed (FR-032)
+        if not isinstance(evaluator, Evaluator):
+            from evolve.evaluation.evaluator import FunctionEvaluator
 
-        evaluator = FunctionEvaluator(evaluator)
+            evaluator = FunctionEvaluator(evaluator)
+    elif config.evaluator is not None:
+        # Declarative resolution from registry
+        eval_registry = get_evaluator_registry()
+        merged_params = dict(config.evaluator_params)
+        if runtime_overrides:
+            merged_params.update(runtime_overrides)
+        evaluator = eval_registry.get(config.evaluator, **merged_params)
+    else:
+        eval_registry = get_evaluator_registry()
+        available = eval_registry.list_evaluators()
+        raise ValueError(
+            "No evaluator provided. Either set config.evaluator to a registered "
+            "evaluator name or pass an evaluator argument to create_engine(). "
+            f"Available evaluators: {available}"
+        )
 
     # Validate operator compatibility (FR-031)
     # Note: Full validation requires compatibility metadata from T047-T049
@@ -130,6 +158,16 @@ def create_engine(
 
     # Build callbacks (FR-039)
     all_callbacks = _build_callbacks(config)
+
+    # Resolve custom_callbacks from registry (Config → Custom → Explicit order)
+    if config.custom_callbacks:
+        cb_registry = get_callback_registry()
+        for entry in config.custom_callbacks:
+            cb_name = entry["name"]
+            cb_params = entry.get("params", {})
+            custom_cb = cb_registry.get(cb_name, **cb_params)
+            all_callbacks.append(custom_cb)
+
     if callbacks:
         all_callbacks.extend(callbacks)
 

@@ -22,7 +22,7 @@ repos:
         stages: [commit]
       - id: dev-stack-mypy
         name: mypy type check
-        entry: python3 -m mypy src/
+        entry: python3 -m mypy evolve/
         language: system
         pass_filenames: false
         types: [python]
