@@ -231,7 +231,7 @@ def main():
 
     # Analyze results
     print("[4/4] Analyzing speciation patterns...")
-    analyze_speciation_results(initial_pop_copy, result.final_population, history)
+    analyze_speciation_results(initial_pop_copy, result.population, history)
 
     print("\n✅ Example complete!")
     print("\nTry modifying:")

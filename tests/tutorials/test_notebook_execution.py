@@ -74,6 +74,8 @@ class TestNotebookImportIndependence:
             "tutorial_utils_test", TUTORIALS_DIR / "utils" / "tutorial_utils.py"
         )
         module = importlib.util.module_from_spec(spec)
+        # Register in sys.modules so @dataclass can resolve cls.__module__
+        sys.modules[spec.name] = module
 
         # This should work without evolve being imported first
         try:

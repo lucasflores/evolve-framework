@@ -112,7 +112,7 @@ class RLEvaluator(Generic[G]):
 
             results.append(
                 Fitness(
-                    values=(fitness_value,),
+                    values=np.array([fitness_value]),
                     metadata={
                         "mean_reward": agg_result.mean_reward,
                         "std_reward": agg_result.std_reward,
@@ -160,7 +160,7 @@ class RLEvaluator(Generic[G]):
             fitness_value = -fitness_value
 
         return Fitness(
-            values=(fitness_value,),
+            values=np.array([fitness_value]),
             metadata={
                 "mean_reward": agg_result.mean_reward,
                 "std_reward": agg_result.std_reward,

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -137,7 +137,7 @@ class SoftPromptDecoder:
         generated_ids = outputs[0]
         text = self._tokenizer.decode(generated_ids, skip_special_tokens=True)
 
-        return text
+        return cast(str, text)
 
     def embed_text(self, text: str) -> np.ndarray:
         """
@@ -160,4 +160,4 @@ class SoftPromptDecoder:
             embeds = embed_layer(input_ids)
 
         # Remove batch dim, convert to numpy
-        return embeds.squeeze(0).cpu().numpy()
+        return cast(np.ndarray, embeds.squeeze(0).cpu().numpy())

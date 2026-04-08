@@ -30,7 +30,7 @@ G = TypeVar("G")
 
 
 @runtime_checkable
-class RecoveryStrategy(Protocol[G]):
+class RecoveryStrategy(Protocol[G]):  # type: ignore[misc]
     """
     Protocol interface for recovery strategies.
 
@@ -112,7 +112,7 @@ class ImmigrationRecovery:
         self,
         successful_matings: int,
         attempted_matings: int,
-        _population_size: int,
+        population_size: int,  # noqa: ARG002
         generation: int,
     ) -> bool:
         """Check if immigration should be triggered."""
@@ -164,7 +164,7 @@ class ImmigrationRecovery:
             # Note: Caller must wrap these in Individual objects
             immigrants.append((genome, protocol))
 
-        return (survivors, immigrants)
+        return (survivors, immigrants)  # type: ignore[return-value]
 
 
 # =============================================================================
@@ -195,8 +195,8 @@ class MutationBoostRecovery:
         self,
         successful_matings: int,
         attempted_matings: int,
-        _population_size: int,
-        _generation: int,
+        population_size: int,  # noqa: ARG002
+        generation: int,  # noqa: ARG002
     ) -> bool:
         """Check if mutation boost should be triggered."""
         if self._boost_remaining > 0:
@@ -262,8 +262,8 @@ class RelaxedMatchingRecovery:
         self,
         successful_matings: int,
         attempted_matings: int,
-        _population_size: int,
-        _generation: int,
+        population_size: int,  # noqa: ARG002
+        generation: int,  # noqa: ARG002
     ) -> bool:
         """Check if matching relaxation should be triggered."""
         if self._relaxation_remaining > 0:

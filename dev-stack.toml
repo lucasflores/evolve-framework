@@ -1,8 +1,8 @@
 [stack]
 version = "0.1.0"
 initialized = "2026-03-26T00:47:19Z"
-last_updated = "2026-03-26T00:47:19Z"
-rollback_ref = "dev-stack/rollback/20260326T004851Z"
+last_updated = "2026-04-08T02:33:22Z"
+rollback_ref = "dev-stack/rollback/20260408T023322Z"
 mode = "brownfield"
 
 [agent]
@@ -34,9 +34,9 @@ version = "0.1.0"
 installed = true
 
 [modules.docker]
-version = "0.1.0"
+version = "0.1.2"
 installed = true
 
 [modules.visualization]
-version = "0.1.0"
+version = "1.0.0"
 installed = true

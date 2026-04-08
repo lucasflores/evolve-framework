@@ -10,7 +10,7 @@ from __future__ import annotations
 import contextlib
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 try:
     import mlflow
@@ -309,7 +309,7 @@ class ResilientMLflowTracker:
 
         # Flush based on interval
         current_time = time.time()
-        return current_time - self._last_flush_time >= self.config.flush_interval
+        return cast(bool, current_time - self._last_flush_time >= self.config.flush_interval)
 
     def _try_flush(self) -> None:
         """Attempt to flush buffer to MLflow server."""

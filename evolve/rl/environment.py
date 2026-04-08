@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from random import Random
-from typing import Any, Protocol, TypeVar, runtime_checkable
+from typing import Any, Protocol, TypeVar, cast, runtime_checkable
 
 import numpy as np
 
@@ -56,7 +56,7 @@ class Space:
         low: np.ndarray | float,
         high: np.ndarray | float,
         shape: tuple[int, ...],
-        dtype: np.dtype = np.float32,
+        dtype: np.dtype = np.dtype(np.float32),
     ) -> Space:
         """
         Create Box (continuous) space.
@@ -160,7 +160,7 @@ class Space:
 
 
 @runtime_checkable
-class Environment(Protocol[Observation, Action]):
+class Environment(Protocol[Observation, Action]):  # type: ignore[misc]
     """
     Environment interface for policy evaluation.
 
@@ -204,7 +204,7 @@ class Environment(Protocol[Observation, Action]):
 
 
 @runtime_checkable
-class VectorizedEnvironment(Protocol[Observation, Action]):
+class VectorizedEnvironment(Protocol[Observation, Action]):  # type: ignore[misc]
     """
     Batched environment for parallel evaluation.
 
@@ -377,7 +377,7 @@ class SimpleEnvironment:
         self._state = self._rng.uniform(-1, 1, size=self.obs_space.shape).astype(
             self.obs_space.dtype
         )
-        return self._state.copy()
+        return cast(np.ndarray, self._state.copy())
 
     def step(self, action: np.ndarray | int) -> tuple[np.ndarray, float, bool, dict[str, Any]]:
         """Take a step - simple dynamics for testing."""
@@ -396,7 +396,7 @@ class SimpleEnvironment:
             delta = 0.1 * (action[: len(self._state)] - self._state)  # type: ignore
 
         self._state = np.clip(
-            self._state + delta.astype(self.obs_space.dtype),  # type: ignore
+            self._state + delta.astype(self.obs_space.dtype),
             self.obs_space.low,
             self.obs_space.high,
         )

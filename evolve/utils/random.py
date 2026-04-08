@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import struct
 from random import Random
-from typing import Any
+from typing import Any, cast
 
 
 def create_rng(seed: int | None = None) -> Random:
@@ -60,7 +60,7 @@ def derive_seed(master_seed: int, worker_id: int) -> int:
     data = struct.pack(">QQ", master_seed & 0xFFFFFFFFFFFFFFFF, worker_id)
     digest = hashlib.sha256(data).digest()
     # Take first 8 bytes as unsigned 64-bit integer
-    return struct.unpack(">Q", digest[:8])[0]
+    return cast(int, struct.unpack(">Q", digest[:8])[0])
 
 
 def get_rng_state(rng: Random) -> tuple[Any, ...]:

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -60,7 +60,7 @@ class CoherenceDefense:
             Clamped embeddings as float32 ndarray.
         """
         if not self.enable_mutation_clamp:
-            return mutated.copy()
+            return cast(np.ndarray, mutated.copy())
 
         result = mutated.copy()
         delta = result - original
@@ -69,7 +69,7 @@ class CoherenceDefense:
             if norm > self.coherence_radius:
                 result[i] = original[i] + delta[i] * (self.coherence_radius / norm)
 
-        return result.astype(np.float32)
+        return cast(np.ndarray, result.astype(np.float32))
 
     def check_feasibility(
         self,

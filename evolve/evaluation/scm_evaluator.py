@@ -218,7 +218,7 @@ class SCMEvaluator:
     def evaluate(
         self,
         individuals: Sequence[Individual[SCMGenome]],
-        _seed: int | None = None,
+        seed: int | None = None,  # noqa: ARG002
     ) -> Sequence[Fitness | None]:
         """
         Evaluate batch of SCM individuals.

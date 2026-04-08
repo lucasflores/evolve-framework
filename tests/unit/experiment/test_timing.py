@@ -30,7 +30,7 @@ class SimpleEvaluator:
     def capabilities(self) -> EvaluatorCapabilities:
         return EvaluatorCapabilities(n_objectives=1)
 
-    def evaluate(self, individuals, _seed=None):
+    def evaluate(self, individuals, seed=None):
         """Evaluate batch of individuals."""
         results = []
         for ind in individuals:

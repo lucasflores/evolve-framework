@@ -134,6 +134,8 @@ def create_engine(
     # Note: Full validation requires compatibility metadata from T047-T049
     _validate_operator_compatibility(config)
 
+    assert isinstance(evaluator, Evaluator)
+
     # Build operators from registry (FR-028)
     op_registry = get_operator_registry()
 
@@ -344,8 +346,9 @@ def _build_callbacks(config: UnifiedConfig) -> list[Callback]:
         from evolve.experiment.tracking.callback import TrackingCallback
 
         tracking_config = config.tracking
+        assert tracking_config is not None
         callbacks.append(
-            TrackingCallback(
+            TrackingCallback(  # type: ignore[abstract]
                 config=tracking_config,
                 unified_config_dict=config.to_dict(),
             )
@@ -529,16 +532,16 @@ def _create_multiobjective_engine(
     )
 
     # Store multi-objective settings for later use (runtime attribute)
-    engine._multiobjective_config = mo_settings
+    engine._multiobjective_config = mo_settings  # type: ignore[attr-defined]
 
     # Store reference point for hypervolume tracking (T055)
     if mo_settings.reference_point is not None:
-        engine._reference_point = mo_settings.reference_point
+        engine._reference_point = mo_settings.reference_point  # type: ignore[attr-defined]
 
     # Store constraint handling settings (T056a-T056c)
     if mo_settings.has_constraints:
-        engine._constraint_specs = mo_settings.constraints
-        engine._constraint_handling = mo_settings.constraint_handling
+        engine._constraint_specs = mo_settings.constraints  # type: ignore[attr-defined]
+        engine._constraint_handling = mo_settings.constraint_handling  # type: ignore[attr-defined]
 
     # Attach callbacks
     engine._callbacks = callbacks

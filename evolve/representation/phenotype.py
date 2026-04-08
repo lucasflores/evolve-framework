@@ -48,7 +48,7 @@ class Phenotype(Protocol):
 
 
 @runtime_checkable
-class Decoder(Protocol[G, P]):
+class Decoder(Protocol[G, P]):  # type: ignore[misc]
     """
     Transforms genomes into phenotypes.
 
@@ -103,7 +103,7 @@ class CallableDecoder(Generic[G, P]):
         >>> decoder = CallableDecoder(lambda g: g.genes)
     """
 
-    def __init__(self, decode_fn: Callable[[G], P]) -> None:  # type: ignore[name-defined]
+    def __init__(self, decode_fn: Callable[[G], P]) -> None:
         """
         Create decoder from function.
 

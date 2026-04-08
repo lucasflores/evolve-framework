@@ -18,6 +18,13 @@ TUTORIAL_PATH = (
     / "06_evolvable_reproduction_protocols.ipynb"
 )
 
+try:
+    import nbconvert  # noqa: F401
+
+    JUPYTER_AVAILABLE = True
+except ImportError:
+    JUPYTER_AVAILABLE = False
+
 
 def execute_notebook(notebook_path: Path, timeout: int = 900) -> tuple[bool, str]:
     """
@@ -81,6 +88,7 @@ class TestTutorial06ERP:
 
     @pytest.mark.slow
     @pytest.mark.integration
+    @pytest.mark.skipif(not JUPYTER_AVAILABLE, reason="jupyter not installed")
     def test_notebook_executes_successfully(self):
         """Test that entire notebook executes without errors."""
         success, error_msg = execute_notebook(TUTORIAL_PATH, timeout=900)
@@ -90,6 +98,7 @@ class TestTutorial06ERP:
 
     @pytest.mark.slow
     @pytest.mark.integration
+    @pytest.mark.skipif(not JUPYTER_AVAILABLE, reason="jupyter not installed")
     def test_notebook_execution_time(self):
         """Test that notebook completes within reasonable time."""
         import time
@@ -110,15 +119,15 @@ class TestTutorial06ERP:
             content = f.read()
 
         required_sections = [
-            "Part 0: Setup",
+            "Part 0: Setup and Imports",
             "Part 1: ERP Primer",
             "Part 2: The Three Protocol Components",
             "Part 3: Building Protocols",
             "Part 4: Running ERP Evolution",
             "Part 5: Protocol Evolution",
             "Part 6: Recovery Mechanisms",
-            "Part 7: Sexual Selection",
-            "Part 8: Advanced",
+            "Part 7: Case Study - Sexual Selection",
+            "Part 8: Advanced ERP Capabilities",
             "Part 9: Best Practices",
             "Part 10: Summary",
         ]
@@ -250,6 +259,7 @@ class TestTutorialContent:
 
 @pytest.mark.slow
 @pytest.mark.integration
+@pytest.mark.skipif(not JUPYTER_AVAILABLE, reason="jupyter not installed")
 def test_tutorial_performance_benchmark():
     """Benchmark tutorial execution time for monitoring."""
     import time

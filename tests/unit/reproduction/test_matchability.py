@@ -233,7 +233,7 @@ class TestProbabilisticMatchability:
         assert 0.0 <= result <= 1.0
 
     def test_base_prob_only(
-        self, _basic_context: MateContext, rng: Random, counter: StepCounter
+        self, basic_context: MateContext, rng: Random, counter: StepCounter
     ) -> None:
         evaluator = ProbabilisticMatchability()
         context = MateContext(

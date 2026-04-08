@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import cast
 
 import numpy as np
 
@@ -18,17 +19,17 @@ import numpy as np
 # Activation functions
 def sigmoid(x: np.ndarray) -> np.ndarray:
     """Sigmoid activation: 1 / (1 + exp(-x))."""
-    return 1.0 / (1.0 + np.exp(-np.clip(x, -500, 500)))
+    return cast(np.ndarray, 1.0 / (1.0 + np.exp(-np.clip(x, -500, 500))))
 
 
 def tanh(x: np.ndarray) -> np.ndarray:
     """Hyperbolic tangent activation."""
-    return np.tanh(x)
+    return cast(np.ndarray, np.tanh(x))
 
 
 def relu(x: np.ndarray) -> np.ndarray:
     """Rectified linear unit: max(0, x)."""
-    return np.maximum(0, x)
+    return cast(np.ndarray, np.maximum(0, x))
 
 
 def leaky_relu(x: np.ndarray, alpha: float = 0.01) -> np.ndarray:
@@ -44,7 +45,7 @@ def identity(x: np.ndarray) -> np.ndarray:
 def softmax(x: np.ndarray) -> np.ndarray:
     """Softmax activation (for output layer)."""
     exp_x = np.exp(x - np.max(x, axis=-1, keepdims=True))
-    return exp_x / np.sum(exp_x, axis=-1, keepdims=True)
+    return cast(np.ndarray, exp_x / np.sum(exp_x, axis=-1, keepdims=True))
 
 
 def step(x: np.ndarray) -> np.ndarray:
@@ -54,7 +55,7 @@ def step(x: np.ndarray) -> np.ndarray:
 
 def gaussian(x: np.ndarray) -> np.ndarray:
     """Gaussian activation: exp(-x^2)."""
-    return np.exp(-x * x)
+    return cast(np.ndarray, np.exp(-x * x))
 
 
 # Activation function registry
@@ -231,7 +232,7 @@ class RecurrentNumpyNetwork:
     @property
     def n_hidden(self) -> int:
         """Number of hidden units."""
-        return self.recurrent_weights.shape[0]
+        return int(self.recurrent_weights.shape[0])
 
 
 @dataclass

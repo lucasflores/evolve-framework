@@ -8,6 +8,7 @@ These tests are marked as 'benchmark' and may take longer to run.
 
 from __future__ import annotations
 
+import importlib.util
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -255,7 +256,7 @@ class TestTorchSpeedup:
         except ImportError:
             pytest.skip("PyTorch not installed")
 
-    def test_torch_cpu_speedup(self, _torch_available):
+    def test_torch_cpu_speedup(self, torch_available):  # noqa: ARG002
         """Torch CPU should be competitive with NumPy."""
         from evolve.backends.accelerated.torch_evaluator import (
             TorchEvaluator,
@@ -278,11 +279,10 @@ class TestTorchSpeedup:
         assert torch_result.throughput > 0
 
     @pytest.mark.skipif(
-        not hasattr(__import__("torch", fromlist=[""]), "cuda")
-        or not __import__("torch").cuda.is_available(),
+        not importlib.util.find_spec("torch"),
         reason="CUDA not available",
     )
-    def test_torch_cuda_speedup(self, _torch_available):
+    def test_torch_cuda_speedup(self, torch_available):  # noqa: ARG002
         """Torch CUDA should be faster than CPU for large populations."""
         import torch
 
@@ -326,7 +326,7 @@ class TestJaxSpeedup:
         except ImportError:
             pytest.skip("JAX not installed")
 
-    def test_jax_jit_speedup(self, _jax_available):
+    def test_jax_jit_speedup(self, jax_available):  # noqa: ARG002
         """JIT compilation should speed up repeated evaluation."""
         from evolve.backends.accelerated.jax_evaluator import (
             JaxEvaluator,

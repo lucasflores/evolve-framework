@@ -178,6 +178,7 @@ class LocalTracker:
         if not self._started:
             raise RuntimeError("Call start_run() before logging")
 
+        assert self.output_dir is not None, "output_dir not set; call start_run() first"
         with open(self.output_dir / "params.json", "w") as f:
             json.dump(params, f, indent=2, default=str)
 
@@ -186,6 +187,7 @@ class LocalTracker:
         if not self._started:
             raise RuntimeError("Call start_run() before logging")
 
+        assert self.output_dir is not None, "output_dir not set; call start_run() first"
         path = Path(path)
         dest = self.output_dir / "artifacts" / (name or path.name)
         shutil.copy(path, dest)
@@ -201,6 +203,7 @@ class LocalTracker:
         if not self._started:
             raise RuntimeError("Call start_run() before logging")
 
+        assert self.output_dir is not None, "output_dir not set; call start_run() first"
         with open(self.output_dir / filename, "w") as f:
             json.dump(data, f, indent=2, default=str)
 
@@ -220,6 +223,7 @@ class LocalTracker:
             "status": "completed",
             "timestamp": datetime.now().isoformat(),
         }
+        assert self.output_dir is not None, "output_dir not set; call start_run() first"
         with open(self.output_dir / "summary.json", "w") as f:
             json.dump(summary, f, indent=2)
 

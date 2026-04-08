@@ -12,6 +12,9 @@ Functions follow the convention:
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import cast
+
 import numpy as np
 
 
@@ -35,7 +38,7 @@ def sphere(x: np.ndarray) -> float | np.ndarray:
     if x.ndim == 1:
         return float(np.sum(x**2))
     else:
-        return np.sum(x**2, axis=1)
+        return cast(np.ndarray, np.sum(x**2, axis=1))
 
 
 def rastrigin(x: np.ndarray, A: float = 10.0) -> float | np.ndarray:
@@ -62,7 +65,7 @@ def rastrigin(x: np.ndarray, A: float = 10.0) -> float | np.ndarray:
         return float(A * n + np.sum(x**2 - A * np.cos(2 * np.pi * x)))
     else:
         n = x.shape[1]
-        return A * n + np.sum(x**2 - A * np.cos(2 * np.pi * x), axis=1)
+        return cast(np.ndarray, A * n + np.sum(x**2 - A * np.cos(2 * np.pi * x), axis=1))
 
 
 def rosenbrock(x: np.ndarray) -> float | np.ndarray:
@@ -86,9 +89,12 @@ def rosenbrock(x: np.ndarray) -> float | np.ndarray:
     if x.ndim == 1:
         return float(np.sum(100 * (x[1:] - x[:-1] ** 2) ** 2 + (1 - x[:-1]) ** 2))
     else:
-        return np.sum(
-            100 * (x[:, 1:] - x[:, :-1] ** 2) ** 2 + (1 - x[:, :-1]) ** 2,
-            axis=1,
+        return cast(
+            np.ndarray,
+            np.sum(
+                100 * (x[:, 1:] - x[:, :-1] ** 2) ** 2 + (1 - x[:, :-1]) ** 2,
+                axis=1,
+            ),
         )
 
 
@@ -120,7 +126,7 @@ def ackley(
         n = x.shape[1]
         sum1 = np.sum(x**2, axis=1)
         sum2 = np.sum(np.cos(c * x), axis=1)
-        return -a * np.exp(-b * np.sqrt(sum1 / n)) - np.exp(sum2 / n) + a + np.e
+        return cast(np.ndarray, -a * np.exp(-b * np.sqrt(sum1 / n)) - np.exp(sum2 / n) + a + np.e)
 
 
 def griewank(x: np.ndarray) -> float | np.ndarray:
@@ -149,7 +155,7 @@ def griewank(x: np.ndarray) -> float | np.ndarray:
         i = np.arange(1, n + 1)
         sum_term = np.sum(x**2, axis=1) / 4000
         prod_term = np.prod(np.cos(x / np.sqrt(i)), axis=1)
-        return sum_term - prod_term + 1
+        return cast(np.ndarray, sum_term - prod_term + 1)
 
 
 def schwefel(x: np.ndarray) -> float | np.ndarray:
@@ -173,7 +179,7 @@ def schwefel(x: np.ndarray) -> float | np.ndarray:
         return float(418.9829 * n - np.sum(x * np.sin(np.sqrt(np.abs(x)))))
     else:
         n = x.shape[1]
-        return 418.9829 * n - np.sum(x * np.sin(np.sqrt(np.abs(x))), axis=1)
+        return cast(np.ndarray, 418.9829 * n - np.sum(x * np.sin(np.sqrt(np.abs(x))), axis=1))
 
 
 # Multi-objective test functions (ZDT suite)
@@ -242,7 +248,7 @@ def zdt3(x: np.ndarray) -> np.ndarray:
 
 
 # Function registry for easy access
-BENCHMARK_FUNCTIONS = {
+BENCHMARK_FUNCTIONS: dict[str, Callable[..., float | np.ndarray]] = {
     "sphere": sphere,
     "rastrigin": rastrigin,
     "rosenbrock": rosenbrock,
@@ -255,7 +261,7 @@ BENCHMARK_FUNCTIONS = {
 }
 
 
-def get_function(name: str):
+def get_function(name: str) -> Callable[..., float | np.ndarray]:
     """
     Get benchmark function by name.
 

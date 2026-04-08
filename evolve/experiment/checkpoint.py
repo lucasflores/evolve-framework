@@ -13,7 +13,9 @@ import pickle
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Self, TypeVar
+from typing import Any, TypeVar, cast
+
+from typing_extensions import Self
 
 from evolve.core.types import Individual
 
@@ -88,7 +90,7 @@ class Checkpoint:
             Loaded Checkpoint
         """
         with open(path, "rb") as f:
-            return pickle.load(f)
+            return cast(Self, pickle.load(f))  # noqa: S301
 
     @property
     def size_bytes(self) -> int:

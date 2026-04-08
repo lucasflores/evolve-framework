@@ -252,7 +252,7 @@ class HistoryCallback:
         """Record final state."""
         pass
 
-    def to_dataframe(self) -> pd.DataFrame:  # type: ignore[name-defined]
+    def to_dataframe(self) -> pd.DataFrame:
         """Convert history to pandas DataFrame."""
         import pandas as pd
 

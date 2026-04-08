@@ -235,7 +235,7 @@ class SCMGenome:
     """
 
     # Accept list at init, but converted to SequenceGenome in __post_init__
-    inner: SequenceGenome[str | float]  # type: ignore[assignment]
+    inner: SequenceGenome[str | float]
     config: SCMConfig
     erc_values: tuple[tuple[int, float], ...] = field(default_factory=tuple)
 

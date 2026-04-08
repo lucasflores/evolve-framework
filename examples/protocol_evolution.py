@@ -277,7 +277,7 @@ def main():
         def __init__(self, tracker):
             self.tracker = tracker
 
-        def on_generation_end(self, _engine, population, generation):
+        def on_generation_end(self, generation, population, _metrics=None):
             self.tracker.track(population, generation + 1)
 
     tracking_callback = ProtocolTrackingCallback(tracker)

@@ -265,8 +265,8 @@ class TrackingCallback(Callback):
                 if ind.fitness is not None:
                     fitness_val = (
                         ind.fitness.values[0]
-                        if hasattr(ind.fitness, "values")
-                        else float(ind.fitness)
+                        if hasattr(ind.fitness, "values") and len(ind.fitness.values) > 0
+                        else 0.0
                     )
                     if best_fitness is None or fitness_val < best_fitness:  # Assume minimization
                         best = ind
@@ -358,7 +358,7 @@ class TrackingCallback(Callback):
 class _NullTracker:
     """No-op tracker for testing and disabled tracking."""
 
-    def start_run(self, params: dict[str, Any] | None = None) -> None:
+    def start_run(self, params: dict[str, Any] | None = None, **kwargs: Any) -> None:
         pass
 
     def log_generation(self, generation: int, metrics: dict[str, float]) -> None:

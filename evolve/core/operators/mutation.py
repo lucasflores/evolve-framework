@@ -69,9 +69,9 @@ class GaussianMutation:
 
     def mutate(
         self,
-        genome: VectorGenome,  # type: ignore[name-defined]
+        genome: VectorGenome,
         rng: Random,
-    ) -> VectorGenome:  # type: ignore[name-defined]
+    ) -> VectorGenome:
         """Apply Gaussian mutation."""
         from evolve.representation.vector import VectorGenome
 
@@ -114,9 +114,9 @@ class UniformMutation:
 
     def mutate(
         self,
-        genome: VectorGenome,  # type: ignore[name-defined]
+        genome: VectorGenome,
         rng: Random,
-    ) -> VectorGenome:  # type: ignore[name-defined]
+    ) -> VectorGenome:
         """Apply uniform mutation."""
         from evolve.representation.vector import VectorGenome
 
@@ -151,9 +151,9 @@ class PolynomialMutation:
 
     def mutate(
         self,
-        genome: VectorGenome,  # type: ignore[name-defined]
+        genome: VectorGenome,
         rng: Random,
-    ) -> VectorGenome:  # type: ignore[name-defined]
+    ) -> VectorGenome:
         """Apply polynomial mutation."""
         from evolve.representation.vector import VectorGenome
 
@@ -215,9 +215,9 @@ class CreepMutation:
 
     def mutate(
         self,
-        genome: VectorGenome,  # type: ignore[name-defined]
+        genome: VectorGenome,
         rng: Random,
-    ) -> VectorGenome:  # type: ignore[name-defined]
+    ) -> VectorGenome:
         """Apply creep mutation."""
         from evolve.representation.vector import VectorGenome
 
@@ -276,13 +276,13 @@ class NEATMutation:
     allow_recurrent: bool = False
 
     # Innovation tracker must be set before use
-    innovation_tracker: InnovationTracker | None = None  # type: ignore[name-defined]
+    innovation_tracker: InnovationTracker | None = None
 
     def mutate(
         self,
-        genome: GraphGenome,  # type: ignore[name-defined]
+        genome: GraphGenome,
         rng: Random,
-    ) -> GraphGenome:  # type: ignore[name-defined]
+    ) -> GraphGenome:
         """
         Apply NEAT mutations to genome.
 
@@ -318,9 +318,9 @@ class NEATMutation:
 
     def _add_node_mutation(
         self,
-        genome: GraphGenome,  # type: ignore[name-defined]
+        genome: GraphGenome,
         rng: Random,
-    ) -> GraphGenome:  # type: ignore[name-defined]
+    ) -> GraphGenome:
         """Add a new node by splitting an existing connection."""
         from evolve.representation.graph import ConnectionGene, NodeGene
 
@@ -366,9 +366,9 @@ class NEATMutation:
 
     def _add_connection_mutation(
         self,
-        genome: GraphGenome,  # type: ignore[name-defined]
+        genome: GraphGenome,
         rng: Random,
-    ) -> GraphGenome:  # type: ignore[name-defined]
+    ) -> GraphGenome:
         """Add a new connection between unconnected nodes."""
         from evolve.representation.graph import ConnectionGene
 
@@ -423,7 +423,7 @@ class NEATMutation:
 
     def _would_create_cycle(
         self,
-        genome: GraphGenome,  # type: ignore[name-defined]
+        genome: GraphGenome,
         from_node: int,
         to_node: int,
     ) -> bool:
@@ -453,9 +453,9 @@ class NEATMutation:
 
     def _weight_mutation(
         self,
-        genome: GraphGenome,  # type: ignore[name-defined]
+        genome: GraphGenome,
         rng: Random,
-    ) -> GraphGenome:  # type: ignore[name-defined]
+    ) -> GraphGenome:
         """Mutate connection weights."""
         from evolve.representation.graph import ConnectionGene, GraphGenome
 
@@ -480,9 +480,9 @@ class NEATMutation:
 
     def _bias_mutation(
         self,
-        genome: GraphGenome,  # type: ignore[name-defined]
+        genome: GraphGenome,
         rng: Random,
-    ) -> GraphGenome:  # type: ignore[name-defined]
+    ) -> GraphGenome:
         """Mutate node biases."""
         from evolve.representation.graph import GraphGenome, NodeGene
 

@@ -10,7 +10,7 @@ NO ML FRAMEWORK IMPORTS ALLOWED (except NumPy).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, cast
 
 from evolve.core.types import Individual
 
@@ -87,7 +87,7 @@ class Island(Generic[G]):
         if not evaluated:
             return 0.0
 
-        return sum(evaluated) / len(evaluated)
+        return cast(float, sum(evaluated) / len(evaluated))
 
     @property
     def fitness_variance(self) -> float:
@@ -98,7 +98,7 @@ class Island(Generic[G]):
             return 0.0
 
         mean = sum(evaluated) / len(evaluated)
-        return sum((f - mean) ** 2 for f in evaluated) / len(evaluated)
+        return cast(float, sum((f - mean) ** 2 for f in evaluated) / len(evaluated))
 
     def increment_isolation(self) -> None:
         """Increment isolation time counter."""

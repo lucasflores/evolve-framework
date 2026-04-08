@@ -19,6 +19,11 @@ import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
 
+# Tutorial utils requires matplotlib, pandas, scipy
+pytest.importorskip("matplotlib", reason="matplotlib required for tutorial utils tests")
+pytest.importorskip("pandas", reason="pandas required for tutorial utils tests")
+pytest.importorskip("scipy", reason="scipy required for tutorial utils tests")
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from docs.tutorials.utils.tutorial_utils import (

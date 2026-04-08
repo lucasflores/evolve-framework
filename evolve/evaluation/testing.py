@@ -38,8 +38,8 @@ class EvaluatorEquivalenceError(AssertionError):
 
 
 def assert_evaluator_equivalence(
-    reference: Evaluator[G],
-    accelerated: Evaluator[G],
+    reference: Evaluator,
+    accelerated: Evaluator,
     test_individuals: Sequence[Individual[G]],
     seed: int,
     rtol: float = 1e-5,
@@ -208,7 +208,7 @@ class EvaluatorTester:
 
     def __init__(
         self,
-        reference: Evaluator[G],
+        reference: Evaluator,
         rtol: float = 1e-5,
         atol: float = 1e-10,
     ) -> None:
@@ -260,7 +260,7 @@ class EvaluatorTester:
 
     def test_equivalence(
         self,
-        accelerated: Evaluator[G],
+        accelerated: Evaluator,
         individuals: Sequence[Individual[G]],
         seed: int = 42,
     ) -> None:
@@ -331,7 +331,7 @@ class Evaluator:
         seed: int | None = None,
     ) -> Sequence[Fitness]:
         """Evaluate individuals."""
-        ...
+        raise NotImplementedError
 
 
 __all__ = [

@@ -93,9 +93,11 @@ class StoppingConfig:
     @classmethod
     def from_dict(cls, data: dict[str, int | float | None]) -> StoppingConfig:
         """Create from dictionary."""
+        max_gen = data.get("max_generations")
+        stag_gen = data.get("stagnation_generations")
         return cls(
-            max_generations=data.get("max_generations"),
+            max_generations=int(max_gen) if max_gen is not None else None,
             fitness_threshold=data.get("fitness_threshold"),
-            stagnation_generations=data.get("stagnation_generations"),
+            stagnation_generations=int(stag_gen) if stag_gen is not None else None,
             time_limit_seconds=data.get("time_limit_seconds"),
         )

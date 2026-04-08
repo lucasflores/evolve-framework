@@ -469,7 +469,7 @@ class QDArchive(Generic[G]):
         individuals = [ind for ind in self.archive.values() if ind.fitness is not None]
 
         individuals.sort(
-            key=lambda ind: ind.fitness.values[0],
+            key=lambda ind: ind.fitness.values[0] if ind.fitness else float("inf"),
             reverse=not minimize,
         )
 
@@ -557,7 +557,7 @@ def novelty_fitness(
 
         results.append(
             Fitness(
-                values=(combined,),
+                values=np.array([combined]),
                 metadata={
                     "novelty": novelty_scores[i],
                     "raw_fitness": ind.fitness.values[0] if ind.fitness else None,

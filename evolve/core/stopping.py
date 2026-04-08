@@ -7,7 +7,7 @@ Multiple stopping criteria can be combined (any triggers stop).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 from evolve.core.population import Population
 
@@ -219,7 +219,7 @@ class CompositeStoppingCriterion:
     def reason(self) -> str:
         """Reason from triggered criterion."""
         if self._triggered is not None:
-            return self._triggered.reason
+            return cast(str, self._triggered.reason)
         return "No criterion triggered"
 
     def add(self, criterion: Any) -> CompositeStoppingCriterion:

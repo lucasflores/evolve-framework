@@ -154,8 +154,8 @@ class FunctionEvaluator(Generic[G]):
 
     def __init__(
         self,
-        fitness_fn: Callable[[Any], float | np.ndarray],  # type: ignore[name-defined]
-        decoder: Decoder[G, Any] | None = None,  # type: ignore[name-defined]
+        fitness_fn: Callable[[Any], float | np.ndarray],
+        decoder: Decoder[G, Any] | None = None,  # type: ignore[type-var]
         n_objectives: int = 1,
         n_constraints: int = 0,
         minimize: bool = True,
@@ -190,7 +190,7 @@ class FunctionEvaluator(Generic[G]):
     def evaluate(
         self,
         individuals: Sequence[Individual[G]],
-        _seed: int | None = None,
+        seed: int | None = None,  # noqa: ARG002
     ) -> Sequence[Fitness]:
         """
         Evaluate by applying fitness function.
@@ -246,7 +246,7 @@ class BatchEvaluator(Generic[G]):
 
     def __init__(
         self,
-        batch_fn: Callable[[np.ndarray], np.ndarray],  # type: ignore[name-defined]
+        batch_fn: Callable[[np.ndarray], np.ndarray],
         n_objectives: int = 1,
     ) -> None:
         """
@@ -271,14 +271,14 @@ class BatchEvaluator(Generic[G]):
     def evaluate(
         self,
         individuals: Sequence[Individual[G]],
-        _seed: int | None = None,
+        seed: int | None = None,  # noqa: ARG002
     ) -> Sequence[Fitness]:
         """Evaluate all individuals in a single batch."""
         import numpy as np
 
         # Stack genes into matrix
         genes_list = [getattr(ind.genome, "genes", ind.genome) for ind in individuals]
-        genes_matrix = np.vstack(genes_list)
+        genes_matrix = np.vstack(genes_list)  # type: ignore[arg-type]
 
         # Batch evaluate
         raw_fitness = self._batch_fn(genes_matrix)

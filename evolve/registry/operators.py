@@ -336,7 +336,7 @@ def _register_builtin_operators(registry: OperatorRegistry) -> None:
     registry.register(
         "crossover",
         "token_two_point",
-        lambda: TokenLevelCrossover(crossover_type="two_point"),
+        lambda: TokenLevelCrossover(crossover_type="two_point"),  # type: ignore[arg-type]
         compatible_genomes={"embedding"},
     )
 

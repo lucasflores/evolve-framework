@@ -10,7 +10,7 @@ Only numpy, dataclasses, typing, and Python stdlib are allowed.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -67,12 +67,12 @@ class EmbeddingGenome:
     @property
     def n_tokens(self) -> int:
         """Number of virtual tokens."""
-        return self.embeddings.shape[0]
+        return int(self.embeddings.shape[0])
 
     @property
     def embed_dim(self) -> int:
         """Model embedding dimension."""
-        return self.embeddings.shape[1]
+        return int(self.embeddings.shape[1])
 
     def copy(self) -> EmbeddingGenome:
         """Deep copy with copied embeddings array."""
@@ -102,7 +102,7 @@ class EmbeddingGenome:
         """Return a 1D copy of the embeddings, shape (n_tokens * embed_dim,)."""
         flat = self.embeddings.reshape(-1).copy()
         flat.flags.writeable = False
-        return flat
+        return cast(np.ndarray, flat)
 
     def to_vector_genome(self) -> VectorGenome:
         """Convert to VectorGenome for use with flat-vector operators."""

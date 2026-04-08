@@ -13,7 +13,7 @@ Example:
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 try:
     import jax
@@ -108,7 +108,7 @@ class JaxEvaluator:
     def evaluate(
         self,
         individuals: Sequence[Individual[G]],
-        _seed: int | None = None,
+        seed: int | None = None,  # noqa: ARG002
     ) -> Sequence[Fitness]:
         """
         Evaluate individuals using JAX.
@@ -212,7 +212,7 @@ class JaxBackend:
             return evaluator.evaluate(individuals, seed=seed)
 
         # Fall back to standard evaluation
-        return evaluator.evaluate(individuals, seed=seed)
+        return cast(Sequence[Fitness], evaluator.evaluate(individuals, seed=seed))
 
     def shutdown(self) -> None:
         """Clear JAX caches."""

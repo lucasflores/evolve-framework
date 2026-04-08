@@ -148,6 +148,7 @@ class ERPEngine(EvolutionEngine[G]):
         self.erp_config = config
 
         # Set up recovery
+        self.recovery: RecoveryStrategy[Any] | None
         if recovery is None and config.enable_recovery:
             self.recovery = ImmigrationRecovery(
                 trigger_threshold=config.recovery_threshold,
@@ -383,9 +384,12 @@ class ERPEngine(EvolutionEngine[G]):
         child2_protocol = inherit_protocol(protocol2, protocol1, self.rng)
 
         # Apply protocol mutation
+        assert self.protocol_mutator is not None
         if self.rng.random() < self.erp_config.protocol_mutation_rate:
+            assert child1_protocol is not None
             child1_protocol = self.protocol_mutator.mutate(child1_protocol, self.rng)
         if self.rng.random() < self.erp_config.protocol_mutation_rate:
+            assert child2_protocol is not None
             child2_protocol = self.protocol_mutator.mutate(child2_protocol, self.rng)
 
         # Create offspring individuals
@@ -446,7 +450,9 @@ class ERPEngine(EvolutionEngine[G]):
             fitness_values = np.array([0.0])
         else:
             fitness_values = (
-                fitness.values if hasattr(fitness, "values") else np.array([float(fitness.value)])
+                fitness.values
+                if hasattr(fitness, "values")
+                else np.array([float(fitness.values[0])])
             )
 
         # Calculate fitness rank
@@ -508,7 +514,7 @@ class ERPEngine(EvolutionEngine[G]):
             self_fitness_values = (
                 self_fitness.values
                 if hasattr(self_fitness, "values")
-                else np.array([float(self_fitness.value)])
+                else np.array([float(self_fitness.values[0])])
             )
 
         if partner_fitness is None:
@@ -517,7 +523,7 @@ class ERPEngine(EvolutionEngine[G]):
             partner_fitness_values = (
                 partner_fitness.values
                 if hasattr(partner_fitness, "values")
-                else np.array([float(partner_fitness.value)])
+                else np.array([float(partner_fitness.values[0])])
             )
 
         # Compute fitness ratio
@@ -563,7 +569,7 @@ class ERPEngine(EvolutionEngine[G]):
                 return float("inf") if self.config.minimize else float("-inf")
             if hasattr(ind.fitness, "values"):
                 return float(ind.fitness.values[0])
-            return float(ind.fitness.value)
+            return float(ind.fitness.values[0])
 
         individuals.sort(key=get_fitness_value, reverse=not self.config.minimize)
 
@@ -581,7 +587,7 @@ class ERPEngine(EvolutionEngine[G]):
                 if hasattr(ind.fitness, "values"):
                     fitness_values.append(float(ind.fitness.values[0]))
                 else:
-                    fitness_values.append(float(ind.fitness.value))
+                    fitness_values.append(float(ind.fitness.values[0]))
 
         if len(fitness_values) < 2:
             return 0.0

@@ -69,7 +69,11 @@ tutorials = [
     "plotly>=5.15.0",
     "gymnasium>=0.29.0",
     "papermill>=2.4.0",
+    "nbconvert>=7.0.0",
+    "jupyter>=1.0.0",
+    "ipykernel>=6.0.0",
     "pandas>=2.0.0",
+    "scipy>=1.10.0",
     "scikit-learn>=1.3.0",
 ]
 dev = [
@@ -164,6 +168,9 @@ module = [
     "wandb.*",
     "ray.*",
     "gymnasium.*",
+    "pandas.*",
+    "networkx.*",
+    "transformers.*",
 ]
 ignore_missing_imports = true
 
@@ -191,6 +198,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "docs/tutorials/*.ipynb" = ["E402"]
+"tests/**" = ["ARG002"]
 
 [tool.ruff.lint.isort]
 known-first-party = [

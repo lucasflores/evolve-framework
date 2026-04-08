@@ -295,7 +295,7 @@ class Individual(Generic[G]):
             "origin": self.metadata.origin,
         }
         current.update(updates)
-        new_metadata = IndividualMetadata(**current)
+        new_metadata = IndividualMetadata(**current)  # type: ignore[arg-type]
         return Individual(
             id=self.id,
             genome=self.genome,

@@ -137,11 +137,8 @@ class TestTrackingCallbackLifecycle:
             unified_config_dict={"population_size": 10},
         )
 
-        # Mock population
-        population = Mock()
-
         # Should not raise
-        callback.on_evolution_start(population)
+        callback.on_run_start({"population_size": 10})
 
         assert callback._started is True
 
@@ -153,18 +150,16 @@ class TestTrackingCallbackLifecycle:
             unified_config_dict={"population_size": 10},
         )
 
-        # Mock population and best individual
+        # Mock population
         population = Mock()
-        best = Mock()
 
         # Start evolution
-        callback.on_evolution_start(population)
+        callback.on_run_start({"population_size": 10})
 
         # Log generation
         callback.on_generation_end(
             generation=0,
-            population=population,
-            best=best,
+            _population=population,
             metrics={"best_fitness": 10.5},
         )
 
@@ -179,19 +174,17 @@ class TestTrackingCallbackLifecycle:
             unified_config_dict={"population_size": 10},
         )
 
-        # Mock population and best
+        # Mock population
         population = Mock()
-        best = Mock()
 
         # Full lifecycle
-        callback.on_evolution_start(population)
+        callback.on_run_start({"population_size": 10})
         callback.on_generation_end(
             generation=0,
-            population=population,
-            best=best,
+            _population=population,
             metrics={"best_fitness": 10.5},
         )
-        callback.on_evolution_end(population, best)
+        callback.on_run_end(population, "completed")
 
         assert callback._started is False
 
@@ -212,18 +205,17 @@ class TestTrackingLogInterval:
         )
 
         population = Mock()
-        best = Mock()
 
-        callback.on_evolution_start(population)
+        callback.on_run_start({})
 
         # Generation 1, 2 - should be skipped (internal counter)
         # Generation 3 - should log
-        callback.on_generation_end(0, population, best, {"f": 1.0})
-        callback.on_generation_end(1, population, best, {"f": 2.0})
-        callback.on_generation_end(2, population, best, {"f": 3.0})  # Logs here
-        callback.on_generation_end(3, population, best, {"f": 4.0})
-        callback.on_generation_end(4, population, best, {"f": 5.0})
-        callback.on_generation_end(5, population, best, {"f": 6.0})  # Logs here
+        callback.on_generation_end(0, population, {"f": 1.0})
+        callback.on_generation_end(1, population, {"f": 2.0})
+        callback.on_generation_end(2, population, {"f": 3.0})  # Logs here
+        callback.on_generation_end(3, population, {"f": 4.0})
+        callback.on_generation_end(4, population, {"f": 5.0})
+        callback.on_generation_end(5, population, {"f": 6.0})  # Logs here
 
         # Should not raise
-        callback.on_evolution_end(population, best)
+        callback.on_run_end(population, "completed")

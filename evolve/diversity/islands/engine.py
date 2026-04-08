@@ -279,7 +279,7 @@ class IslandEvolutionEngine(Generic[G]):
             for _ in range(self.config.population_per_island):
                 genome = genome_factory(island_rng)
                 individual = Individual(
-                    id=str(uuid4()),
+                    id=uuid4(),
                     genome=genome,
                 )
                 population.append(individual)
@@ -339,7 +339,7 @@ class IslandEvolutionEngine(Generic[G]):
             elite = sorted_pop[i]
             new_population.append(
                 Individual(
-                    id=str(uuid4()),
+                    id=uuid4(),
                     genome=elite.genome,  # Keep same genome
                     fitness=elite.fitness,  # Keep fitness
                 )
@@ -382,7 +382,7 @@ class IslandEvolutionEngine(Generic[G]):
             # Create offspring
             new_population.append(
                 Individual(
-                    id=str(uuid4()),
+                    id=uuid4(),
                     genome=child1_genome,
                 )
             )
@@ -390,7 +390,7 @@ class IslandEvolutionEngine(Generic[G]):
             if len(new_population) < target_size:
                 new_population.append(
                     Individual(
-                        id=str(uuid4()),
+                        id=uuid4(),
                         genome=child2_genome,
                     )
                 )

@@ -67,10 +67,10 @@ class UniformCrossover:
 
     def crossover(
         self,
-        parent1: VectorGenome,  # type: ignore[name-defined]
-        parent2: VectorGenome,  # type: ignore[name-defined]
+        parent1: VectorGenome,
+        parent2: VectorGenome,
         rng: Random,
-    ) -> tuple[VectorGenome, VectorGenome]:  # type: ignore[name-defined]
+    ) -> tuple[VectorGenome, VectorGenome]:
         """Create offspring via uniform crossover."""
         from evolve.representation.vector import VectorGenome
 
@@ -99,10 +99,10 @@ class SinglePointCrossover:
 
     def crossover(
         self,
-        parent1: VectorGenome,  # type: ignore[name-defined]
-        parent2: VectorGenome,  # type: ignore[name-defined]
+        parent1: VectorGenome,
+        parent2: VectorGenome,
         rng: Random,
-    ) -> tuple[VectorGenome, VectorGenome]:  # type: ignore[name-defined]
+    ) -> tuple[VectorGenome, VectorGenome]:
         """Create offspring via single-point crossover."""
         from evolve.representation.vector import VectorGenome
 
@@ -128,10 +128,10 @@ class TwoPointCrossover:
 
     def crossover(
         self,
-        parent1: VectorGenome,  # type: ignore[name-defined]
-        parent2: VectorGenome,  # type: ignore[name-defined]
+        parent1: VectorGenome,
+        parent2: VectorGenome,
         rng: Random,
-    ) -> tuple[VectorGenome, VectorGenome]:  # type: ignore[name-defined]
+    ) -> tuple[VectorGenome, VectorGenome]:
         """Create offspring via two-point crossover."""
         from evolve.representation.vector import VectorGenome
 
@@ -184,10 +184,10 @@ class BlendCrossover:
 
     def crossover(
         self,
-        parent1: VectorGenome,  # type: ignore[name-defined]
-        parent2: VectorGenome,  # type: ignore[name-defined]
+        parent1: VectorGenome,
+        parent2: VectorGenome,
         rng: Random,
-    ) -> tuple[VectorGenome, VectorGenome]:  # type: ignore[name-defined]
+    ) -> tuple[VectorGenome, VectorGenome]:
         """Create offspring via blend crossover."""
         from evolve.representation.vector import VectorGenome
 
@@ -233,10 +233,10 @@ class SimulatedBinaryCrossover:
 
     def crossover(
         self,
-        parent1: VectorGenome,  # type: ignore[name-defined]
-        parent2: VectorGenome,  # type: ignore[name-defined]
+        parent1: VectorGenome,
+        parent2: VectorGenome,
         rng: Random,
-    ) -> tuple[VectorGenome, VectorGenome]:  # type: ignore[name-defined]
+    ) -> tuple[VectorGenome, VectorGenome]:
         """Create offspring via SBX crossover."""
         from evolve.representation.vector import VectorGenome
 
@@ -294,11 +294,11 @@ class NEATCrossover:
 
     def crossover(
         self,
-        parent1: GraphGenome,  # type: ignore[name-defined]
-        parent2: GraphGenome,  # type: ignore[name-defined]
+        parent1: GraphGenome,
+        parent2: GraphGenome,
         rng: Random,
         parent1_fitter: bool = True,
-    ) -> tuple[GraphGenome, GraphGenome]:  # type: ignore[name-defined]
+    ) -> tuple[GraphGenome, GraphGenome]:
         """
         Create offspring via NEAT crossover.
 
@@ -349,7 +349,7 @@ class NEATCrossover:
                 else:
                     child2_connections.add(c1)
 
-            else:  # c2 is not None
+            elif c2 is not None:
                 # Disjoint/excess from parent2
                 if parent1_fitter:
                     child2_connections.add(c2)

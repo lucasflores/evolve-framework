@@ -40,7 +40,7 @@ class NSGA2Selector(Generic[G]):
         self,
         population: Sequence[Individual[G]],
         n_select: int,
-        _rng: Random,
+        rng: Random,  # noqa: ARG002
     ) -> list[Individual[G]]:
         """
         Select individuals based on rank and crowding.
@@ -71,7 +71,7 @@ class NSGA2Selector(Generic[G]):
                 from evolve.core.types import Fitness
 
                 if isinstance(ind.fitness, Fitness):
-                    fitnesses.append(MultiObjectiveFitness(objectives=ind.fitness.values_array))
+                    fitnesses.append(MultiObjectiveFitness(objectives=ind.fitness.values))
                 else:
                     raise TypeError(
                         f"Expected MultiObjectiveFitness or Fitness, got {type(ind.fitness)}"
@@ -124,7 +124,7 @@ class NSGA2Selector(Generic[G]):
                 from evolve.core.types import Fitness
 
                 if isinstance(ind.fitness, Fitness):
-                    fitnesses.append(MultiObjectiveFitness(objectives=ind.fitness.values_array))
+                    fitnesses.append(MultiObjectiveFitness(objectives=ind.fitness.values))
 
         fronts = fast_non_dominated_sort(fitnesses)
 

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Protocol, TypeVar, runtime_checkable
+from typing import Any, Protocol, TypeVar, cast, runtime_checkable
 
 import numpy as np
 
@@ -22,7 +22,7 @@ Action = TypeVar("Action", bound=np.ndarray | int)
 
 
 @runtime_checkable
-class Policy(Protocol[Observation, Action]):
+class Policy(Protocol[Observation, Action]):  # type: ignore[misc]
     """
     Policy maps observations to actions.
 
@@ -48,7 +48,7 @@ class Policy(Protocol[Observation, Action]):
 
 
 @runtime_checkable
-class StatefulPolicy(Policy[Observation, Action], Protocol):
+class StatefulPolicy(Policy[Observation, Action], Protocol):  # type: ignore[misc]
     """Policy with internal state (RNN, LSTM)."""
 
     def reset_state(self) -> None:
@@ -104,7 +104,7 @@ class LinearPolicy:
         output = observation @ self.weights + self.bias
         if self.discrete:
             return int(np.argmax(output))
-        return output
+        return cast(np.ndarray, output)
 
     @property
     def n_parameters(self) -> int:
@@ -331,17 +331,17 @@ class RecurrentPolicy:
     @property
     def hidden_size(self) -> int:
         """Size of hidden state."""
-        return self.w_hh.shape[0]
+        return int(self.w_hh.shape[0])
 
     @property
     def input_size(self) -> int:
         """Size of input."""
-        return self.w_xh.shape[0]
+        return int(self.w_xh.shape[0])
 
     @property
     def output_size(self) -> int:
         """Size of output."""
-        return self.w_hy.shape[1]
+        return int(self.w_hy.shape[1])
 
     def reset_state(self) -> None:
         """Reset hidden state to zeros."""
@@ -371,18 +371,14 @@ class RecurrentPolicy:
             self.reset_state()
 
         # Update hidden state
-        self._hidden = np.tanh(
-            observation @ self.w_xh
-            + self._hidden @ self.w_hh  # type: ignore
-            + self.b_h
-        )
+        self._hidden = np.tanh(observation @ self.w_xh + self._hidden @ self.w_hh + self.b_h)
 
         # Compute output
         output = self._hidden @ self.w_hy + self.b_y
 
         if self.discrete:
             return int(np.argmax(output))
-        return output
+        return cast(np.ndarray, output)
 
     @property
     def n_parameters(self) -> int:

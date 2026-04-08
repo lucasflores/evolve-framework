@@ -255,7 +255,7 @@ class Population(Generic[G]):
     def sample(
         self,
         n: int,
-        rng: Random,  # type: ignore[name-defined]
+        rng: Random,
         replace: bool = False,
     ) -> Sequence[Individual[G]]:
         """

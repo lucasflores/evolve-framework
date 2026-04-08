@@ -12,7 +12,7 @@ import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
 from random import Random
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -62,6 +62,7 @@ class LLMJudgeEvaluator:
 
     @property
     def capabilities(self) -> EvaluatorCapabilities:
+        assert self.task_spec.rubric is not None
         return EvaluatorCapabilities(
             batchable=True,
             stochastic=False,
@@ -127,7 +128,7 @@ class LLMJudgeEvaluator:
     def _call_judge(self, prompt: str) -> str:
         """Call the judge model. Uses _judge_fn if provided, else loads model."""
         if self._judge_fn is not None:
-            return self._judge_fn(prompt)
+            return cast(str, self._judge_fn(prompt))
 
         try:
             import torch
@@ -151,7 +152,7 @@ class LLMJudgeEvaluator:
                     temperature=self.temperature if self.temperature > 0 else None,
                     do_sample=self.temperature > 0,
                 )
-            return tokenizer.decode(outputs[0], skip_special_tokens=True)
+            return cast(str, tokenizer.decode(outputs[0], skip_special_tokens=True))
 
         except Exception as e:
             raise EvaluationError(f"Judge model '{self.judge_model_id}' failed: {e}") from e
@@ -178,6 +179,7 @@ class LLMJudgeEvaluator:
             One Fitness per individual, shape (n_criteria,).
         """
         rubric = self.task_spec.rubric
+        assert rubric is not None
         inputs = self.task_spec.inputs
 
         # Subsample inputs if sample_size configured

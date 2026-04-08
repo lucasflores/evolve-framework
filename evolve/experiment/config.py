@@ -13,7 +13,9 @@ import hashlib
 import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Self
+from typing import Any
+
+from typing_extensions import Self
 
 
 @dataclass

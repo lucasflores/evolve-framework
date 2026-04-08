@@ -112,7 +112,7 @@ class CollectionContext:
         return self.island_populations is not None
 
 
-class MetricCollector(Protocol[G]):
+class MetricCollector(Protocol[G]):  # type: ignore[misc]
     """
     Protocol for specialized metric collectors.
 

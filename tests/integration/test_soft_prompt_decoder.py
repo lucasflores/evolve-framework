@@ -11,7 +11,9 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from evolve.representation.embedding import EmbeddingGenome
+torch = pytest.importorskip("torch", reason="PyTorch required for soft prompt decoder tests")
+
+from evolve.representation.embedding import EmbeddingGenome  # noqa: E402
 
 
 class TestSoftPromptDecoderValidation:

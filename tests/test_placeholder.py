@@ -2,4 +2,4 @@
 
 
 def test_import_evolve_framework() -> None:
-    import evolve_framework  # noqa: F401
+    import evolve  # noqa: F401

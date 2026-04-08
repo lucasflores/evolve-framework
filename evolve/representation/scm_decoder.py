@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import networkx as nx
 
@@ -311,7 +311,7 @@ class DecodedSCM:
     @property
     def edge_count(self) -> int:
         """Number of edges in causal graph."""
-        return self.graph.number_of_edges()
+        return cast(int, self.graph.number_of_edges())
 
     @property
     def total_complexity(self) -> int:

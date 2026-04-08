@@ -116,13 +116,13 @@ class StandardRollout:
 
         # Reset stateful policy if applicable
         if hasattr(policy, "reset_state"):
-            policy.reset_state()  # type: ignore
+            policy.reset_state()
 
         info: dict[str, Any] = {}
 
         while True:
             if render and hasattr(env, "render"):
-                env.render()  # type: ignore
+                env.render()
 
             action = policy(observation)
 
@@ -200,7 +200,7 @@ def evaluate_policy(
 
         # Close environment if it has a close method
         if hasattr(env, "close"):
-            env.close()  # type: ignore
+            env.close()
 
     return AggregatedResult(
         mean_reward=float(np.mean(all_rewards)),

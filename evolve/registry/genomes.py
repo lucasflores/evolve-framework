@@ -10,7 +10,10 @@ from __future__ import annotations
 import inspect
 from collections.abc import Callable
 from random import Random
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, cast
+
+if TYPE_CHECKING:
+    from evolve.representation.embedding import EmbeddingGenome as EmbeddingGenome
 
 G = TypeVar("G")
 
@@ -231,7 +234,7 @@ def _register_builtin_genomes(registry: GenomeRegistry) -> None:
         lower_arr = np.full(dimensions, lower, dtype=np.float64)
         upper_arr = np.full(dimensions, upper, dtype=np.float64)
 
-        return VectorGenome(genes=genes, bounds=(lower_arr, upper_arr))
+        return VectorGenome(genes=np.array(genes), bounds=(lower_arr, upper_arr))
 
     registry.register(
         "vector",
@@ -252,7 +255,7 @@ def _register_builtin_genomes(registry: GenomeRegistry) -> None:
             rng = Random()
 
         genes = [rng.choice(alphabet) for _ in range(length)]
-        return SequenceGenome(genes=genes)
+        return SequenceGenome(genes=tuple(genes))
 
     registry.register(
         "sequence",
@@ -273,10 +276,13 @@ def _register_builtin_genomes(registry: GenomeRegistry) -> None:
             rng = Random()
 
         # Create a minimal network with input-output connections
-        return GraphGenome.create_minimal(
-            n_inputs=input_nodes,
-            n_outputs=output_nodes,
-            rng=rng,
+        return cast(
+            GraphGenome,
+            GraphGenome.create_minimal(  # type: ignore[attr-defined]
+                n_inputs=input_nodes,
+                n_outputs=output_nodes,
+                rng=rng,
+            ),
         )
 
     registry.register(
@@ -296,9 +302,12 @@ def _register_builtin_genomes(registry: GenomeRegistry) -> None:
         if rng is None:
             rng = Random()
 
-        return SCMGenome.create_random(
-            n_variables=num_variables,
-            rng=rng,
+        return cast(
+            SCMGenome,
+            SCMGenome.create_random(  # type: ignore[attr-defined]
+                n_variables=num_variables,
+                rng=rng,
+            ),
         )
 
     registry.register(
@@ -315,7 +324,7 @@ def _register_builtin_genomes(registry: GenomeRegistry) -> None:
         embed_dim: int = 768,
         model_id: str = "default",
         rng: Random | None = None,
-    ) -> EmbeddingGenome:  # type: ignore[name-not-defined]  # noqa: F821
+    ) -> EmbeddingGenome:  # noqa: F821
         """Create a random EmbeddingGenome."""
         from evolve.representation.embedding import EmbeddingGenome
 

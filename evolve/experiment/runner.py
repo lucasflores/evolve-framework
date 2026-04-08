@@ -76,7 +76,7 @@ class ExperimentRunner(Generic[G]):
         if self.checkpoint_manager is None:
             checkpoint_dir = output_dir / "checkpoints"
             self.checkpoint_manager = CheckpointManager(
-                checkpoint_dir=checkpoint_dir,
+                output_dir=checkpoint_dir,
                 checkpoint_interval=self.config.checkpoint_interval,
             )
 
@@ -180,7 +180,7 @@ class ExperimentRunner(Generic[G]):
 
         # Run with tracking callback
         tracking_cb = TrackingCallback(self)
-        result = self.engine.run(population, callbacks=[tracking_cb])
+        result = self.engine.run(population, callbacks=[tracking_cb])  # type: ignore[list-item]
 
         # Adjust result generation count
         adjusted_result = EvolutionResult(
@@ -246,7 +246,7 @@ class ExperimentRunner(Generic[G]):
             experiment_name=self.config.name,
             config_hash=self.config.hash(),
             generation=generation,
-            population=population.individuals,
+            population=list(population.individuals),
             best_individual=best,
             rng_state=self.engine.get_rng_state(),
             fitness_history=self.engine.history,

@@ -95,7 +95,7 @@ def create_scm_mate_context(
 class TestSCMERPIntegration:
     """Integration tests for SCM genomes with ERP matchability (T094)."""
 
-    def test_scm_distance_integrates_with_mate_context(self, basic_config, _rng):
+    def test_scm_distance_integrates_with_mate_context(self, basic_config, rng):  # noqa: ARG002
         """Test that SCM distance can be used to create MateContext."""
         from evolve.representation.scm import SCMGenome
         from evolve.representation.scm_decoder import SCMDecoder
@@ -324,7 +324,7 @@ class TestEndToEndSCMDiscovery:
         data = np.column_stack([A, B, C])
         return data, ("A", "B", "C")
 
-    def test_scm_genome_evaluator_workflow(self, synthetic_3var_data, _rng):
+    def test_scm_genome_evaluator_workflow(self, synthetic_3var_data, rng):  # noqa: ARG002
         """Test complete workflow: genome -> decode -> evaluate."""
         from evolve.evaluation.scm_evaluator import SCMEvaluator, SCMFitnessConfig
         from evolve.representation.scm import SCMConfig, SCMGenome
@@ -372,7 +372,7 @@ class TestEndToEndSCMDiscovery:
         for f in valid_fitnesses:
             assert len(f.values) > 0
 
-    def test_population_fitness_variance(self, synthetic_3var_data, _rng):
+    def test_population_fitness_variance(self, synthetic_3var_data, rng):  # noqa: ARG002
         """Test that population has meaningful fitness variance."""
         from evolve.evaluation.scm_evaluator import SCMEvaluator, SCMFitnessConfig
         from evolve.representation.scm import SCMConfig, SCMGenome
@@ -423,7 +423,7 @@ class TestEndToEndSCMDiscovery:
 class TestPopulationEvolution:
     """T104: Integration tests for population-scale evolution."""
 
-    def test_large_population_creation(self, basic_config, _rng):
+    def test_large_population_creation(self, basic_config, rng):  # noqa: ARG002
         """Test creating and evaluating 1000 individuals."""
         from evolve.evaluation.scm_evaluator import SCMEvaluator, SCMFitnessConfig
         from evolve.representation.scm import SCMGenome
@@ -471,7 +471,7 @@ class TestPopulationEvolution:
         valid_fitnesses = [f for f in fitnesses if f is not None]
         assert len(valid_fitnesses) > population_size // 10, "Too few valid genomes"
 
-    def test_simulated_generations(self, basic_config, _rng):
+    def test_simulated_generations(self, basic_config, rng):  # noqa: ARG002
         """Test simulating multiple generations of selection/reproduction."""
         from evolve.evaluation.scm_evaluator import SCMEvaluator, SCMFitnessConfig
         from evolve.representation.scm import SCMGenome
@@ -559,7 +559,7 @@ class TestPopulationEvolution:
 class TestMemoryProfiling:
     """T104a: Memory profiling tests for large-scale evolution."""
 
-    def test_population_memory_bounded(self, basic_config, _rng):
+    def test_population_memory_bounded(self, basic_config, rng):  # noqa: ARG002
         """Test that 1000+ population evolution doesn't cause memory issues."""
         import gc
 
@@ -596,7 +596,7 @@ class TestMemoryProfiling:
 class TestDecodingPerformance:
     """T105: Performance tests for decoding large genomes."""
 
-    def test_decode_500_genes_under_threshold(self, basic_config, _rng):
+    def test_decode_500_genes_under_threshold(self, basic_config, rng):  # noqa: ARG002
         """Test that decoding 500-gene genome completes in reasonable time."""
         import time
 
@@ -624,7 +624,7 @@ class TestDecodingPerformance:
         # Note: Being lenient with 50ms to account for CI variability
         assert avg_time_ms < 50, f"Decoding took {avg_time_ms:.2f}ms on average"
 
-    def test_batch_decode_performance(self, basic_config, _rng):
+    def test_batch_decode_performance(self, basic_config, rng):  # noqa: ARG002
         """Test decoding batch of genomes has acceptable throughput."""
         import time
 

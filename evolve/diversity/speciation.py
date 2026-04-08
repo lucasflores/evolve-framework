@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Generic, Protocol, TypeVar
+from typing import TYPE_CHECKING, Generic, Protocol, TypeVar, cast
 
 import numpy as np
 
@@ -30,7 +30,7 @@ G = TypeVar("G")
 # ============================================================================
 
 
-class DistanceFunction(Protocol[G]):
+class DistanceFunction(Protocol[G]):  # type: ignore[misc]
     """
     Protocol for distance functions between genomes.
 
@@ -252,7 +252,7 @@ class Species(Generic[G]):
         if not evaluated:
             return 0.0
 
-        return sum(evaluated) / len(evaluated)
+        return cast(float, sum(evaluated) / len(evaluated))
 
     @property
     def best_fitness(self) -> float | None:
@@ -262,7 +262,7 @@ class Species(Generic[G]):
         if not evaluated:
             return None
 
-        return max(evaluated)
+        return cast(float, max(evaluated))
 
     @property
     def fitness_variance(self) -> float:
@@ -273,7 +273,7 @@ class Species(Generic[G]):
             return 0.0
 
         mean = sum(evaluated) / len(evaluated)
-        return sum((f - mean) ** 2 for f in evaluated) / len(evaluated)
+        return cast(float, sum((f - mean) ** 2 for f in evaluated) / len(evaluated))
 
     def update_stagnation(self, minimize: bool = False) -> None:
         """
@@ -321,9 +321,9 @@ class Species(Generic[G]):
             return self.members[0] if self.members else None
 
         if minimize:
-            return min(evaluated, key=lambda m: m.fitness.values[0])
+            return min(evaluated, key=lambda m: m.fitness.values[0] if m.fitness else float("inf"))
         else:
-            return max(evaluated, key=lambda m: m.fitness.values[0])
+            return max(evaluated, key=lambda m: m.fitness.values[0] if m.fitness else float("-inf"))
 
     def clear_members(self) -> None:
         """Clear member list for re-speciation."""

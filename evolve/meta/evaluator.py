@@ -12,7 +12,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from random import Random
 from statistics import mean, median
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from evolve.config.meta import MetaEvolutionConfig
@@ -217,7 +217,7 @@ class MetaEvaluator:
                     else:
                         fitnesses.append(float(ind.fitness))
             if fitnesses:
-                return min(fitnesses) if self.base_config.minimize else max(fitnesses)
+                return cast(float, min(fitnesses) if self.base_config.minimize else max(fitnesses))
 
         raise ValueError("Cannot extract fitness from result")
 

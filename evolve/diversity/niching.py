@@ -12,6 +12,8 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from typing import TypeVar
 
+import numpy as np
+
 from evolve.core.types import Individual
 
 G = TypeVar("G")
@@ -114,19 +116,21 @@ def crowding_distance(
     distances = [0.0] * n
 
     # Get fitness values
-    fitness_values = []
+    fitness_values: list[np.ndarray] = []
     for ind in individuals:
         if ind.fitness is not None:
-            fitness_values.append(ind.fitness.values)
+            fitness_values.append(np.array(ind.fitness.values))
         else:
-            fitness_values.append(tuple([0.0] * n_objectives))
+            fitness_values.append(np.array([0.0] * n_objectives))
 
     # For each objective
     for m in range(n_objectives):
         # Sort by objective m
         sorted_indices = sorted(
             range(n),
-            key=lambda i: fitness_values[i][m] if m < len(fitness_values[i]) else 0.0,
+            key=lambda i, _m=m: (  # type: ignore[misc]
+                float(fitness_values[i][_m]) if _m < len(fitness_values[i]) else 0.0
+            ),
         )
 
         # Boundary individuals get infinite distance

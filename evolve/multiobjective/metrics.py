@@ -6,6 +6,8 @@ Implements hypervolume indicator and other performance metrics.
 
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 
 
@@ -149,7 +151,7 @@ def generational_distance(
         d = np.min(np.linalg.norm(reference_front - point, axis=1))
         distances.append(d**p)
 
-    return (np.mean(distances)) ** (1.0 / p)
+    return cast(float, (np.mean(distances)) ** (1.0 / p))
 
 
 def inverted_generational_distance(
@@ -184,7 +186,7 @@ def inverted_generational_distance(
         d = np.min(np.linalg.norm(front - ref_point, axis=1))
         distances.append(d**p)
 
-    return (np.mean(distances)) ** (1.0 / p)
+    return cast(float, (np.mean(distances)) ** (1.0 / p))
 
 
 def spread(
@@ -215,22 +217,22 @@ def spread(
     sorted_front = front[sorted_indices]
 
     # Calculate consecutive distances
-    distances = []
+    distances: list[float] = []
     for i in range(len(sorted_front) - 1):
-        d = np.linalg.norm(sorted_front[i + 1] - sorted_front[i])
+        d = float(np.linalg.norm(sorted_front[i + 1] - sorted_front[i]))
         distances.append(d)
 
     if len(distances) == 0:
         return 1.0
 
-    distances = np.array(distances)
-    mean_d = np.mean(distances)
+    distances_arr = np.array(distances)
+    mean_d = np.mean(distances_arr)
 
     if mean_d == 0:
         return 0.0  # All points at same location
 
     # Calculate spread
-    spread_val = np.sum(np.abs(distances - mean_d)) / (len(distances) * mean_d)
+    spread_val = np.sum(np.abs(distances_arr - mean_d)) / (len(distances_arr) * mean_d)
 
     return float(min(spread_val, 1.0))
 

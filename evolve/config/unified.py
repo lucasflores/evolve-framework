@@ -623,7 +623,7 @@ class UnifiedConfig:
             objectives=objectives,
             reference_point=reference_point,
             constraints=constraints,
-            constraint_handling=constraint_handling,
+            constraint_handling=constraint_handling,  # type: ignore[arg-type]
         )
 
         # Auto-enable MULTIOBJECTIVE tracking category (T057)
