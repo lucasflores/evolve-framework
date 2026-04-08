@@ -411,8 +411,12 @@ class TestEndToEndSCMDiscovery:
 
         fitness_values = [f.values[0] for f in valid_fitnesses]
 
+        # Filter out non-finite values (NaN/inf from degenerate SCMs)
+        finite_values = [v for v in fitness_values if np.isfinite(v)]
+        assert len(finite_values) > 5, "Too few finite fitness values"
+
         # Should have variance (not all same fitness)
-        assert np.std(fitness_values) > 0, "Population has no fitness variance"
+        assert np.std(finite_values) > 0, "Population has no fitness variance"
 
 
 # =============================================================================

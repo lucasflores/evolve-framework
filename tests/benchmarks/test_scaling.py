@@ -213,6 +213,10 @@ class TestDimensionScaling:
 class TestParallelSpeedup:
     """Test parallel backend speedup over sequential."""
 
+    @pytest.mark.xfail(
+        reason="CI runners may not benefit from parallel overhead",
+        strict=False,
+    )
     def test_parallel_speedup_large_population(self):
         """Parallel should be faster for large populations."""
         from evolve.backends.parallel import ParallelBackend
