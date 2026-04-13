@@ -106,6 +106,10 @@ experiments/
 
 # APM dependencies
 apm_modules/
+
+# VS Code workspace files
+*.code-workspace
+
 # === DEV-STACK:BEGIN:GITIGNORE ===
 .dev-stack/pipeline/
 .dev-stack/viz/
