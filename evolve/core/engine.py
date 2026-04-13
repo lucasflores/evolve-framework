@@ -14,11 +14,14 @@ All randomness flows through explicit RNG instances.
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from random import Random
 from typing import Any, Generic, TypeVar
 from uuid import uuid4
+
+import numpy as np
 
 from evolve.core.callbacks import Callback
 from evolve.core.population import Population
@@ -45,6 +48,7 @@ class EvolutionConfig:
         crossover_rate: Probability of crossover
         mutation_rate: Probability of mutation per individual
         minimize: If True, lower fitness is better
+        metric_categories: Set of metric category names to compute
     """
 
     population_size: int = 100
@@ -53,6 +57,7 @@ class EvolutionConfig:
     crossover_rate: float = 0.9
     mutation_rate: float = 1.0  # Per individual, not per gene
     minimize: bool = True
+    metric_categories: frozenset[str] = field(default_factory=lambda: frozenset({"core"}))
 
 
 @dataclass
@@ -118,6 +123,7 @@ class EvolutionEngine(Generic[G]):
         mutation: Any,  # MutationOperator[G]
         seed: int = 42,
         stopping: Any | None = None,
+        callbacks: Sequence[Callback[G]] | None = None,
     ) -> None:
         """
         Initialize engine with configuration.
@@ -130,6 +136,7 @@ class EvolutionEngine(Generic[G]):
             mutation: Mutation operator
             seed: Master random seed
             stopping: Optional stopping criterion (default: generation limit)
+            callbacks: Optional callbacks to persist across all run() calls
         """
         self.config = config
         self.evaluator = evaluator
@@ -148,8 +155,11 @@ class EvolutionEngine(Generic[G]):
         # State
         self._generation = 0
         self._history: list[dict[str, Any]] = []
+        self._creation_callbacks: list[Callback[G]] = list(callbacks) if callbacks else []
         self._callbacks: list[Callback[G]] = []
         self._timer = GenerationTimer()
+        self._prev_centroid: np.ndarray | None = None
+        self._prev_best_genome: Any = None
 
     def run(
         self,
@@ -166,7 +176,10 @@ class EvolutionEngine(Generic[G]):
         Returns:
             EvolutionResult with best individual and history
         """
-        self._callbacks = list(callbacks) if callbacks else []
+        # Merge creation-time callbacks with run-time callbacks, sort by priority
+        run_callbacks = list(callbacks) if callbacks else []
+        merged = self._creation_callbacks + run_callbacks
+        self._callbacks = sorted(merged, key=lambda cb: getattr(cb, "priority", 0))
         self._history = []
         self._generation = 0
 
@@ -314,6 +327,7 @@ class EvolutionEngine(Generic[G]):
         new_population = Population(
             individuals=new_individuals,
             generation=self._generation + 1,
+            minimize=self.config.minimize,
         )
 
         # Time evaluation phase
@@ -345,11 +359,14 @@ class EvolutionEngine(Generic[G]):
             for ind in population.individuals
         ]
 
-        return Population(individuals=updated, generation=population.generation)
+        return Population(
+            individuals=updated, generation=population.generation, minimize=self.config.minimize
+        )
 
     def _compute_metrics(self, population: Population[G]) -> dict[str, Any]:
         """Compute generation metrics including timing."""
         stats = population.statistics
+        categories = self.config.metric_categories
 
         metrics: dict[str, Any] = {
             "generation": self._generation,
@@ -360,17 +377,103 @@ class EvolutionEngine(Generic[G]):
         if stats.best_fitness is not None:
             metrics["best_fitness"] = float(stats.best_fitness.values[0])
 
+        if stats.worst_fitness is not None:
+            metrics["worst_fitness"] = float(stats.worst_fitness.values[0])
+
         if stats.mean_fitness is not None:
             metrics["mean_fitness"] = float(stats.mean_fitness.values[0])
 
         if stats.std_fitness is not None:
             metrics["std_fitness"] = stats.std_fitness
 
+        # Extended population metrics (fitness distribution)
+        if "extended_population" in categories:
+            evaluated = [
+                ind
+                for ind in population.individuals
+                if ind.fitness is not None and ind.fitness.n_objectives == 1
+            ]
+            if evaluated:
+                values = np.array(
+                    [float(ind.fitness.values[0]) for ind in evaluated if ind.fitness is not None]
+                )
+                metrics["median_fitness"] = float(np.median(values))
+                metrics["q1_fitness"] = float(np.percentile(values, 25))
+                metrics["q3_fitness"] = float(np.percentile(values, 75))
+                metrics["min_fitness"] = float(np.min(values))
+                metrics["max_fitness"] = float(np.max(values))
+                metrics["fitness_range"] = float(np.max(values) - np.min(values))
+                metrics["unique_fitness_count"] = int(len(np.unique(values)))
+
+        # Diversity metrics
+        if "diversity" in categories:
+            self._compute_diversity_metrics(population, metrics)
+
         # Add timing metrics (selection, variation, evaluation, total)
         timing_metrics = self._timer.get_metrics(breakdown=True)
         metrics.update(timing_metrics)
 
         return metrics
+
+    def _compute_diversity_metrics(
+        self, population: Population[G], metrics: dict[str, Any]
+    ) -> None:
+        """Compute genome diversity and search movement metrics."""
+        from evolve.representation.vector import VectorGenome
+
+        evaluated = [ind for ind in population.individuals if ind.fitness is not None]
+        if not evaluated:
+            return
+
+        genomes = [ind.genome for ind in evaluated]
+
+        # Gene-level statistics (VectorGenome only)
+        if isinstance(genomes[0], VectorGenome):
+            gene_matrix = np.array([g.genes for g in genomes])  # type: ignore[attr-defined]
+            gene_stds = np.std(gene_matrix, axis=0)
+            metrics["mean_gene_std"] = float(np.mean(gene_stds))
+
+            centroid = np.mean(gene_matrix, axis=0)
+            dists_from_centroid = np.linalg.norm(gene_matrix - centroid, axis=1)
+            metrics["mean_distance_from_centroid"] = float(np.mean(dists_from_centroid))
+
+            # Centroid drift
+            if self._prev_centroid is not None:
+                metrics["centroid_drift"] = float(np.linalg.norm(centroid - self._prev_centroid))
+            self._prev_centroid = centroid
+
+        # Sampled pairwise distance via Genome.distance() protocol
+        if hasattr(genomes[0], "distance"):
+            n = len(genomes)
+            if n >= 2:
+                # Sample up to 50 pairs for efficiency
+                max_pairs = min(50, n * (n - 1) // 2)
+                rng = self.rng
+                total_dist = 0.0
+                count = 0
+                for _ in range(max_pairs):
+                    i = rng.randint(0, n - 1)
+                    j = rng.randint(0, n - 2)
+                    if j >= i:
+                        j += 1
+                    total_dist += genomes[i].distance(genomes[j])  # type: ignore[attr-defined]
+                    count += 1
+                if count > 0:
+                    metrics["mean_pairwise_distance"] = total_dist / count
+
+        # Best genome similarity / best_changed
+        best_list = population.best(1, minimize=self.config.minimize)
+        if best_list:
+            current_best_genome = best_list[0].genome
+            if self._prev_best_genome is not None and hasattr(current_best_genome, "distance"):
+                with contextlib.suppress(TypeError, ValueError):
+                    metrics["best_genome_similarity"] = current_best_genome.distance(
+                        self._prev_best_genome
+                    )
+            metrics["best_changed"] = (
+                self._prev_best_genome is None or current_best_genome != self._prev_best_genome
+            )
+            self._prev_best_genome = current_best_genome
 
     def _get_best(self, population: Population[G]) -> Individual[G]:
         """Get best individual from population."""

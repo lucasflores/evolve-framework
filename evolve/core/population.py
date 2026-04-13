@@ -36,6 +36,7 @@ class PopulationStatistics:
         species_count: Number of distinct species
         front_sizes: Individuals per Pareto front (multi-objective only)
         evaluated_count: Number of individuals with fitness computed
+        minimize: If True, best_fitness is min; if False, best_fitness is max
     """
 
     size: int
@@ -47,6 +48,7 @@ class PopulationStatistics:
     species_count: int = 0
     front_sizes: list[int] | None = None
     evaluated_count: int = 0
+    minimize: bool = True
 
 
 class Population(Generic[G]):
@@ -73,6 +75,7 @@ class Population(Generic[G]):
         self,
         individuals: Sequence[Individual[G]],
         generation: int = 0,
+        minimize: bool = True,
     ) -> None:
         """
         Create population from individuals.
@@ -80,6 +83,7 @@ class Population(Generic[G]):
         Args:
             individuals: Sequence of individuals (must not be empty)
             generation: Current generation number
+            minimize: If True, lower fitness is better
 
         Raises:
             ValueError: If individuals is empty
@@ -89,6 +93,7 @@ class Population(Generic[G]):
 
         self._individuals: tuple[Individual[G], ...] = tuple(individuals)
         self._generation = generation
+        self._minimize = minimize
         self._statistics: PopulationStatistics | None = None
 
     @property
@@ -131,14 +136,18 @@ class Population(Generic[G]):
                 evaluated_count=0,
             )
 
-        # Get fitness values (assume minimization for best/worst)
+        # Get fitness values (use minimize flag for best/worst)
         fitness_values = [ind.fitness for ind in evaluated if ind.fitness is not None]
 
         # For single-objective, compute simple statistics
         if fitness_values and fitness_values[0].n_objectives == 1:
             values = np.array([f.values[0] for f in fitness_values])
-            best_idx = int(np.argmin(values))
-            worst_idx = int(np.argmax(values))
+            if self._minimize:
+                best_idx = int(np.argmin(values))
+                worst_idx = int(np.argmax(values))
+            else:
+                best_idx = int(np.argmax(values))
+                worst_idx = int(np.argmin(values))
             mean_val = float(np.mean(values))
             std_val = float(np.std(values))
 
@@ -170,6 +179,7 @@ class Population(Generic[G]):
             std_fitness=std_val,
             species_count=species_count,
             evaluated_count=evaluated_count,
+            minimize=self._minimize,
         )
 
     def __len__(self) -> int:

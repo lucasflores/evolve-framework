@@ -83,6 +83,28 @@ class SequenceGenome(Generic[T]):
         """Hash for set/dict membership."""
         return hash(self.genes)
 
+    def distance(self, other: SequenceGenome[T]) -> float:
+        """Compute Levenshtein edit distance to another SequenceGenome."""
+        if not isinstance(other, SequenceGenome):
+            raise TypeError(
+                f"Cannot compute distance between SequenceGenome and {type(other).__name__}"
+            )
+        # Wagner-Fischer algorithm for Levenshtein distance
+        a, b = self.genes, other.genes
+        m, n = len(a), len(b)
+        dp = list(range(n + 1))
+        for i in range(1, m + 1):
+            prev = dp[0]
+            dp[0] = i
+            for j in range(1, n + 1):
+                temp = dp[j]
+                if a[i - 1] == b[j - 1]:
+                    dp[j] = prev
+                else:
+                    dp[j] = 1 + min(prev, dp[j], dp[j - 1])
+                prev = temp
+        return float(dp[n])
+
     def __len__(self) -> int:
         """Number of genes."""
         return len(self.genes)

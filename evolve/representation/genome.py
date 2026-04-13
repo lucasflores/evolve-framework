@@ -57,6 +57,20 @@ class Genome(Protocol):
         """
         ...
 
+    def distance(self, other: Self) -> float:
+        """
+        Compute distance to another genome.
+
+        Used for diversity metrics and speciation.
+
+        Args:
+            other: Another genome of the same type
+
+        Returns:
+            Non-negative distance (0 = identical)
+        """
+        ...
+
 
 @runtime_checkable
 class SerializableGenome(Genome, Protocol):

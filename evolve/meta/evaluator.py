@@ -7,6 +7,7 @@ inner evolutionary loops and aggregating fitness.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -33,6 +34,8 @@ class MetaEvaluator:
         meta_config: Meta-evolution settings.
         fitness_fn: Inner loop fitness function.
         seed: Base random seed.
+        meta_generation: Current outer-loop generation (set by run_meta_evolution).
+        parent_run_id: MLflow parent run ID for nested tracking.
 
     Example:
         >>> evaluator = MetaEvaluator(
@@ -60,6 +63,40 @@ class MetaEvaluator:
 
     _trials_run: int = 0
     """Total number of trials run."""
+
+    meta_generation: int = 0
+    """Current meta-evolution generation (set by run_meta_evolution)."""
+
+    parent_run_id: str | None = None
+    """MLflow parent run ID (set by run_meta_evolution)."""
+
+    def _run_inner_trial(
+        self,
+        engine: Any,
+        population: Any,
+        config: UnifiedConfig,
+        trial: int,
+    ) -> Any:
+        """Run an inner evolution trial, optionally inside a nested MLflow run."""
+        try:
+            import mlflow
+
+            if self.parent_run_id is not None:
+                config_hash = config.compute_hash()
+                with mlflow.start_run(nested=True):
+                    mlflow.set_tags(
+                        {
+                            "meta_generation": str(self.meta_generation),
+                            "meta_parent_run_id": self.parent_run_id,
+                            "config_hash": config_hash,
+                            "trial": str(trial),
+                        }
+                    )
+                    return engine.run(population)
+            else:
+                return engine.run(population)
+        except ImportError:
+            return engine.run(population)
 
     def evaluate(self, config: UnifiedConfig) -> float:
         """
@@ -96,7 +133,8 @@ class MetaEvaluator:
             engine = create_engine(config, self.fitness_fn, seed=trial_seed)
             population = create_initial_population(config, seed=trial_seed)
 
-            result = engine.run(population)
+            # Run inner evolution, optionally in a nested MLflow run
+            result = self._run_inner_trial(engine, population, config, trial)
             self._trials_run += 1
 
             # Extract fitness
@@ -301,101 +339,137 @@ def run_meta_evolution(
     # Run outer evolution
     rng = Random(seed)
 
-    # Initialize population of configurations
-    population: list[tuple[UnifiedConfig, float | None]] = []
-    for _ in range(meta_config.outer_population_size):
-        # Generate random vector in [0, 1] for each dimension
-        vector = [rng.random() for _ in range(codec.dimensions)]
-        config = codec.decode(vector)
-        population.append((config, None))
+    # Try to set up MLflow parent run
+    mlflow_available = False
+    parent_run = None
+    try:
+        import mlflow
 
-    # Evolution history
-    history: list[dict[str, Any]] = []
-    best_overall: tuple[UnifiedConfig, float] | None = None
+        mlflow_available = True
+    except ImportError:
+        pass
 
-    # Outer evolution loop
-    for gen in range(meta_config.outer_generations):
-        # Evaluate population
-        evaluated: list[tuple[UnifiedConfig, float]] = []
-        for config, _ in population:
-            fitness = meta_evaluator.evaluate(config)
-            evaluated.append((config, fitness))
+    def _run_outer_loop() -> MetaEvolutionResult:
+        nonlocal parent_run
 
-        # Sort by fitness
-        minimize = base_config.minimize
-        evaluated.sort(key=lambda x: x[1], reverse=not minimize)
+        # Set parent run ID on evaluator
+        if mlflow_available and parent_run is not None:
+            meta_evaluator.parent_run_id = parent_run.info.run_id
 
-        # Track best
-        gen_best = evaluated[0]
-        if best_overall is None or (
-            (minimize and gen_best[1] < best_overall[1])
-            or (not minimize and gen_best[1] > best_overall[1])
-        ):
-            best_overall = gen_best
+        # Initialize population of configurations
+        population: list[tuple[UnifiedConfig, float | None]] = []
+        for _ in range(meta_config.outer_population_size):
+            vector = [rng.random() for _ in range(codec.dimensions)]
+            config = codec.decode(vector)
+            population.append((config, None))
 
-        # Record history
-        fitnesses = [f for _, f in evaluated]
-        history.append(
-            {
+        history: list[dict[str, Any]] = []
+        best_overall: tuple[UnifiedConfig, float] | None = None
+
+        for gen in range(meta_config.outer_generations):
+            meta_evaluator.meta_generation = gen
+
+            evaluated: list[tuple[UnifiedConfig, float]] = []
+            for config, _ in population:
+                fitness = meta_evaluator.evaluate(config)
+                evaluated.append((config, fitness))
+
+            minimize = base_config.minimize
+            evaluated.sort(key=lambda x: x[1], reverse=not minimize)
+
+            gen_best = evaluated[0]
+            if best_overall is None or (
+                (minimize and gen_best[1] < best_overall[1])
+                or (not minimize and gen_best[1] > best_overall[1])
+            ):
+                best_overall = gen_best
+
+            fitnesses_list = [f for _, f in evaluated]
+            gen_metrics = {
                 "generation": gen,
                 "best_fitness": gen_best[1],
-                "mean_fitness": sum(fitnesses) / len(fitnesses),
-                "min_fitness": min(fitnesses),
-                "max_fitness": max(fitnesses),
+                "mean_fitness": sum(fitnesses_list) / len(fitnesses_list),
+                "min_fitness": min(fitnesses_list),
+                "max_fitness": max(fitnesses_list),
             }
+            history.append(gen_metrics)
+
+            # Log outer-loop metrics to MLflow parent run
+            if mlflow_available and parent_run is not None:
+                with contextlib.suppress(Exception):
+                    mlflow.log_metrics(
+                        {
+                            "meta_best_fitness": gen_best[1],
+                            "meta_mean_fitness": gen_metrics["mean_fitness"],
+                        },
+                        step=gen,
+                    )
+
+            # Selection and variation
+            elite_count = max(1, meta_config.outer_population_size // 10)
+            next_pop: list[tuple[UnifiedConfig, float | None]] = []
+
+            for cfg, fit in evaluated[:elite_count]:
+                next_pop.append((cfg, fit))
+
+            while len(next_pop) < meta_config.outer_population_size:
+                parent1 = _tournament_select(evaluated, 3, rng, minimize)
+                parent2 = _tournament_select(evaluated, 3, rng, minimize)
+                child_vector = _crossover_vectors(
+                    codec.encode(parent1),
+                    codec.encode(parent2),
+                    rng,
+                )
+                child_vector = _mutate_vector(child_vector, 0.1, rng)
+                child_config = codec.decode(child_vector)
+                next_pop.append((child_config, None))
+
+            population = next_pop
+
+        # Final evaluation
+        final_pop: list[tuple[UnifiedConfig, float]] = []
+        for config, cached in population:
+            if cached is not None:
+                final_pop.append((config, cached))
+            else:
+                fitness = meta_evaluator.evaluate(config)
+                final_pop.append((config, fitness))
+
+        assert best_overall is not None
+        best_solution = meta_evaluator.get_cached_solution(best_overall[0])
+
+        # Log best config as artifact
+        if mlflow_available and parent_run is not None:
+            try:
+                import json
+                import os
+                import tempfile
+
+                best_dict = best_overall[0].to_dict()
+                with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+                    json.dump(best_dict, f, indent=2)
+                    tmppath = f.name
+                mlflow.log_artifact(tmppath, "best_config")
+                os.unlink(tmppath)
+            except Exception:
+                pass
+
+        return MetaEvolutionResult(
+            best_config=best_overall[0],
+            best_fitness=best_overall[1],
+            best_solution=best_solution,
+            final_population=final_pop,
+            history=history,
+            trials_run=meta_evaluator.trials_run,
         )
 
-        # Selection and variation for next generation
-        elite_count = max(1, meta_config.outer_population_size // 10)
-        next_pop: list[tuple[UnifiedConfig, float | None]] = []
-
-        # Elitism
-        for cfg, fit in evaluated[:elite_count]:
-            next_pop.append((cfg, fit))
-
-        # Fill rest with offspring
-        while len(next_pop) < meta_config.outer_population_size:
-            # Tournament selection
-            parent1 = _tournament_select(evaluated, 3, rng, minimize)
-            parent2 = _tournament_select(evaluated, 3, rng, minimize)
-
-            # Crossover
-            child_vector = _crossover_vectors(
-                codec.encode(parent1),
-                codec.encode(parent2),
-                rng,
-            )
-
-            # Mutation
-            child_vector = _mutate_vector(child_vector, 0.1, rng)
-
-            # Decode to config
-            child_config = codec.decode(child_vector)
-            next_pop.append((child_config, None))
-
-        population = next_pop
-
-    # Final evaluation of population
-    final_pop: list[tuple[UnifiedConfig, float]] = []
-    for config, cached in population:
-        if cached is not None:
-            final_pop.append((config, cached))
-        else:
-            fitness = meta_evaluator.evaluate(config)
-            final_pop.append((config, fitness))
-
-    # Get best solution from cache
-    assert best_overall is not None
-    best_solution = meta_evaluator.get_cached_solution(best_overall[0])
-
-    return MetaEvolutionResult(
-        best_config=best_overall[0],
-        best_fitness=best_overall[1],
-        best_solution=best_solution,
-        final_population=final_pop,
-        history=history,
-        trials_run=meta_evaluator.trials_run,
-    )
+    # Execute with or without MLflow parent run
+    if mlflow_available:
+        with mlflow.start_run(run_name="meta-evolution") as parent_run:
+            mlflow.set_tag("meta_evolution", "true")
+            return _run_outer_loop()
+    else:
+        return _run_outer_loop()
 
 
 def _tournament_select(

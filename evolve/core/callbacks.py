@@ -35,6 +35,11 @@ class Callback(Protocol[G]):
     Callbacks can access but should not modify the population.
     """
 
+    @property
+    def priority(self) -> int:
+        """Execution priority (lower runs first, default 0)."""
+        ...
+
     def on_generation_start(
         self,
         generation: int,
@@ -120,6 +125,11 @@ class SimpleCallback:
     Subclass and override only the methods you need.
     """
 
+    @property
+    def priority(self) -> int:
+        """Default priority (0 = highest)."""
+        return 0
+
     def on_generation_start(
         self,
         generation: int,
@@ -162,6 +172,11 @@ class PrintCallback:
 
     print_every: int = 1
     show_best: bool = True
+
+    @property
+    def priority(self) -> int:
+        """Default priority."""
+        return 0
 
     def on_generation_start(
         self,
@@ -216,6 +231,11 @@ class HistoryCallback:
     def __post_init__(self) -> None:
         self.history: list[dict[str, Any]] = []
         self.config: Any = None
+
+    @property
+    def priority(self) -> int:
+        """Default priority."""
+        return 0
 
     def on_generation_start(
         self,
@@ -274,6 +294,11 @@ class LoggingCallback:
 
     log_level: str = "INFO"
     log_destination: str = "console"
+
+    @property
+    def priority(self) -> int:
+        """Default priority."""
+        return 0
 
     def __post_init__(self) -> None:
         import logging
@@ -352,6 +377,11 @@ class CheckpointCallback:
 
     checkpoint_dir: str = "./checkpoints"
     checkpoint_frequency: int = 10
+
+    @property
+    def priority(self) -> int:
+        """Default priority."""
+        return 0
 
     def __post_init__(self) -> None:
         import os

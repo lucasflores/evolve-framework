@@ -1,13 +1,32 @@
 lockfile_version: '1'
-generated_at: '2026-03-26T00:49:08.909916+00:00'
+generated_at: '2026-04-13T17:43:02.171815+00:00'
 apm_version: 0.8.5
 dependencies:
 - repo_url: lucasflores/agent-skills
   host: github.com
-  resolved_commit: 8434caf3f85dabb8df197185f449fea1488406ec
+  resolved_commit: c2419810ded1700459e097d5150f188444fd20cf
   package_type: apm_package
   deployed_files:
+  - .claude/agents/research-assistant.md
+  - .claude/agents/research-assistant.md
+  - .claude/commands/AutoSpecKit.md
+  - .claude/skills/idea-to-speckit
+  - .claude/skills/research-assistant
+  - .claude/skills/research-project-init
   - .github/agents/research-assistant.agent.md
+  - .github/prompts/AutoSpecKit.prompt.md
   - .github/skills/idea-to-speckit
   - .github/skills/research-assistant
-  content_hash: sha256:39e905e551978c182c620b78d419690fcabeecfc2ba75db65e25666b9b785847
+  - .github/skills/research-project-init
+  content_hash: sha256:13299198089843f0b4d71c15e03ba2d21e586cec852f5d47fe4957377b6f49c8
+mcp_servers:
+- huggingface/hf-mcp-server
+- io.github.github/github-mcp-server
+- io.github.upstash/context7
+mcp_configs:
+  huggingface/hf-mcp-server:
+    name: huggingface/hf-mcp-server
+  io.github.github/github-mcp-server:
+    name: io.github.github/github-mcp-server
+  io.github.upstash/context7:
+    name: io.github.upstash/context7

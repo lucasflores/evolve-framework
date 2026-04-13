@@ -64,6 +64,11 @@ class TrackingCallback(Callback):
     _generation_counter: int = field(default=0, repr=False)
     _dataset_logged: bool = field(default=False, repr=False)
 
+    @property
+    def priority(self) -> int:
+        """TrackingCallback runs late (priority 1000) so injected metrics are available."""
+        return 1000
+
     def _ensure_tracker(self) -> None:
         """Lazily initialize tracker on first use."""
         if self._tracker is not None:
@@ -120,6 +125,12 @@ class TrackingCallback(Callback):
             self._generation_counter = 0
             self._dataset_logged = False
 
+            # Log UnifiedConfig tags as MLflow tags (T039)
+            if self.unified_config_dict:
+                tags = self.unified_config_dict.get("tags", [])
+                if tags:
+                    self._log_tags(tags)
+
             # Log full config as JSON artifact
             if self.unified_config_dict:
                 self._log_config_artifact()
@@ -127,6 +138,10 @@ class TrackingCallback(Callback):
             # Log evaluation data if provided
             if self.evaluation_data is not None and self.config.log_datasets:
                 self._log_evaluation_data()
+
+            # Log dataset configs from UnifiedConfig (T040)
+            if self.unified_config_dict and self.config.log_datasets:
+                self._log_dataset_configs()
 
         except ImportError:
             # Don't silently swallow missing dependencies - fail loudly
@@ -246,6 +261,33 @@ class TrackingCallback(Callback):
 
         except Exception as e:
             logger.warning(f"Failed to log config artifact: {e}")
+
+    def _log_tags(self, tags: list[str]) -> None:
+        """Log UnifiedConfig tags as MLflow run tag (T039)."""
+        try:
+            import mlflow
+
+            mlflow.set_tag("evolve.tags", ",".join(str(t) for t in tags))
+        except Exception as e:
+            logger.warning(f"Failed to log tags: {e}")
+
+    def _log_dataset_configs(self) -> None:
+        """Log training/validation dataset configs as MLflow tags (T040)."""
+        if not self.unified_config_dict:
+            return
+        try:
+            import mlflow
+
+            for key in ("training_data", "validation_data"):
+                ds = self.unified_config_dict.get(key)
+                if ds and isinstance(ds, dict):
+                    mlflow.set_tag(f"dataset.{key}.name", ds.get("name", ""))
+                    if ds.get("path"):
+                        mlflow.set_tag(f"dataset.{key}.path", ds["path"])
+                    if ds.get("context"):
+                        mlflow.set_tag(f"dataset.{key}.context", ds["context"])
+        except Exception as e:
+            logger.warning(f"Failed to log dataset configs: {e}")
 
     def _log_best_solution(self, population: Population[Any]) -> None:
         """

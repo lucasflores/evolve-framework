@@ -122,7 +122,7 @@ class TestCombinedFlow:
         engine = create_engine(config)
         assert engine is not None
         # Should have callbacks: CallbackConfig-derived (0 by default) + custom (2) + explicit (0)
-        assert len(engine._callbacks) >= 2
+        assert len(engine._creation_callbacks) >= 2
 
 
 class TestCallbackWiring:
@@ -142,7 +142,7 @@ class TestCallbackWiring:
         engine = create_engine(config)
         from evolve.core.callbacks import HistoryCallback
 
-        history_cbs = [cb for cb in engine._callbacks if isinstance(cb, HistoryCallback)]
+        history_cbs = [cb for cb in engine._creation_callbacks if isinstance(cb, HistoryCallback)]
         assert len(history_cbs) == 1
 
     def test_execution_order_config_custom_explicit(self):
@@ -168,7 +168,7 @@ class TestCallbackWiring:
         explicit_cb = PrintCallback(print_every=1)
         engine = create_engine(config, callbacks=[explicit_cb])
 
-        cbs = engine._callbacks
+        cbs = engine._creation_callbacks
         # Order: LoggingCallback (from Config) → HistoryCallback (custom) → PrintCallback (explicit)
         logging_idx = next(i for i, cb in enumerate(cbs) if isinstance(cb, LoggingCallback))
         history_idx = next(i for i, cb in enumerate(cbs) if isinstance(cb, HistoryCallback))
@@ -188,7 +188,7 @@ class TestCallbackWiring:
         )
         engine = create_engine(config)
         # No CallbackConfig and no custom_callbacks → 0 callbacks
-        assert len(engine._callbacks) == 0
+        assert len(engine._creation_callbacks) == 0
 
     def test_unregistered_callback_name_raises(self):
         config = UnifiedConfig(
@@ -221,5 +221,5 @@ class TestCallbackWiring:
         engine = create_engine(config)
         from evolve.core.callbacks import HistoryCallback
 
-        history_cbs = [cb for cb in engine._callbacks if isinstance(cb, HistoryCallback)]
+        history_cbs = [cb for cb in engine._creation_callbacks if isinstance(cb, HistoryCallback)]
         assert len(history_cbs) == 2

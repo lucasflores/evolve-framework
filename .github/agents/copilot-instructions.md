@@ -1,6 +1,6 @@
 # evolve-framework Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-04-06
+Auto-generated from all feature plans. Last updated: 2026-04-13
 
 ## Active Technologies
 - File-based checkpoints (pickle/JSON), optional MLflow artifact store (001-core-framework-architecture)
@@ -18,6 +18,8 @@ Auto-generated from all feature plans. Last updated: 2026-04-06
 - N/A (checkpoints via framework serialization + MLflow artifacts) (007-llm-soft-prompt-evolution)
 - Python >=3.10 (supports 3.10, 3.11, 3.12) + numpy>=1.24.0, networkx>=3.0, typing_extensions>=4.0.0 (008-evaluator-registry-config)
 - N/A (in-memory registries, JSON file serialization) (008-evaluator-registry-config)
+- Python 3.11+ + numpy, mlflow, dataclasses (stdlib) (009-feature-cleanup-backlog)
+- N/A (in-memory framework; MLflow for experiment tracking) (009-feature-cleanup-backlog)
 
 - Python 3.10+ + NumPy (core); Optional: PyTorch, JAX, MLflow, Ray (001-core-framework-architecture)
 
@@ -37,9 +39,9 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.10+: Follow standard conventions
 
 ## Recent Changes
+- 009-feature-cleanup-backlog: Added Python 3.11+ + numpy, mlflow, dataclasses (stdlib)
 - 008-evaluator-registry-config: Added Python >=3.10 (supports 3.10, 3.11, 3.12) + numpy>=1.24.0, networkx>=3.0, typing_extensions>=4.0.0
 - 007-llm-soft-prompt-evolution: Added Python ≥3.10 (project targets 3.10–3.12) + numpy ≥1.24.0 (core genome), torch ≥2.0.0 (optional — decoder/evaluator), transformers (optional — tokenizer/model loading), evolve-framework core protocols
-- 006-mlflow-metrics-tracking: Added Python 3.10+ (matches existing framework requirements in pyproject.toml)
 
 
 <!-- MANUAL ADDITIONS START -->

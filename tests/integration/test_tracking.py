@@ -58,7 +58,7 @@ class TestTrackingWithCreateEngine:
         engine = create_engine(config, dummy_fitness)
 
         # Check that TrackingCallback exists
-        callbacks = engine._callbacks
+        callbacks = engine._creation_callbacks
         tracking_callbacks = [cb for cb in callbacks if isinstance(cb, TrackingCallback)]
 
         assert len(tracking_callbacks) == 1
@@ -86,7 +86,9 @@ class TestTrackingWithCreateEngine:
         engine = create_engine(config, dummy_fitness)
 
         # Find TrackingCallback and check its unified_config_dict
-        tracking_cb = next(cb for cb in engine._callbacks if isinstance(cb, TrackingCallback))
+        tracking_cb = next(
+            cb for cb in engine._creation_callbacks if isinstance(cb, TrackingCallback)
+        )
 
         assert tracking_cb.unified_config_dict is not None
         assert tracking_cb.unified_config_dict["population_size"] == 20

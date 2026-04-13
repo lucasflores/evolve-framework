@@ -92,6 +92,14 @@ class VectorGenome:
         """Hash for set/dict membership."""
         return hash(self.genes.tobytes())
 
+    def distance(self, other: VectorGenome) -> float:
+        """Compute L2 (Euclidean) distance to another VectorGenome."""
+        if not isinstance(other, VectorGenome):
+            raise TypeError(
+                f"Cannot compute distance between VectorGenome and {type(other).__name__}"
+            )
+        return float(np.linalg.norm(self.genes - other.genes))
+
     def __len__(self) -> int:
         """Number of genes."""
         return len(self.genes)

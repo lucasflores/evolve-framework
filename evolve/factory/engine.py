@@ -401,10 +401,8 @@ def _create_standard_engine(
         mutation=mutation,
         seed=seed,
         stopping=stopping,
+        callbacks=callbacks,
     )
-
-    # Attach callbacks (runtime attribute)
-    engine._callbacks = callbacks
 
     return engine
 
@@ -465,8 +463,8 @@ def _create_erp_engine(
         stopping=stopping,
     )
 
-    # Attach callbacks (runtime attribute)
-    engine._callbacks = callbacks
+    # Attach callbacks as creation callbacks for persistence
+    engine._creation_callbacks = callbacks
 
     return engine
 
@@ -543,8 +541,8 @@ def _create_multiobjective_engine(
         engine._constraint_specs = mo_settings.constraints  # type: ignore[attr-defined]
         engine._constraint_handling = mo_settings.constraint_handling  # type: ignore[attr-defined]
 
-    # Attach callbacks
-    engine._callbacks = callbacks
+    # Attach callbacks as creation callbacks for persistence
+    engine._creation_callbacks = callbacks
 
     return engine
 

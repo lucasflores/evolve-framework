@@ -30,6 +30,42 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
+class DatasetConfig:
+    """
+    Configuration for a dataset reference (T036).
+
+    Attributes:
+        name: Human-readable dataset identifier.
+        path: Optional filesystem path to dataset.
+        data: Optional in-memory data (not serialized).
+        context: Dataset context description (e.g., "training", "validation").
+    """
+
+    name: str
+    path: str | None = None
+    data: Any = field(default=None, repr=False)
+    context: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to JSON-serializable dict (excludes in-memory data)."""
+        result: dict[str, Any] = {"name": self.name}
+        if self.path is not None:
+            result["path"] = self.path
+        if self.context:
+            result["context"] = self.context
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> DatasetConfig:
+        """Reconstruct from dict."""
+        return cls(
+            name=data["name"],
+            path=data.get("path"),
+            context=data.get("context", ""),
+        )
+
+
+@dataclass(frozen=True)
 class UnifiedConfig:
     """
     Complete experiment specification.
@@ -61,11 +97,17 @@ class UnifiedConfig:
         genome_type: Genome representation type (resolved via GenomeRegistry).
         genome_params: Parameters for genome initialization.
         minimize: If True, lower fitness is better.
+        evaluator: Evaluator registry name (resolved via EvaluatorRegistry).
+        evaluator_params: Parameters passed to evaluator factory.
+        custom_callbacks: Declarative callback entries resolved via CallbackRegistry.
         stopping: Additional stopping criteria.
         callbacks: Built-in callback configuration.
         erp: ERP settings (enables ERPEngine when present).
         multiobjective: Multi-objective settings (enables NSGA-II when present).
         meta: Meta-evolution settings (enables outer loop when present).
+        tracking: Tracking configuration for experiment observability.
+        training_data: Training dataset reference for MLflow logging.
+        validation_data: Validation dataset reference for MLflow logging.
 
     Example:
         >>> config = UnifiedConfig(
@@ -207,6 +249,12 @@ class UnifiedConfig:
     tracking: TrackingConfig | None = None
     """Tracking configuration for experiment observability (FR-002)."""
 
+    training_data: DatasetConfig | None = None
+    """Training dataset configuration for MLflow logging."""
+
+    validation_data: DatasetConfig | None = None
+    """Validation dataset configuration for MLflow logging."""
+
     # -------------------------------------------------------------------------
     # Validation
     # -------------------------------------------------------------------------
@@ -329,6 +377,8 @@ class UnifiedConfig:
         result["multiobjective"] = self.multiobjective.to_dict() if self.multiobjective else None
         result["meta"] = self.meta.to_dict() if self.meta else None
         result["tracking"] = self.tracking.to_dict() if self.tracking else None
+        result["training_data"] = self.training_data.to_dict() if self.training_data else None
+        result["validation_data"] = self.validation_data.to_dict() if self.validation_data else None
 
         return result
 
@@ -376,6 +426,14 @@ class UnifiedConfig:
         if data.get("tracking"):
             tracking = TrackingConfig.from_dict(data["tracking"])
 
+        training_data = None
+        if data.get("training_data"):
+            training_data = DatasetConfig.from_dict(data["training_data"])
+
+        validation_data = None
+        if data.get("validation_data"):
+            validation_data = DatasetConfig.from_dict(data["validation_data"])
+
         # Handle tags as list or tuple
         tags = data.get("tags", ())
         if isinstance(tags, list):
@@ -417,6 +475,8 @@ class UnifiedConfig:
             multiobjective=multiobjective,
             meta=meta,
             tracking=tracking,
+            training_data=training_data,
+            validation_data=validation_data,
         )
 
     def to_json(self, indent: int | None = 2) -> str:

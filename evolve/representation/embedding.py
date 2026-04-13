@@ -96,6 +96,12 @@ class EmbeddingGenome:
     def __hash__(self) -> int:
         return hash((self.model_id, self.seed_text, self.strategy, self.embeddings.tobytes()))
 
+    def distance(self, other: EmbeddingGenome) -> float:
+        """Frobenius norm distance between embedding matrices."""
+        if not isinstance(other, EmbeddingGenome):
+            raise TypeError(f"Cannot compute distance with {type(other).__name__}")
+        return float(np.linalg.norm(self.embeddings - other.embeddings))
+
     # ── Flat-vector adapters ──────────────────────────────────────────
 
     def flat(self) -> np.ndarray:
