@@ -1,6 +1,10 @@
 """
 Crossover operators - Combine genetic material from parents.
 
+Registry names (for ``UnifiedConfig(crossover=...)``)::
+
+    "uniform", "single_point", "two_point", "blend", "sbx"
+
 Crossover operators MUST:
 - Accept explicit RNG for determinism
 - Return new genome instances (not modify parents)

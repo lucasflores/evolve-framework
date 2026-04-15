@@ -2,9 +2,7 @@ evolve.utils package
 ====================
 
 .. automodule:: evolve.utils
-   :members:
    :show-inheritance:
-   :undoc-members:
 
 Submodules
 ----------

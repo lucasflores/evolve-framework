@@ -4,6 +4,16 @@ Sequence Genome - Variable-length sequence representation.
 Useful for genetic programming, variable-length encodings,
 and discrete optimization problems.
 
+Registry name: ``"sequence"``
+
+Declarative usage::
+
+    config = UnifiedConfig(
+        genome_type="sequence",
+        genome_params={"length": 50, "alphabet": (0, 1)},
+        ...
+    )
+
 NO ML FRAMEWORK IMPORTS ALLOWED.
 """
 

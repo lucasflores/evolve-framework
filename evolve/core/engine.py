@@ -1,13 +1,16 @@
 """
 EvolutionEngine - Main evolution loop orchestrator.
 
+Prefer ``create_engine(config, evaluator)`` from ``evolve.factory`` to
+construct an engine from a ``UnifiedConfig``. Direct ``EvolutionEngine``
+construction is for advanced use cases requiring custom operator wiring.
+
 The engine coordinates:
-1. Population initialization
-2. Fitness evaluation
-3. Selection
-4. Variation (crossover + mutation)
-5. Replacement
-6. Termination checking
+1. Fitness evaluation
+2. Selection
+3. Variation (crossover + mutation)
+4. Replacement
+5. Termination checking
 
 All randomness flows through explicit RNG instances.
 """
@@ -94,24 +97,32 @@ class EvolutionEngine(Generic[G]):
 
     All randomness flows through explicit RNG instances for reproducibility.
 
-    Example:
-        >>> from evolve.core.engine import EvolutionEngine, EvolutionConfig
-        >>> from evolve.core.operators import TournamentSelection, UniformCrossover, GaussianMutation
-        >>> from evolve.evaluation import FunctionEvaluator
-        >>> from evolve.evaluation.reference.functions import sphere
+    **Recommended**: Use ``create_engine(config, evaluator)`` from
+    ``evolve.factory`` to construct an engine from a ``UnifiedConfig``.
+    Direct construction is for advanced use only.
+
+    Example (recommended — declarative):
+        >>> from evolve import UnifiedConfig, create_engine
+        >>> from evolve.factory import create_initial_population
         >>>
+        >>> config = UnifiedConfig(
+        ...     name="example", population_size=50, max_generations=100,
+        ...     genome_type="vector", genome_params={"dimensions": 10},
+        ...     selection="tournament", crossover="blend", mutation="gaussian",
+        ...     minimize=True, seed=42,
+        ... )
+        >>> engine = create_engine(config, evaluator=fitness_fn)
+        >>> population = create_initial_population(config)
+        >>> result = engine.run(population)
+
+    Example (advanced — manual construction):
         >>> config = EvolutionConfig(population_size=50, max_generations=100)
-        >>> evaluator = FunctionEvaluator(sphere)
         >>> engine = EvolutionEngine(
-        ...     config=config,
-        ...     evaluator=evaluator,
+        ...     config=config, evaluator=evaluator,
         ...     selection=TournamentSelection(),
         ...     crossover=UniformCrossover(),
-        ...     mutation=GaussianMutation(),
-        ...     seed=42
+        ...     mutation=GaussianMutation(), seed=42,
         ... )
-        >>> result = engine.run(initial_population=pop)
-        >>> print(f"Best fitness: {result.best.fitness}")
     """
 
     def __init__(

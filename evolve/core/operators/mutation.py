@@ -1,6 +1,10 @@
 """
 Mutation operators - Modify individual genomes.
 
+Registry names (for ``UnifiedConfig(mutation=...)``)::
+
+    "gaussian", "uniform", "polynomial"
+
 Mutation operators MUST:
 - Accept explicit RNG for determinism
 - Return new genome instances (not modify in place)

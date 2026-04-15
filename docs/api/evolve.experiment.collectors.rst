@@ -2,9 +2,7 @@ evolve.experiment.collectors package
 ====================================
 
 .. automodule:: evolve.experiment.collectors
-   :members:
    :show-inheritance:
-   :undoc-members:
 
 Submodules
 ----------

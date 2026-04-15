@@ -2,9 +2,7 @@ evolve.meta package
 ===================
 
 .. automodule:: evolve.meta
-   :members:
    :show-inheritance:
-   :undoc-members:
 
 Subpackages
 -----------

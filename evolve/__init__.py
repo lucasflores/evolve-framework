@@ -2,27 +2,34 @@
 Evolve Framework - Research-Grade Evolutionary Algorithms Experimentation
 
 A modular, research-grade framework for evolutionary computation with:
+- Declarative experiment configuration via UnifiedConfig
 - Model-agnostic architecture (no hard dependencies on ML frameworks)
 - Deterministic reproducibility via explicit seeding
 - Optional GPU/JIT acceleration
 - Multi-objective optimization (NSGA-II)
+- Evolvable Reproduction Protocols (ERP)
 - Neuroevolution and RL support
 - Experiment tracking and checkpointing
 
-Example:
-    >>> from evolve import EvolutionEngine, EvolutionConfig, VectorGenome
-    >>> from evolve.core.operators import TournamentSelection, UniformCrossover, GaussianMutation
-    >>> from evolve.evaluation import FunctionEvaluator
+Quick Start:
+    >>> from evolve import UnifiedConfig, create_engine
+    >>> from evolve.factory import create_initial_population
     >>>
-    >>> engine = EvolutionEngine(
-    ...     config=EvolutionConfig(population_size=100, max_generations=100),
-    ...     evaluator=FunctionEvaluator(lambda g: sum(g.genes**2)),
-    ...     selection=TournamentSelection(),
-    ...     crossover=UniformCrossover(),
-    ...     mutation=GaussianMutation(),
-    ...     seed=42
+    >>> config = UnifiedConfig(
+    ...     name="example",
+    ...     population_size=100,
+    ...     max_generations=50,
+    ...     genome_type="vector",
+    ...     genome_params={"dimensions": 10, "bounds": (-5.12, 5.12)},
+    ...     selection="tournament",
+    ...     crossover="blend",
+    ...     mutation="gaussian",
+    ...     minimize=True,
+    ...     seed=42,
     ... )
-    >>> result = engine.run(initial_population)
+    >>> engine = create_engine(config, evaluator=my_fitness_fn)
+    >>> population = create_initial_population(config)
+    >>> result = engine.run(population)
     >>> print(f"Best fitness: {result.best.fitness}")
 """
 

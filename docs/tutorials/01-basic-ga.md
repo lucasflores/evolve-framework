@@ -1,5 +1,10 @@
 # Tutorial 1: Your First Genetic Algorithm
 
+> **Legacy Reference** — This markdown tutorial uses the older `EvolutionConfig` / `EvolutionEngine`
+> pattern. For the current recommended approach, see
+> [Tutorial 01: UnifiedConfig](01_unified_config.ipynb) which uses
+> `UnifiedConfig` + `create_engine()` for declarative experiment configuration.
+
 This tutorial walks through creating a simple genetic algorithm to optimize a mathematical function.
 
 ## Goal

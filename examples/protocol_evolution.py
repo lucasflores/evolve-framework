@@ -6,6 +6,11 @@ Demonstrates how to track and visualize protocol parameter evolution
 over generations. Shows how intent, matchability, and crossover protocols
 adapt during evolution.
 
+This example shows two approaches:
+1. **Declarative (UnifiedConfig)**: Basic ERP experiment via config
+2. **Advanced: Manual Override**: Custom diverse protocol initialization
+   and per-individual tracking that can't be expressed declaratively
+
 Run this example:
     python examples/protocol_evolution.py
 
@@ -21,6 +26,7 @@ from random import Random
 
 import numpy as np
 
+from evolve.config import UnifiedConfig
 from evolve.core.callbacks import HistoryCallback
 from evolve.core.operators.crossover import UniformCrossover
 from evolve.core.operators.mutation import GaussianMutation
@@ -222,7 +228,34 @@ def main():
     print("=" * 70)
     print("PROTOCOL EVOLUTION TRACKING")
     print("=" * 70)
-    print("\nScenario:")
+
+    # ── Declarative approach: basic ERP via UnifiedConfig ──
+    print("\n[Declarative] Basic ERP via UnifiedConfig.with_erp():")
+    config = UnifiedConfig(
+        name="protocol_evolution",
+        population_size=POPULATION_SIZE,
+        max_generations=GENERATIONS,
+        selection="tournament",
+        selection_params={"tournament_size": 3},
+        crossover="uniform",
+        crossover_params={"swap_prob": 0.5},
+        mutation="gaussian",
+        mutation_rate=0.1,
+        mutation_params={"sigma": 0.5},
+        genome_type="vector",
+        genome_params={"dimensions": DIMENSIONS, "bounds": INIT_RANGE},
+        seed=SEED,
+    ).with_erp(
+        protocol_mutation_rate=0.15,
+        enable_recovery=False,
+    )
+    print(f"  Config hash: {config.compute_hash()[:12]}...")
+    print("  (Uniform protocols — all individuals share same initial strategy)")
+
+    # ── Advanced: Manual Override ──
+    # For diverse per-individual protocol initialization + tracking,
+    # we use direct ERPEngine construction.
+    print("\n[Advanced] Diverse protocol evolution:")
     print(f"  • {POPULATION_SIZE} individuals with diverse protocols")
     print("  • Thresholds: 0.2 - 0.9 (uniform random)")
     print("  • Crossover types: uniform, single-point, two-point")

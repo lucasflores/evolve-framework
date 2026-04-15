@@ -6,7 +6,7 @@ All functions are implemented in pure NumPy for CPU reference.
 
 Functions follow the convention:
 - Input: numpy array of shape (n,) for single evaluation
-         or shape (batch, n) for batch evaluation
+  or shape (batch, n) for batch evaluation
 - Output: scalar fitness value (lower is better for minimization)
 """
 

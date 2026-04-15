@@ -2,9 +2,7 @@ evolve.registry package
 =======================
 
 .. automodule:: evolve.registry
-   :members:
    :show-inheritance:
-   :undoc-members:
 
 Submodules
 ----------

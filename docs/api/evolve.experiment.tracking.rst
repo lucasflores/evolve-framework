@@ -2,9 +2,7 @@ evolve.experiment.tracking package
 ==================================
 
 .. automodule:: evolve.experiment.tracking
-   :members:
    :show-inheritance:
-   :undoc-members:
 
 Submodules
 ----------

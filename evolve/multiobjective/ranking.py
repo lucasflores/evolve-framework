@@ -54,6 +54,7 @@ def fast_non_dominated_sort(
     2. Solutions with domination count 0 form the first front
     3. For each solution in current front, decrement domination count
        of solutions it dominates; those reaching 0 form next front
+
     4. Repeat until all solutions assigned
 
     Complexity: O(M * N^2) where M = objectives, N = population size

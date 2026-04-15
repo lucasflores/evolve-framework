@@ -55,7 +55,43 @@ This guide provides practical advice for using ERP effectively in your evolution
 
 ## Getting Started
 
-### Basic Setup
+### Declarative Setup via UnifiedConfig
+
+The easiest way to enable ERP is through `UnifiedConfig.with_erp()`:
+
+```python
+from evolve.config import UnifiedConfig
+from evolve.factory import create_engine, create_initial_population
+
+config = UnifiedConfig(
+    name="erp_experiment",
+    population_size=50,
+    max_generations=100,
+    selection="tournament",
+    selection_params={"tournament_size": 3},
+    crossover="uniform",
+    crossover_params={"swap_prob": 0.5},
+    mutation="gaussian",
+    mutation_rate=0.1,
+    mutation_params={"sigma": 0.5},
+    genome_type="vector",
+    genome_params={"dimensions": 10, "bounds": (-5.0, 5.0)},
+    seed=42,
+).with_erp(
+    protocol_mutation_rate=0.15,
+    enable_recovery=False,   # Start simple
+)
+
+engine = create_engine(config, evaluator=your_evaluator)
+population = create_initial_population(config)
+result = engine.run(population)
+```
+
+This automatically resolves operators from registries, creates the `ERPEngine`, and assigns default protocols to all individuals.
+
+### Advanced: Direct ERPEngine Usage
+
+For custom per-individual protocols (e.g., asymmetric mating strategies), use `ERPEngine` directly:
 
 ```python
 from evolve.reproduction.engine import ERPEngine, ERPConfig
@@ -79,6 +115,10 @@ mutation_config = MutationConfig(
 protocol_mutator = ProtocolMutator(config=mutation_config)
 
 # 3. Create ERP engine
+from evolve.core.operators.crossover import UniformCrossover
+from evolve.core.operators.mutation import GaussianMutation
+from evolve.core.operators.selection import TournamentSelection
+
 erp_engine = ERPEngine(
     config=erp_config,
     evaluator=your_evaluator,
@@ -454,7 +494,7 @@ def compute_reproductive_skew(mating_events):
 
 ## Related Resources
 
-- **Tutorial 6**: [Evolvable Reproduction Protocols](../tutorials/06_evolvable_reproduction_protocols.ipynb)
+- **Tutorial 7**: [Evolvable Reproduction Protocols](../tutorials/07_evolvable_reproduction.ipynb)
 - **ADR 002**: [ERP Extensibility Design](../adr/002-erp-extensibility.md)
 - **API Reference**: [evolve.reproduction](../api/reproduction.md)
 - **Examples**:

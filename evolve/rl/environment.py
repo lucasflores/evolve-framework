@@ -227,25 +227,25 @@ class VectorizedEnvironment(Protocol[Observation, Action]):  # type: ignore[misc
         ...
 
     def reset(self, seeds: list[int] | None = None) -> np.ndarray:
-        """
+        r"""
         Reset all environments.
 
         Args:
             seeds: Per-environment seeds
 
         Returns:
-            Batch of observations, shape: (num_envs, *obs_shape)
+            Batch of observations, shape: (num_envs, \*obs_shape)
         """
         ...
 
     def step(
         self, actions: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[dict[str, Any]]]:
-        """
+        r"""
         Step all environments.
 
         Args:
-            actions: Batch of actions, shape: (num_envs, *action_shape)
+            actions: Batch of actions, shape: (num_envs, \*action_shape)
 
         Returns:
             (observations, rewards, dones, infos)

@@ -41,6 +41,10 @@ try:
 except ImportError:
     PAPERMILL_AVAILABLE = False
 
+# Kernel name for notebook execution — must match an installed Jupyter kernelspec.
+# Install with: python -m ipykernel install --user --name evolve-framework
+KERNEL_NAME = "evolve-framework"
+
 
 @pytest.fixture(scope="module")
 def temp_output_dir():
@@ -115,31 +119,31 @@ class TestNotebookImportIndependence:
 
 @pytest.mark.skipif(not PAPERMILL_AVAILABLE, reason="papermill not installed")
 @pytest.mark.skipif(
-    not _notebook_exists("01_vector_genome.ipynb"), reason="Notebook not yet created"
+    not _notebook_exists("02_vector_genome.ipynb"), reason="Notebook not yet created"
 )
 class TestVectorGenomeNotebook:
-    """Tests for 01_vector_genome.ipynb notebook execution.
+    """Tests for 02_vector_genome.ipynb notebook execution.
 
     T048: VectorGenome notebook execution test
     """
 
     def test_notebook_executes_without_error(self, temp_output_dir):
         """Notebook should execute all cells without raising exceptions."""
-        input_path = TUTORIALS_DIR / "01_vector_genome.ipynb"
-        output_path = temp_output_dir / "01_vector_genome_executed.ipynb"
+        input_path = TUTORIALS_DIR / "02_vector_genome.ipynb"
+        output_path = temp_output_dir / "02_vector_genome_executed.ipynb"
 
         # Execute notebook
         pm.execute_notebook(
             str(input_path),
             str(output_path),
-            kernel_name="python3",
+            kernel_name=KERNEL_NAME,
             parameters={},
             cwd=str(TUTORIALS_DIR),
         )
 
         assert output_path.exists(), "Executed notebook should be created"
 
-    def test_rastrigin_convergence(self, _temp_output_dir):
+    def test_rastrigin_convergence(self, temp_output_dir):
         """Rastrigin optimization should converge within 1% of optimum.
 
         Independent test criterion: Rastrigin converges to within 1% of
@@ -149,7 +153,7 @@ class TestVectorGenomeNotebook:
         # Skip if notebook not fully implemented yet
         pytest.skip("Convergence test requires full notebook implementation")
 
-    def test_rosenbrock_convergence(self, _temp_output_dir):
+    def test_rosenbrock_convergence(self, temp_output_dir):
         """Rosenbrock optimization should converge within 1% of optimum."""
         pytest.skip("Convergence test requires full notebook implementation")
 
@@ -161,27 +165,27 @@ class TestVectorGenomeNotebook:
 
 @pytest.mark.skipif(not PAPERMILL_AVAILABLE, reason="papermill not installed")
 @pytest.mark.skipif(
-    not _notebook_exists("02_sequence_genome.ipynb"), reason="Notebook not yet created"
+    not _notebook_exists("03_sequence_genome.ipynb"), reason="Notebook not yet created"
 )
 class TestSequenceGenomeNotebook:
-    """Tests for 02_sequence_genome.ipynb notebook execution.
+    """Tests for 03_sequence_genome.ipynb notebook execution.
 
     T066: SequenceGenome notebook execution test
     """
 
     def test_notebook_executes_without_error(self, temp_output_dir):
         """Notebook should execute all cells without raising exceptions."""
-        input_path = TUTORIALS_DIR / "02_sequence_genome.ipynb"
-        output_path = temp_output_dir / "02_sequence_genome_executed.ipynb"
+        input_path = TUTORIALS_DIR / "03_sequence_genome.ipynb"
+        output_path = temp_output_dir / "03_sequence_genome_executed.ipynb"
 
         pm.execute_notebook(
             str(input_path),
             str(output_path),
-            kernel_name="python3",
+            kernel_name=KERNEL_NAME,
             cwd=str(TUTORIALS_DIR),
         )
 
-    def test_symbolic_regression_accuracy(self, _temp_output_dir):
+    def test_symbolic_regression_accuracy(self, temp_output_dir):
         """Evolved expressions should achieve within 5% test error."""
         pytest.skip("Accuracy test requires full notebook implementation")
 
@@ -193,23 +197,23 @@ class TestSequenceGenomeNotebook:
 
 @pytest.mark.skipif(not PAPERMILL_AVAILABLE, reason="papermill not installed")
 @pytest.mark.skipif(
-    not _notebook_exists("03_graph_genome_neat.ipynb"), reason="Notebook not yet created"
+    not _notebook_exists("04_graph_genome_neat.ipynb"), reason="Notebook not yet created"
 )
 class TestGraphGenomeNotebook:
-    """Tests for 03_graph_genome_neat.ipynb notebook execution.
+    """Tests for 04_graph_genome_neat.ipynb notebook execution.
 
     T083: GraphGenome notebook execution test
     """
 
     def test_notebook_executes_without_error(self, temp_output_dir):
         """Notebook should execute all cells without raising exceptions."""
-        input_path = TUTORIALS_DIR / "03_graph_genome_neat.ipynb"
-        output_path = temp_output_dir / "03_graph_genome_neat_executed.ipynb"
+        input_path = TUTORIALS_DIR / "04_graph_genome_neat.ipynb"
+        output_path = temp_output_dir / "04_graph_genome_neat_executed.ipynb"
 
         pm.execute_notebook(
             str(input_path),
             str(output_path),
-            kernel_name="python3",
+            kernel_name=KERNEL_NAME,
             cwd=str(TUTORIALS_DIR),
         )
 
@@ -221,23 +225,23 @@ class TestGraphGenomeNotebook:
 
 @pytest.mark.skipif(not PAPERMILL_AVAILABLE, reason="papermill not installed")
 @pytest.mark.skipif(
-    not _notebook_exists("04_rl_neuroevolution.ipynb"), reason="Notebook not yet created"
+    not _notebook_exists("05_rl_neuroevolution.ipynb"), reason="Notebook not yet created"
 )
 class TestRLNeuroevolutionNotebook:
-    """Tests for 04_rl_neuroevolution.ipynb notebook execution.
+    """Tests for 05_rl_neuroevolution.ipynb notebook execution.
 
     T103: RLGenome notebook execution test
     """
 
     def test_notebook_executes_without_error(self, temp_output_dir):
         """Notebook should execute all cells without raising exceptions."""
-        input_path = TUTORIALS_DIR / "04_rl_neuroevolution.ipynb"
-        output_path = temp_output_dir / "04_rl_neuroevolution_executed.ipynb"
+        input_path = TUTORIALS_DIR / "05_rl_neuroevolution.ipynb"
+        output_path = temp_output_dir / "05_rl_neuroevolution_executed.ipynb"
 
         pm.execute_notebook(
             str(input_path),
             str(output_path),
-            kernel_name="python3",
+            kernel_name=KERNEL_NAME,
             cwd=str(TUTORIALS_DIR),
         )
 
@@ -249,23 +253,23 @@ class TestRLNeuroevolutionNotebook:
 
 @pytest.mark.skipif(not PAPERMILL_AVAILABLE, reason="papermill not installed")
 @pytest.mark.skipif(
-    not _notebook_exists("05_scm_multiobjective.ipynb"), reason="Notebook not yet created"
+    not _notebook_exists("06_scm_multiobjective.ipynb"), reason="Notebook not yet created"
 )
 class TestSCMGenomeNotebook:
-    """Tests for 05_scm_multiobjective.ipynb notebook execution.
+    """Tests for 06_scm_multiobjective.ipynb notebook execution.
 
     T125: SCMGenome notebook execution test
     """
 
     def test_notebook_executes_without_error(self, temp_output_dir):
         """Notebook should execute all cells without raising exceptions."""
-        input_path = TUTORIALS_DIR / "05_scm_multiobjective.ipynb"
-        output_path = temp_output_dir / "05_scm_multiobjective_executed.ipynb"
+        input_path = TUTORIALS_DIR / "06_scm_multiobjective.ipynb"
+        output_path = temp_output_dir / "06_scm_multiobjective_executed.ipynb"
 
         pm.execute_notebook(
             str(input_path),
             str(output_path),
-            kernel_name="python3",
+            kernel_name=KERNEL_NAME,
             cwd=str(TUTORIALS_DIR),
         )
 

@@ -3,7 +3,12 @@
 Sexual Selection with ERP - Standalone Example
 
 Demonstrates asymmetric sexual selection using Evolvable Reproduction Protocols.
-Models choosy vs. eager mating strategies similar to Tutorial 06, Part 7.
+Models choosy vs. eager mating strategies similar to Tutorial 07, Part 7.
+
+This example shows two approaches:
+1. **Declarative (UnifiedConfig)**: Basic ERP experiment via config
+2. **Advanced: Manual Override**: Custom per-individual protocol assignment
+   for asymmetric mating strategies that can't be expressed declaratively
 
 Run this example:
     python examples/sexual_selection.py
@@ -19,6 +24,7 @@ from random import Random
 
 import numpy as np
 
+from evolve.config import UnifiedConfig
 from evolve.core.callbacks import HistoryCallback
 from evolve.core.operators.crossover import UniformCrossover
 from evolve.core.operators.mutation import GaussianMutation
@@ -138,7 +144,35 @@ def main():
     print("=" * 70)
     print("SEXUAL SELECTION WITH ERP")
     print("=" * 70)
-    print("\nScenario:")
+
+    # ── Declarative approach: basic ERP via UnifiedConfig ──
+    # For simple ERP (uniform protocols), everything is declarative:
+    print("\n[Declarative] Basic ERP via UnifiedConfig.with_erp():")
+    config = UnifiedConfig(
+        name="sexual_selection",
+        population_size=POPULATION_SIZE,
+        max_generations=GENERATIONS,
+        selection="tournament",
+        selection_params={"tournament_size": 3},
+        crossover="uniform",
+        crossover_params={"swap_prob": 0.5},
+        mutation="gaussian",
+        mutation_rate=0.1,
+        mutation_params={"sigma": 0.5},
+        genome_type="vector",
+        genome_params={"dimensions": DIMENSIONS, "bounds": INIT_RANGE},
+        seed=SEED,
+    ).with_erp(
+        protocol_mutation_rate=0.1,
+        enable_recovery=False,
+    )
+    print(f"  Config hash: {config.compute_hash()[:12]}...")
+    print("  (Uniform protocols — all individuals share same strategy)")
+
+    # ── Advanced: Manual Override ──
+    # For asymmetric sexual selection (choosy vs eager), we need
+    # per-individual protocol assignment — requires direct ERPEngine usage.
+    print("\n[Advanced] Asymmetric sexual selection:")
     print(
         f"  • {int(POPULATION_SIZE * CHOOSY_FRACTION)} choosy individuals (threshold={CHOOSY_THRESHOLD})"
     )

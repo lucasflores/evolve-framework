@@ -5,6 +5,11 @@ Speciation via Assortative Mating - Standalone Example
 Demonstrates how ERP can model speciation through assortative mating.
 Individuals prefer mates similar to themselves (cosine similarity).
 
+This example shows two approaches:
+1. **Declarative (UnifiedConfig)**: Basic ERP experiment via config
+2. **Advanced: Manual Override**: Custom cosine-similarity matchability
+   for assortative mating that can't be expressed declaratively
+
 Run this example:
     python examples/speciation_demo.py
 
@@ -20,6 +25,7 @@ from random import Random
 
 import numpy as np
 
+from evolve.config import UnifiedConfig
 from evolve.core.callbacks import HistoryCallback
 from evolve.core.operators.crossover import UniformCrossover
 from evolve.core.operators.mutation import GaussianMutation
@@ -174,7 +180,34 @@ def main():
     print("=" * 70)
     print("SPECIATION VIA ASSORTATIVE MATING")
     print("=" * 70)
-    print("\nScenario:")
+
+    # ── Declarative approach: basic ERP via UnifiedConfig ──
+    print("\n[Declarative] Basic ERP via UnifiedConfig.with_erp():")
+    config = UnifiedConfig(
+        name="speciation_demo",
+        population_size=POPULATION_SIZE,
+        max_generations=GENERATIONS,
+        selection="tournament",
+        selection_params={"tournament_size": 3},
+        crossover="uniform",
+        crossover_params={"swap_prob": 0.5},
+        mutation="gaussian",
+        mutation_rate=0.1,
+        mutation_params={"sigma": 0.3},
+        genome_type="vector",
+        genome_params={"dimensions": DIMENSIONS, "bounds": INIT_RANGE},
+        seed=SEED,
+    ).with_erp(
+        protocol_mutation_rate=0.05,  # Low mutation to maintain clustering
+        enable_recovery=False,
+    )
+    print(f"  Config hash: {config.compute_hash()[:12]}...")
+    print("  (Uniform protocols — all individuals share same strategy)")
+
+    # ── Advanced: Manual Override ──
+    # For cosine-similarity assortative mating, we need custom per-individual
+    # matchability functions — requires direct ERPEngine construction.
+    print("\n[Advanced] Assortative mating with cosine similarity:")
     print(f"  • {POPULATION_SIZE} individuals with cosine similarity matchability")
     print(f"  • Threshold: {SIMILARITY_THRESHOLD} (prefer similar genomes)")
     print(f"  • {GENERATIONS} generations")

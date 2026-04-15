@@ -4,6 +4,20 @@ SCM (Structural Causal Model) Genome Representation.
 This module provides evolutionary representations for causal discovery
 through the evolution of Structural Causal Models (SCMs).
 
+Registry name: ``"scm"``
+
+Declarative usage::
+
+    config = UnifiedConfig(
+        genome_type="scm",
+        genome_params={"num_variables": 5},
+        ...
+    )
+
+.. note::
+    The SCM genome factory is experimental. For full control over
+    causal model structure, use ``SCMConfig`` directly.
+
 Key components:
 - SCMConfig: Configuration for SCM genome creation and evolution
 - SCMAlphabet: Symbol set factory for SCM genomes
@@ -167,13 +181,13 @@ class SCMAlphabet:
 
     @classmethod
     def from_config(cls, config: SCMConfig) -> SCMAlphabet:
-        """
+        r"""
         Generate alphabet from configuration.
 
         Creates:
         - Variable refs for observed + latent variables
-        - STORE_* genes for all variables
-        - Standard operators: +, -, *, /
+        - STORE_\* genes for all variables
+        - Standard operators: +, -, \*, /
         - Standard constants: 0, 1, 2, -1, 0.5, PI
         - ERC slots: ERC_0, ERC_1, ... ERC_{n-1}
         """
@@ -294,6 +308,7 @@ class SCMGenome:
                 "erc_values": [[slot, value], ...],
                 "config": {...}
             }
+
         """
         return {
             "type": "SCMGenome",

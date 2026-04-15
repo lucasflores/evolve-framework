@@ -2,9 +2,7 @@ evolve.rl package
 =================
 
 .. automodule:: evolve.rl
-   :members:
    :show-inheritance:
-   :undoc-members:
 
 Submodules
 ----------

@@ -2,9 +2,7 @@ evolve.config package
 =====================
 
 .. automodule:: evolve.config
-   :members:
    :show-inheritance:
-   :undoc-members:
 
 Submodules
 ----------

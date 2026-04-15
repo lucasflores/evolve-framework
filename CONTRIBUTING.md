@@ -169,14 +169,18 @@ When adding or modifying tutorial notebooks:
 4. **Check estimated completion times are accurate**
 
 ```bash
-# Test a specific tutorial
-python -m pytest tests/integration/test_tutorials.py::test_tutorial_06_erp
+# Test a specific tutorial integration test
+python -m pytest tests/integration/test_tutorial_06_erp.py
 
 # Test standalone examples
 python -m pytest tests/integration/test_erp_examples.py
+
+# Execute tutorial notebooks (requires papermill)
+python -m pytest tests/tutorials/test_notebook_execution.py
 ```
 
 **Tutorial conventions:**
+- All tutorials use ``UnifiedConfig`` + ``create_engine()`` as the canonical pattern
 - Keep tutorials under 90 minutes completion time
 - Include progress indicators and section headers
 - Use consistent variable naming across tutorials

@@ -2,9 +2,7 @@ evolve.core.operators package
 =============================
 
 .. automodule:: evolve.core.operators
-   :members:
    :show-inheritance:
-   :undoc-members:
 
 Submodules
 ----------

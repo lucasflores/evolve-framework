@@ -4,6 +4,20 @@ Graph Genome - NEAT-style topology-evolving genome.
 Implements graph-based genomes with node and connection genes
 identified by innovation numbers for crossover alignment.
 
+Registry name: ``"graph"``
+
+Declarative usage::
+
+    config = UnifiedConfig(
+        genome_type="graph",
+        genome_params={"input_nodes": 2, "output_nodes": 1},
+        ...
+    )
+
+.. note::
+    The graph genome factory is experimental. Some advanced topologies
+    may require manual ``GraphGenome`` construction.
+
 NO ML FRAMEWORK IMPORTS ALLOWED.
 """
 

@@ -2,9 +2,7 @@ evolve.representation package
 =============================
 
 .. automodule:: evolve.representation
-   :members:
    :show-inheritance:
-   :undoc-members:
 
 Submodules
 ----------

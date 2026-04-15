@@ -1,6 +1,10 @@
 """
 Selection operators - Choose individuals for reproduction.
 
+Registry names (for ``UnifiedConfig(selection=...)``)::
+
+    "tournament", "roulette", "rank", "elitist", "crowded_tournament"
+
 Selection operators MUST:
 - Accept explicit RNG for determinism
 - Support elitism via separate mechanism

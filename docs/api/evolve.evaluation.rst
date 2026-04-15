@@ -2,9 +2,7 @@ evolve.evaluation package
 =========================
 
 .. automodule:: evolve.evaluation
-   :members:
    :show-inheritance:
-   :undoc-members:
 
 Subpackages
 -----------

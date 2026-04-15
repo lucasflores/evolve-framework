@@ -2,9 +2,7 @@ evolve.diversity package
 ========================
 
 .. automodule:: evolve.diversity
-   :members:
    :show-inheritance:
-   :undoc-members:
 
 Subpackages
 -----------

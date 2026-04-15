@@ -3,6 +3,10 @@ Operator Registry.
 
 Provides a registry mapping operator names to implementations,
 with lazy initialization and genome compatibility tracking.
+
+Used internally by ``create_engine(UnifiedConfig(...))`` to resolve
+operator names like ``"tournament"``, ``"gaussian"``, ``"sbx"`` to
+their implementing classes.
 """
 
 from __future__ import annotations

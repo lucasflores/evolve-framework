@@ -97,7 +97,7 @@ class GenomeRegistry:
         Create a genome instance.
 
         Validates params against the factory's signature before invocation.
-        Factories accepting **kwargs skip strict validation.
+        Factories accepting ``**kwargs`` skip strict validation.
 
         Args:
             name: Registered genome type name.

@@ -2,6 +2,8 @@
 
 Welcome to the Evolve Framework tutorial series! These notebooks teach evolutionary algorithms to ML practitioners by bridging familiar concepts from machine learning to evolutionary computation.
 
+Every tutorial uses `UnifiedConfig` + `create_engine()` as the canonical pattern for defining and running experiments.
+
 ## Prerequisites
 
 - **Audience**: ML/DS practitioners with strong statistics/linear algebra background but NO evolutionary algorithms experience
@@ -12,66 +14,77 @@ Welcome to the Evolve Framework tutorial series! These notebooks teach evolution
 
 | # | Tutorial | Genome Type | Problem Domain | Est. Time |
 |---|----------|-------------|----------------|-----------|
-| 1 | [VectorGenome](01_vector_genome.ipynb) | Fixed-length vectors | Continuous optimization | 45-60 min |
-| 2 | [SequenceGenome](02_sequence_genome.ipynb) | Variable-length sequences | Symbolic regression (GP) | 45-60 min |
-| 3 | [GraphGenome/NEAT](03_graph_genome_neat.ipynb) | Network topology | Neural architecture search | 60-75 min |
-| 4 | [RL/Neuroevolution](04_rl_neuroevolution.ipynb) | Policy weights | Reinforcement learning | 45-60 min |
-| 5 | [SCM/Multi-Objective](05_scm_multiobjective.ipynb) | Causal graphs | Causal discovery (NSGA-II) | 60-75 min |
-| 6 | [**Evolvable Reproduction Protocols**](06_evolvable_reproduction_protocols.ipynb) | Individual protocols | Sexual selection, speciation | 75-90 min |
+| 1 | [**UnifiedConfig** (Start Here)](01_unified_config.ipynb) | Config | Declarative experiment setup | 30-45 min |
+| 2 | [VectorGenome](02_vector_genome.ipynb) | Fixed-length vectors | Continuous optimization | 45-60 min |
+| 3 | [SequenceGenome](03_sequence_genome.ipynb) | Variable-length sequences | Symbolic regression (GP) | 45-60 min |
+| 4 | [GraphGenome/NEAT](04_graph_genome_neat.ipynb) | Network topology | Neural architecture search | 60-75 min |
+| 5 | [RL/Neuroevolution](05_rl_neuroevolution.ipynb) | Policy weights | Reinforcement learning | 45-60 min |
+| 6 | [SCM/Multi-Objective](06_scm_multiobjective.ipynb) | Causal graphs | Causal discovery (NSGA-II) | 60-75 min |
+| 7 | [Evolvable Reproduction](07_evolvable_reproduction.ipynb) | Individual protocols | Sexual selection, speciation | 75-90 min |
 
 ## Learning Path
 
 ### Recommended Order (Complete Beginner)
 ```
-Tutorial 1 → Tutorial 2 → Tutorial 3 → Tutorial 4 → Tutorial 5
+Tutorial 01 (UnifiedConfig) → Tutorial 02 → Tutorial 03 → Tutorial 04 → Tutorial 05
 ```
 
-**Prerequisites for Tutorial 6**: Complete Tutorial 1 (VectorGenome) first to understand basic EA concepts.
+**Tutorial 01 is required** — it introduces `UnifiedConfig`, `create_engine()`, and `create_initial_population()` which all subsequent tutorials build on.
+
+**Prerequisites for Tutorial 07**: Complete Tutorial 01 and Tutorial 02 first to understand basic EA concepts.
 
 ### By Interest
 
 | If you're interested in... | Start with |
 |---------------------------|------------|
-| **Hyperparameter optimization** | Tutorial 1 (VectorGenome) |
-| **Symbolic AI / interpretable models** | Tutorial 2 (SequenceGenome) |
-| **Neural architecture search** | Tutorial 3 (GraphGenome/NEAT) |
-| **RL without gradients** | Tutorial 4 (RL/Neuroevolution) |
-| **Causal inference** | Tutorial 5 (SCM/Multi-Objective) |
-| **Sexual selection / speciation** | Tutorial 6 (Evolvable Reproduction Protocols) |
+| **Getting started** | Tutorial 01 (UnifiedConfig) |
+| **Hyperparameter optimization** | Tutorial 02 (VectorGenome) |
+| **Symbolic AI / interpretable models** | Tutorial 03 (SequenceGenome) |
+| **Neural architecture search** | Tutorial 04 (GraphGenome/NEAT) |
+| **RL without gradients** | Tutorial 05 (RL/Neuroevolution) |
+| **Causal inference** | Tutorial 06 (SCM/Multi-Objective) |
+| **Sexual selection / speciation** | Tutorial 07 (Evolvable Reproduction) |
 
 ## Key Concepts Covered
 
-### Tutorial 1: VectorGenome
+### Tutorial 01: UnifiedConfig
+- Declarative experiment configuration via `UnifiedConfig`
+- `create_engine()` factory for one-line engine creation
+- `create_initial_population()` from config
+- Config serialization, hashing, and reproducibility
+- Sub-configs: stopping, tracking, ERP, multi-objective, meta-evolution
+
+### Tutorial 02: VectorGenome
 - EA fundamentals: selection, crossover, mutation
 - Population-based optimization vs gradient descent
 - Adaptive mutation rates
 - Benchmark functions (Rastrigin, Rosenbrock)
 
-### Tutorial 2: SequenceGenome
+### Tutorial 03: SequenceGenome
 - Variable-length representations
 - Expression tree manipulation
 - Subtree crossover
 - Bloat control (parsimony pressure)
 
-### Tutorial 3: GraphGenome/NEAT
+### Tutorial 04: GraphGenome/NEAT
 - Topology evolution
 - Speciation and genomic distance
 - Fitness sharing
 - Innovation numbers for crossover alignment
 
-### Tutorial 4: RL/Neuroevolution
+### Tutorial 05: RL/Neuroevolution
 - Evolution as derivative-free optimization
 - Policy networks from genomes
 - Episode rollout as fitness
 - Fitness aggregation strategies
 
-### Tutorial 5: SCM/Multi-Objective
+### Tutorial 06: SCM/Multi-Objective
 - Pareto dominance
 - NSGA-II algorithm
 - Crowding distance
 - Multi-objective trade-offs
 
-### Tutorial 6: Evolvable Reproduction Protocols
+### Tutorial 07: Evolvable Reproduction
 - Individual-level mating strategies
 - Reproduction intent policies (willingness to mate)
 - Matchability functions (mate selection criteria)
@@ -83,13 +96,15 @@ Tutorial 1 → Tutorial 2 → Tutorial 3 → Tutorial 4 → Tutorial 5
 ## Common Features
 
 All tutorials include:
+- ✅ **UnifiedConfig** declarative experiment setup
 - ✅ **EA Primer sections** with ML analogies
 - ✅ **Mermaid diagrams** for visual concepts
 - ✅ **Interactive visualizations** (matplotlib + plotly)
 - ✅ **Callbacks** for logging and early stopping
 - ✅ **Checkpointing** for save/resume
 - ✅ **Island model** parallelism overview
-- ✅ **GPU acceleration** guidance
+- ✅ **GPU acceleration** guidance (Tutorial 02)
+- ✅ **Config serialization** and reproducibility (Tutorial 01)
 
 ## ML-to-EA Terminology
 
@@ -154,7 +169,10 @@ Reduce population sizes in the configuration cells if you encounter memory error
 
 ---
 
-## Markdown Tutorials (Reference)
+## Markdown Tutorials (Legacy Reference)
+
+> **Note**: These markdown tutorials use the older `EvolutionConfig` + manual construction pattern.
+> For new experiments, use the `UnifiedConfig` + `create_engine()` approach shown in the notebooks above.
 
 These supplementary tutorials provide additional documentation in markdown format:
 

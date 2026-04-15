@@ -2,9 +2,7 @@ evolve.backends package
 =======================
 
 .. automodule:: evolve.backends
-   :members:
    :show-inheritance:
-   :undoc-members:
 
 Subpackages
 -----------

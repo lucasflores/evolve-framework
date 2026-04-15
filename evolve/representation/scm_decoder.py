@@ -80,10 +80,10 @@ class Const:
 
 @dataclass(frozen=True)
 class BinOp:
-    """
+    r"""
     Binary operation in expression.
 
-    Represents arithmetic operations: +, -, *, /
+    Represents arithmetic operations: +, -, \*, /
     """
 
     op: str  # One of: '+', '-', '*', '/'

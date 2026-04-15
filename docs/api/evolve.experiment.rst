@@ -2,9 +2,7 @@ evolve.experiment package
 =========================
 
 .. automodule:: evolve.experiment
-   :members:
    :show-inheritance:
-   :undoc-members:
 
 Subpackages
 -----------

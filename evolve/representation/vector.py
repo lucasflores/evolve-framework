@@ -3,6 +3,16 @@ VectorGenome - Fixed-length real-valued vector representation.
 
 This is the most common genome type for continuous optimization
 and neuroevolution weight encoding.
+
+Registry name: ``"vector"``
+
+Declarative usage::
+
+    config = UnifiedConfig(
+        genome_type="vector",
+        genome_params={"dimensions": 10, "bounds": (-5.12, 5.12)},
+        ...
+    )
 """
 
 from __future__ import annotations

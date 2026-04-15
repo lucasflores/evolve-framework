@@ -12,10 +12,7 @@ from pathlib import Path
 import pytest
 
 TUTORIAL_PATH = (
-    Path(__file__).parent.parent.parent
-    / "docs"
-    / "tutorials"
-    / "06_evolvable_reproduction_protocols.ipynb"
+    Path(__file__).parent.parent.parent / "docs" / "tutorials" / "07_evolvable_reproduction.ipynb"
 )
 
 try:
