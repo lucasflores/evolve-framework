@@ -99,6 +99,8 @@ class UnifiedConfig:
         minimize: If True, lower fitness is better.
         evaluator: Evaluator registry name (resolved via EvaluatorRegistry).
         evaluator_params: Parameters passed to evaluator factory.
+        decoder: Decoder registry name (resolved via DecoderRegistry).
+        decoder_params: Parameters passed to decoder factory.
         custom_callbacks: Declarative callback entries resolved via CallbackRegistry.
         stopping: Additional stopping criteria.
         callbacks: Built-in callback configuration.
@@ -224,6 +226,12 @@ class UnifiedConfig:
     evaluator_params: dict[str, Any] = field(default_factory=dict)
     """Parameters passed to evaluator factory."""
 
+    decoder: str | None = None
+    """Decoder registry name (resolved via DecoderRegistry)."""
+
+    decoder_params: dict[str, Any] = field(default_factory=dict)
+    """Parameters passed to decoder factory."""
+
     custom_callbacks: tuple[dict[str, Any], ...] = ()
     """Declarative callback entries: each dict has 'name' (str) and optional 'params' (dict)."""
 
@@ -301,6 +309,20 @@ class UnifiedConfig:
                 stacklevel=2,
             )
 
+        # Decoder declarative fields
+        if self.decoder is not None and not self.decoder:
+            raise ValueError("decoder must be a non-empty string when set")
+
+        if self.decoder_params and self.decoder is None:
+            import warnings
+
+            warnings.warn(
+                "decoder_params set without decoder name; "
+                "params will be ignored unless a decoder is specified",
+                UserWarning,
+                stacklevel=2,
+            )
+
         # Validate custom_callbacks structure
         for i, entry in enumerate(self.custom_callbacks):
             if not isinstance(entry, dict):
@@ -367,6 +389,8 @@ class UnifiedConfig:
             "minimize": self.minimize,
             "evaluator": self.evaluator,
             "evaluator_params": dict(self.evaluator_params),
+            "decoder": self.decoder,
+            "decoder_params": dict(self.decoder_params),
             "custom_callbacks": [dict(cb) for cb in self.custom_callbacks],
         }
 
@@ -468,6 +492,8 @@ class UnifiedConfig:
             minimize=data.get("minimize", True),
             evaluator=data.get("evaluator"),
             evaluator_params=data.get("evaluator_params", {}),
+            decoder=data.get("decoder"),
+            decoder_params=data.get("decoder_params", {}),
             custom_callbacks=custom_callbacks,
             stopping=stopping,
             callbacks=callbacks,
@@ -561,6 +587,10 @@ class UnifiedConfig:
             data.pop("evaluator_params", None)
         if not data.get("custom_callbacks"):
             data.pop("custom_callbacks", None)
+        if data.get("decoder") is None:
+            data.pop("decoder", None)
+        if not data.get("decoder_params"):
+            data.pop("decoder_params", None)
 
         # Sort for determinism
         json_str = json.dumps(data, sort_keys=True)

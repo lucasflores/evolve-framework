@@ -24,6 +24,7 @@ from evolve.factory.engine import (
     create_engine,
     create_initial_population,
 )
+from evolve.registry.decoders import reset_decoder_registry
 from evolve.registry.genomes import reset_genome_registry
 from evolve.registry.operators import reset_operator_registry
 
@@ -33,9 +34,11 @@ def reset_registries():
     """Reset registries before and after each test."""
     reset_operator_registry()
     reset_genome_registry()
+    reset_decoder_registry()
     yield
     reset_operator_registry()
     reset_genome_registry()
+    reset_decoder_registry()
 
 
 def simple_fitness(genome: Any) -> float:
@@ -476,3 +479,74 @@ class TestCreateInitialPopulation:
         for individual in population.individuals:
             for val in individual.genome.genes:
                 assert -2.0 <= val <= 2.0
+
+
+class TestDecoderWiring:
+    """Tests for decoder resolution in create_engine()."""
+
+    def test_engine_with_decoder_from_config(self) -> None:
+        """Test that decoder is resolved from config and passed to FunctionEvaluator."""
+        config = UnifiedConfig(
+            population_size=10,
+            selection="tournament",
+            crossover="sbx",
+            mutation="gaussian",
+            genome_type="vector",
+            genome_params={"dimensions": 5, "bounds": (-1.0, 1.0)},
+            decoder="identity",
+        )
+        engine = create_engine(config, evaluator=simple_fitness)
+        assert engine is not None
+        # The evaluator should be a FunctionEvaluator with decoder set
+        from evolve.evaluation.evaluator import FunctionEvaluator
+
+        assert isinstance(engine.evaluator, FunctionEvaluator)
+        assert engine.evaluator._decoder is not None
+
+    def test_engine_without_decoder(self) -> None:
+        """Test that engine works without decoder (decoder stays None)."""
+        config = UnifiedConfig(
+            population_size=10,
+            selection="tournament",
+            crossover="sbx",
+            mutation="gaussian",
+            genome_type="vector",
+            genome_params={"dimensions": 5, "bounds": (-1.0, 1.0)},
+        )
+        engine = create_engine(config, evaluator=simple_fitness)
+        from evolve.evaluation.evaluator import FunctionEvaluator
+
+        assert isinstance(engine.evaluator, FunctionEvaluator)
+        assert engine.evaluator._decoder is None
+
+    def test_decoder_with_params(self) -> None:
+        """Test decoder_params are forwarded to factory."""
+        from unittest.mock import MagicMock
+
+        from evolve.registry.decoders import get_decoder_registry
+
+        reg = get_decoder_registry()
+        mock_decoder = MagicMock()
+
+        def custom_factory(hidden_size: int = 64, **_kw):
+            mock_decoder.hidden_size = hidden_size
+            return mock_decoder
+
+        reg.register("test_decoder", custom_factory)
+
+        config = UnifiedConfig(
+            population_size=10,
+            selection="tournament",
+            crossover="sbx",
+            mutation="gaussian",
+            genome_type="vector",
+            genome_params={"dimensions": 5, "bounds": (-1.0, 1.0)},
+            decoder="test_decoder",
+            decoder_params={"hidden_size": 128},
+        )
+        engine = create_engine(config, evaluator=simple_fitness)
+        from evolve.evaluation.evaluator import FunctionEvaluator
+
+        assert isinstance(engine.evaluator, FunctionEvaluator)
+        assert engine.evaluator._decoder is mock_decoder
+        assert mock_decoder.hidden_size == 128

@@ -330,3 +330,50 @@ class TestUnifiedConfigWithTracking:
 
         assert restored.tracking is not None
         assert restored.tracking.experiment_name == "json_test"
+
+
+class TestDecoderFields:
+    """Test decoder and decoder_params fields on UnifiedConfig."""
+
+    def test_decoder_defaults_to_none(self) -> None:
+        config = UnifiedConfig(population_size=50)
+        assert config.decoder is None
+        assert config.decoder_params == {}
+
+    def test_decoder_round_trip(self) -> None:
+        original = UnifiedConfig(
+            population_size=50,
+            decoder="identity",
+            decoder_params={"key": "value"},
+        )
+        data = original.to_dict()
+        restored = UnifiedConfig.from_dict(data)
+        assert restored.decoder == "identity"
+        assert restored.decoder_params == {"key": "value"}
+
+    def test_decoder_json_round_trip(self) -> None:
+        original = UnifiedConfig(
+            population_size=50,
+            decoder="graph_to_network",
+        )
+        json_str = original.to_json()
+        restored = UnifiedConfig.from_json(json_str)
+        assert restored.decoder == "graph_to_network"
+
+    def test_empty_decoder_raises(self) -> None:
+        with pytest.raises(ValueError, match="decoder must be a non-empty string"):
+            UnifiedConfig(population_size=50, decoder="")
+
+    def test_decoder_params_without_name_warns(self) -> None:
+        with pytest.warns(UserWarning, match="decoder_params set without decoder name"):
+            UnifiedConfig(population_size=50, decoder_params={"k": 1})
+
+    def test_decoder_excluded_from_hash_when_default(self) -> None:
+        c1 = UnifiedConfig(population_size=50)
+        c2 = UnifiedConfig(population_size=50)
+        assert c1.compute_hash() == c2.compute_hash()
+
+    def test_decoder_changes_hash(self) -> None:
+        c1 = UnifiedConfig(population_size=50)
+        c2 = UnifiedConfig(population_size=50, decoder="identity")
+        assert c1.compute_hash() != c2.compute_hash()

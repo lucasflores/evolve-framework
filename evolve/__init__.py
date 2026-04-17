@@ -93,8 +93,9 @@ from evolve.meta import (
     run_meta_evolution,
 )
 
-# Registry (operator and genome lookup)
+# Registry (operator, genome, and decoder lookup)
 from evolve.registry import (
+    get_decoder_registry,
     get_genome_registry,
     get_operator_registry,
 )
@@ -186,6 +187,7 @@ __all__ = [
     "create_population_from_config",
     "OperatorCompatibilityError",
     # Registry
+    "get_decoder_registry",
     "get_operator_registry",
     "get_genome_registry",
     # Meta-Evolution

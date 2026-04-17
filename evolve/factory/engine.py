@@ -25,6 +25,7 @@ from evolve.core.stopping import (
 )
 from evolve.evaluation.evaluator import Evaluator
 from evolve.registry.callbacks import get_callback_registry
+from evolve.registry.decoders import get_decoder_registry
 from evolve.registry.evaluators import get_evaluator_registry
 from evolve.registry.genomes import get_genome_registry
 from evolve.registry.operators import get_operator_registry
@@ -107,13 +108,25 @@ def create_engine(
     if effective_seed is None:
         effective_seed = Random().randint(0, 2**31)
 
+    # --- Decoder resolution ---
+    decoder = None
+    if config.decoder is not None:
+        dec_registry = get_decoder_registry()
+        decoder = dec_registry.get(config.decoder, **config.decoder_params)
+
     # --- Evaluator resolution ---
     if evaluator is not None:
         # Explicit evaluator argument: wrap callable if needed (FR-032)
-        if not isinstance(evaluator, Evaluator):
-            from evolve.evaluation.evaluator import FunctionEvaluator
+        from evolve.evaluation.evaluator import FunctionEvaluator
 
-            evaluator = FunctionEvaluator(evaluator)
+        if not isinstance(evaluator, Evaluator):
+            evaluator = FunctionEvaluator(evaluator, decoder=decoder)
+        elif (
+            decoder is not None
+            and isinstance(evaluator, FunctionEvaluator)
+            and evaluator._decoder is None
+        ):
+            evaluator._decoder = decoder
     elif config.evaluator is not None:
         # Declarative resolution from registry
         eval_registry = get_evaluator_registry()
@@ -121,6 +134,12 @@ def create_engine(
         if runtime_overrides:
             merged_params.update(runtime_overrides)
         evaluator = eval_registry.get(config.evaluator, **merged_params)
+        # Inject decoder into registry-resolved FunctionEvaluator if needed
+        if decoder is not None:
+            from evolve.evaluation.evaluator import FunctionEvaluator
+
+            if isinstance(evaluator, FunctionEvaluator) and evaluator._decoder is None:
+                evaluator._decoder = decoder
     else:
         eval_registry = get_evaluator_registry()
         available = eval_registry.list_evaluators()

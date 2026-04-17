@@ -1,8 +1,8 @@
 """
-Operator, Genome, Evaluator, and Callback Registries.
+Operator, Genome, Evaluator, Callback, and Decoder Registries.
 
 Provides registries for looking up operators, genome types, evaluators,
-and callbacks by name, enabling declarative configuration of
+callbacks, and decoders by name, enabling declarative configuration of
 evolutionary algorithms.
 
 Public API:
@@ -10,16 +10,23 @@ Public API:
     get_genome_registry(): Get the global genome registry
     get_evaluator_registry(): Get the global evaluator registry
     get_callback_registry(): Get the global callback registry
+    get_decoder_registry(): Get the global decoder registry
     reset_operator_registry(): Reset operator registry (for testing)
     reset_genome_registry(): Reset genome registry (for testing)
     reset_evaluator_registry(): Reset evaluator registry (for testing)
     reset_callback_registry(): Reset callback registry (for testing)
+    reset_decoder_registry(): Reset decoder registry (for testing)
 """
 
 from evolve.registry.callbacks import (
     CallbackRegistry,
     get_callback_registry,
     reset_callback_registry,
+)
+from evolve.registry.decoders import (
+    DecoderRegistry,
+    get_decoder_registry,
+    reset_decoder_registry,
 )
 from evolve.registry.evaluators import (
     EvaluatorRegistry,
@@ -54,4 +61,8 @@ __all__ = [
     "CallbackRegistry",
     "get_callback_registry",
     "reset_callback_registry",
+    # Decoder registry
+    "DecoderRegistry",
+    "get_decoder_registry",
+    "reset_decoder_registry",
 ]
