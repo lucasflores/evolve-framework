@@ -58,6 +58,16 @@ def gaussian(x: np.ndarray) -> np.ndarray:
     return cast(np.ndarray, np.exp(-x * x))
 
 
+def sin_activation(x: np.ndarray) -> np.ndarray:
+    """Sine activation: sin(x)."""
+    return cast(np.ndarray, np.sin(x))
+
+
+def abs_activation(x: np.ndarray) -> np.ndarray:
+    """Absolute value activation: |x|."""
+    return cast(np.ndarray, np.abs(x))
+
+
 # Activation function registry
 ACTIVATIONS: dict[str, Callable[[np.ndarray], np.ndarray]] = {
     "sigmoid": sigmoid,
@@ -69,6 +79,8 @@ ACTIVATIONS: dict[str, Callable[[np.ndarray], np.ndarray]] = {
     "softmax": softmax,
     "step": step,
     "gaussian": gaussian,
+    "sin": sin_activation,
+    "abs": abs_activation,
 }
 
 

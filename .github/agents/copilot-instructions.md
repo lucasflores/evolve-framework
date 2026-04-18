@@ -1,6 +1,6 @@
 # evolve-framework Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-04-13
+Auto-generated from all feature plans. Last updated: 2026-04-17
 
 ## Active Technologies
 - File-based checkpoints (pickle/JSON), optional MLflow artifact store (001-core-framework-architecture)
@@ -22,6 +22,7 @@ Auto-generated from all feature plans. Last updated: 2026-04-13
 - N/A (in-memory framework; MLflow for experiment tracking) (009-feature-cleanup-backlog)
 - Python 3.11+ + evolve-framework (this project), Jupyter notebooks, Sphinx (docs build) (011-docs-unifiedconfig-refactor)
 - N/A (documentation-only changes) (011-docs-unifiedconfig-refactor)
+- Python ≥3.10 + NumPy ≥1.24.0 (CPU-only, no ML frameworks) (012-es-hyperneat-decoder)
 
 - Python 3.10+ + NumPy (core); Optional: PyTorch, JAX, MLflow, Ray (001-core-framework-architecture)
 
@@ -41,9 +42,9 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.10+: Follow standard conventions
 
 ## Recent Changes
+- 012-es-hyperneat-decoder: Added Python ≥3.10 + NumPy ≥1.24.0 (CPU-only, no ML frameworks)
 - 011-docs-unifiedconfig-refactor: Added Python 3.11+ + evolve-framework (this project), Jupyter notebooks, Sphinx (docs build)
 - 009-feature-cleanup-backlog: Added Python 3.11+ + numpy, mlflow, dataclasses (stdlib)
-- 008-evaluator-registry-config: Added Python >=3.10 (supports 3.10, 3.11, 3.12) + numpy>=1.24.0, networkx>=3.0, typing_extensions>=4.0.0
 
 
 <!-- MANUAL ADDITIONS START -->

@@ -158,6 +158,17 @@ def _register_builtin_decoders(registry: DecoderRegistry) -> None:
 
     registry.register("graph_to_mlp", create_graph_to_mlp_decoder)
 
+    # -----------------------------------------
+    # cppn_to_network: GraphGenome (CPPN) → NEATNetwork (ES-HyperNEAT)
+    # -----------------------------------------
+    def create_cppn_to_network_decoder(**kwargs: Any) -> Any:
+        """Create a CPPNToNetworkDecoder."""
+        from evolve.representation.cppn_decoder import CPPNToNetworkDecoder
+
+        return CPPNToNetworkDecoder(**kwargs)
+
+    registry.register("cppn_to_network", create_cppn_to_network_decoder)
+
 
 # -----------------------------------------------------------------------------
 # Module-level singleton

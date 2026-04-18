@@ -71,11 +71,11 @@ class TestBuiltinDecoders:
         decoder = reg.get("graph_to_mlp")
         assert decoder is not None
 
-    def test_list_has_three_builtins(self):
+    def test_list_has_four_builtins(self):
         reg = get_decoder_registry()
         names = reg.list_decoders()
-        assert len(names) == 3
-        for name in ["identity", "graph_to_network", "graph_to_mlp"]:
+        assert len(names) == 4
+        for name in ["identity", "graph_to_network", "graph_to_mlp", "cppn_to_network"]:
             assert name in names
 
     def test_list_is_sorted(self):
@@ -88,6 +88,7 @@ class TestBuiltinDecoders:
         assert reg.is_registered("identity")
         assert reg.is_registered("graph_to_network")
         assert reg.is_registered("graph_to_mlp")
+        assert reg.is_registered("cppn_to_network")
 
     def test_is_registered_false_for_unknown(self):
         reg = get_decoder_registry()
