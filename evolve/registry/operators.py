@@ -35,7 +35,7 @@ class OperatorRegistry:
         >>> registry.register("mutation", "custom", CustomMutation, compatible_genomes={"vector"})
     """
 
-    CATEGORIES = ("selection", "crossover", "mutation")
+    CATEGORIES = ("selection", "crossover", "mutation", "merge")
 
     def __init__(self) -> None:
         """Initialize empty registry."""
@@ -342,6 +342,20 @@ def _register_builtin_operators(registry: OperatorRegistry) -> None:
         "token_two_point",
         lambda: TokenLevelCrossover(crossover_type="two_point"),  # type: ignore[arg-type]
         compatible_genomes={"embedding"},
+    )
+
+    # -----------------------------------------
+    # Merge operators
+    # -----------------------------------------
+    from evolve.core.operators.merge import (
+        GraphSymbiogeneticMerge,
+    )
+
+    registry.register(
+        "merge",
+        "graph_symbiogenetic",
+        GraphSymbiogeneticMerge,
+        compatible_genomes={"graph"},
     )
 
 

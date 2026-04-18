@@ -174,11 +174,39 @@ def create_engine(
         **config.mutation_params,
     )
 
+    # Build merge operator if merge is enabled
+    merge_operator = None
+    if config.is_merge_enabled:
+        assert config.merge is not None
+        merge_params = dict(config.merge.operator_params)
+        # Only pass graph-specific params for graph merge operators
+        if "graph" in config.merge.operator:
+            merge_params.setdefault("interface_count", config.merge.interface_count)
+            merge_params.setdefault("interface_ratio", config.merge.interface_ratio)
+            merge_params.setdefault("weight_method", config.merge.weight_method)
+            merge_params.setdefault("weight_mean", config.merge.weight_mean)
+            merge_params.setdefault("weight_std", config.merge.weight_std)
+        merge_operator = op_registry.get(
+            "merge",
+            config.merge.operator,
+            **merge_params,
+        )
+
     # Build stopping criteria (FR-033)
     stopping = _build_stopping_criteria(config)
 
     # Build callbacks (FR-039)
     all_callbacks = _build_callbacks(config)
+
+    # Auto-add HallOfFameCallback when archive sourcing is configured
+    if (
+        config.is_merge_enabled
+        and config.merge is not None
+        and config.merge.symbiont_source == "archive"
+    ):
+        from evolve.core.callbacks import HallOfFameCallback
+
+        all_callbacks.append(HallOfFameCallback(max_size=config.merge.archive_size))
 
     # Resolve custom_callbacks from registry (Config → Custom → Explicit order)
     if config.custom_callbacks:
@@ -203,6 +231,7 @@ def create_engine(
             seed=effective_seed,
             stopping=stopping,
             callbacks=all_callbacks,
+            merge=merge_operator,
         )
 
     # Check for ERP mode (FR-029)
@@ -216,6 +245,7 @@ def create_engine(
             seed=effective_seed,
             stopping=stopping,
             callbacks=all_callbacks,
+            merge=merge_operator,
         )
 
     # Standard evolution engine
@@ -228,6 +258,7 @@ def create_engine(
         seed=effective_seed,
         stopping=stopping,
         callbacks=all_callbacks,
+        merge=merge_operator,
     )
 
 
@@ -273,6 +304,17 @@ def _validate_operator_compatibility(config: UnifiedConfig) -> None:
             config.genome_type,
             op_registry.get_compatibility(config.mutation),
         )
+
+    # Check merge (if configured)
+    if config.is_merge_enabled:
+        assert config.merge is not None
+        if not op_registry.is_compatible(config.merge.operator, config.genome_type):
+            raise OperatorCompatibilityError(
+                config.merge.operator,
+                "merge",
+                config.genome_type,
+                op_registry.get_compatibility(config.merge.operator),
+            )
 
 
 def _build_stopping_criteria(config: UnifiedConfig) -> Any:
@@ -385,6 +427,7 @@ def _create_standard_engine(
     seed: int,
     stopping: Any,
     callbacks: list[Callback],
+    merge: Any | None = None,
 ) -> EvolutionEngine:
     """
     Create a standard EvolutionEngine.
@@ -410,6 +453,10 @@ def _create_standard_engine(
         crossover_rate=config.crossover_rate,
         mutation_rate=config.mutation_rate,
         minimize=config.minimize,
+        merge_rate=config.merge.merge_rate if config.merge else 0.0,
+        symbiont_source=config.merge.symbiont_source if config.merge else "cross_species",
+        symbiont_fate=config.merge.symbiont_fate if config.merge else "consumed",
+        max_complexity=config.merge.max_complexity if config.merge else None,
     )
 
     engine = EvolutionEngine(
@@ -421,6 +468,7 @@ def _create_standard_engine(
         seed=seed,
         stopping=stopping,
         callbacks=callbacks,
+        merge=merge,
     )
 
     return engine
@@ -435,6 +483,7 @@ def _create_erp_engine(
     seed: int,
     stopping: Any,
     callbacks: list[Callback],
+    merge: Any | None = None,  # noqa: ARG001
 ) -> ERPEngine:
     """
     Create an ERPEngine for evolvable reproduction protocols (FR-029).
@@ -497,6 +546,7 @@ def _create_multiobjective_engine(
     seed: int,
     stopping: Any,
     callbacks: list[Callback],
+    merge: Any | None = None,
 ) -> EvolutionEngine:
     """
     Create a multi-objective engine with NSGA-II selection (FR-030).
@@ -536,6 +586,7 @@ def _create_multiobjective_engine(
         crossover_rate=config.crossover_rate,
         mutation_rate=config.mutation_rate,
         minimize=True,  # Multi-objective always minimizes (Pareto)
+        merge_rate=config.merge.merge_rate if config.merge else 0.0,
     )
 
     engine = EvolutionEngine(
@@ -546,6 +597,7 @@ def _create_multiobjective_engine(
         mutation=mutation,
         seed=seed,
         stopping=stopping,
+        merge=merge,
     )
 
     # Store multi-objective settings for later use (runtime attribute)

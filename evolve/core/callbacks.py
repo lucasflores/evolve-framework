@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 
 from evolve.core.population import Population
+from evolve.core.types import Individual
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -448,3 +449,77 @@ class CheckpointCallback:
 
         with open(filepath, "w") as f:
             json.dump(checkpoint_data, f, indent=2)
+
+
+@dataclass
+class HallOfFameCallback:
+    """
+    Maintains a bounded archive of the best individuals seen.
+
+    Updated at the end of each generation by inserting the current
+    best individuals and trimming to ``max_size``.
+
+    Attributes:
+        max_size: Maximum number of individuals to retain.
+        archive: Current hall-of-fame members (best first).
+    """
+
+    max_size: int = 50
+
+    def __post_init__(self) -> None:
+        self.archive: list[Individual[Any]] = []
+
+    @property
+    def priority(self) -> int:
+        """Run after standard callbacks."""
+        return 10
+
+    def on_generation_start(
+        self,
+        generation: int,
+        population: Population[Any],
+    ) -> None:
+        """No-op."""
+        pass
+
+    def on_generation_end(
+        self,
+        generation: int,  # noqa: ARG002
+        population: Population[Any],
+        metrics: dict[str, Any],  # noqa: ARG002
+    ) -> None:
+        """Update archive with current population's best individuals."""
+        minimize = population._minimize
+        # Add all evaluated individuals to candidate pool
+        candidates = list(self.archive)
+        for ind in population.individuals:
+            if ind.fitness is not None:
+                candidates.append(ind)
+
+        # Sort: best first
+        candidates.sort(
+            key=lambda ind: ind.fitness.values[0] if ind.fitness is not None else float("inf"),
+            reverse=not minimize,
+        )
+
+        # Deduplicate by id, keep best rank
+        seen: set[Any] = set()
+        unique: list[Individual[Any]] = []
+        for ind in candidates:
+            if ind.id not in seen:
+                seen.add(ind.id)
+                unique.append(ind)
+
+        self.archive = unique[: self.max_size]
+
+    def on_run_start(self, config: Any) -> None:  # noqa: ARG002
+        """Clear archive at run start."""
+        self.archive = []
+
+    def on_run_end(
+        self,
+        population: Population[Any],
+        reason: str,
+    ) -> None:
+        """No-op."""
+        pass

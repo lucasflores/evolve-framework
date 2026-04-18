@@ -14,6 +14,10 @@ from evolve.core.operators.crossover import (
     TwoPointCrossover,
     UniformCrossover,
 )
+from evolve.core.operators.merge import (
+    GraphSymbiogeneticMerge,
+    SymbiogeneticMerge,
+)
 from evolve.core.operators.mutation import (
     CreepMutation,
     GaussianMutation,
@@ -57,4 +61,7 @@ __all__ = [
     # Token operators (ESPO)
     "TokenAwareMutator",
     "TokenLevelCrossover",
+    # Merge operators
+    "SymbiogeneticMerge",
+    "GraphSymbiogeneticMerge",
 ]

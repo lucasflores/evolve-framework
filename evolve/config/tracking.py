@@ -45,6 +45,7 @@ class MetricCategory(Enum):
     ERP = "erp"
     METADATA = "metadata"
     DERIVED = "derived"
+    SYMBIOGENESIS = "symbiogenesis"
 
 
 @dataclass(frozen=True)

@@ -36,6 +36,18 @@ from evolve.utils.timing import GenerationTimer
 G = TypeVar("G")
 
 
+def _genome_complexity(genome: Any) -> int:
+    """Estimate genome complexity as gene/node count."""
+    if hasattr(genome, "n_nodes"):
+        return int(genome.n_nodes)
+    if hasattr(genome, "genes"):
+        g = genome.genes
+        return len(g) if hasattr(g, "__len__") else 0
+    if hasattr(genome, "embeddings"):
+        return int(genome.embeddings.shape[0])
+    return 0
+
+
 @dataclass
 class EvolutionConfig:
     """
@@ -49,6 +61,10 @@ class EvolutionConfig:
         mutation_rate: Probability of mutation per individual
         minimize: If True, lower fitness is better
         metric_categories: Set of metric category names to compute
+        merge_rate: Per-individual probability of being selected as merge host
+        symbiont_source: Where to source symbionts ("cross_species" or "archive")
+        symbiont_fate: What happens to symbiont after merge ("consumed" or "survives")
+        max_complexity: Optional max gene count for merged genome
     """
 
     population_size: int = 100
@@ -58,6 +74,10 @@ class EvolutionConfig:
     mutation_rate: float = 1.0  # Per individual, not per gene
     minimize: bool = True
     metric_categories: frozenset[str] = field(default_factory=lambda: frozenset({"core"}))
+    merge_rate: float = 0.0
+    symbiont_source: str = "cross_species"
+    symbiont_fate: str = "consumed"
+    max_complexity: int | None = None
 
 
 @dataclass
@@ -124,6 +144,7 @@ class EvolutionEngine(Generic[G]):
         seed: int = 42,
         stopping: Any | None = None,
         callbacks: Sequence[Callback[G]] | None = None,
+        merge: Any | None = None,  # SymbiogeneticMerge[G]
     ) -> None:
         """
         Initialize engine with configuration.
@@ -137,12 +158,14 @@ class EvolutionEngine(Generic[G]):
             seed: Master random seed
             stopping: Optional stopping criterion (default: generation limit)
             callbacks: Optional callbacks to persist across all run() calls
+            merge: Optional symbiogenetic merge operator
         """
         self.config = config
         self.evaluator = evaluator
         self.selection = selection
         self.crossover = crossover
         self.mutation = mutation
+        self.merge_operator = merge
         self.seed = seed
         self.rng = create_rng(seed)
 
@@ -160,6 +183,13 @@ class EvolutionEngine(Generic[G]):
         self._timer = GenerationTimer()
         self._prev_centroid: np.ndarray | None = None
         self._prev_best_genome: Any = None
+
+        # Merge metric collector (auto-enabled when symbiogenesis category active)
+        self._merge_collector: Any = None
+        if "symbiogenesis" in config.metric_categories and self.merge_operator is not None:
+            from evolve.experiment.collectors.merge import MergeMetricCollector
+
+            self._merge_collector = MergeMetricCollector()
 
     def run(
         self,
@@ -320,6 +350,12 @@ class EvolutionEngine(Generic[G]):
         offspring = offspring[:n_offspring]
         self._timer.stop("variation")
 
+        # Merge phase (symbiogenetic merge)
+        if self.merge_operator is not None and self.config.merge_rate > 0.0:
+            self._timer.start("merge")
+            offspring = self._apply_merge(offspring)
+            self._timer.stop("merge")
+
         # Combine elites and offspring
         new_individuals = elites + offspring
 
@@ -339,6 +375,153 @@ class EvolutionEngine(Generic[G]):
         self._timer.end_generation()
 
         return evaluated_population
+
+    def _apply_merge(self, offspring: list[Individual[G]]) -> list[Individual[G]]:
+        """
+        Apply symbiogenetic merge to a subset of offspring.
+
+        Each offspring has ``merge_rate`` probability of being selected
+        as a merge host.  The symbiont is sourced based on ``symbiont_source``
+        config (intra-pool, cross_species, or archive).
+
+        Args:
+            offspring: List of offspring individuals.
+
+        Returns:
+            Updated offspring list with merges applied.
+        """
+        import warnings
+
+        if len(offspring) < 2:
+            return offspring
+
+        source = self.config.symbiont_source
+        fate = self.config.symbiont_fate
+        max_complexity = self.config.max_complexity
+
+        # Build archive pool if sourcing from archive
+        archive_pool: list[Individual[G]] = []
+        if source == "archive":
+            from evolve.core.callbacks import HallOfFameCallback
+
+            for cb in self._callbacks:
+                if isinstance(cb, HallOfFameCallback):
+                    archive_pool = list(cb.archive)
+                    break
+            if not archive_pool:
+                warnings.warn(
+                    "Archive-based symbiont sourcing requested but archive is empty; "
+                    "skipping merge phase.",
+                    stacklevel=2,
+                )
+                return offspring
+
+        consumed_indices: set[int] = set()
+        result: list[Individual[G]] = []
+
+        for i, ind in enumerate(offspring):
+            if i in consumed_indices:
+                continue
+
+            if self.rng.random() < self.config.merge_rate:
+                # Source symbiont
+                symbiont: Individual[G] | None = None
+                symbiont_idx: int | None = None
+
+                if source == "archive":
+                    # Pick from archive (always distinct from host by id)
+                    archive_candidates = [a for a in archive_pool if a.id != ind.id]
+                    if archive_candidates:
+                        symbiont = self.rng.choice(archive_candidates)
+                elif source == "cross_species":
+                    # Pick from offspring with different species_id
+                    host_species = ind.metadata.species_id
+                    cross_candidates = [
+                        (j, o)
+                        for j, o in enumerate(offspring)
+                        if j != i
+                        and j not in consumed_indices
+                        and o.metadata.species_id != host_species
+                    ]
+                    if cross_candidates:
+                        symbiont_idx, symbiont = self.rng.choice(cross_candidates)
+                    elif host_species is None:
+                        # No species assigned — fall back to intra-pool
+                        intra_candidates = [
+                            (j, o)
+                            for j, o in enumerate(offspring)
+                            if j != i and j not in consumed_indices
+                        ]
+                        if intra_candidates:
+                            symbiont_idx, symbiont = self.rng.choice(intra_candidates)
+                    else:
+                        warnings.warn(
+                            "cross_species sourcing found no different-species symbiont; "
+                            "skipping merge for this host.",
+                            stacklevel=2,
+                        )
+                else:
+                    # Default intra-pool
+                    intra_candidates = [
+                        (j, o)
+                        for j, o in enumerate(offspring)
+                        if j != i and j not in consumed_indices
+                    ]
+                    if intra_candidates:
+                        symbiont_idx, symbiont = self.rng.choice(intra_candidates)
+
+                if symbiont is None:
+                    result.append(ind)
+                    continue
+
+                merged_genome = self.merge_operator.merge(  # type: ignore[union-attr]
+                    ind.genome, symbiont.genome, self.rng
+                )
+
+                # Check max_complexity
+                if max_complexity is not None:
+                    merged_c = _genome_complexity(merged_genome)
+                    if merged_c > max_complexity:
+                        warnings.warn(
+                            f"Merged genome complexity ({merged_c}) exceeds "
+                            f"max_complexity ({max_complexity}); skipping merge.",
+                            stacklevel=2,
+                        )
+                        result.append(ind)
+                        continue
+
+                # Record merge metrics if collector active
+                if self._merge_collector is not None:
+                    host_c = _genome_complexity(ind.genome)
+                    sym_c = _genome_complexity(symbiont.genome)
+                    merged_c_val = _genome_complexity(merged_genome)
+                    self._merge_collector.record_merge(host_c, sym_c, merged_c_val)
+
+                merged_ind = Individual(
+                    id=uuid4(),
+                    genome=merged_genome,
+                    metadata=IndividualMetadata(
+                        parent_ids=(ind.id, symbiont.id),
+                        origin="symbiogenetic_merge",
+                        source_strategy=source,
+                    ),
+                    created_at=self._generation + 1,
+                )
+                result.append(merged_ind)
+
+                # Handle symbiont fate
+                if fate == "consumed" and symbiont_idx is not None:
+                    consumed_indices.add(symbiont_idx)
+            else:
+                result.append(ind)
+
+        # Add unconsumed offspring that were skipped due to consumed_indices
+        for i, _ind in enumerate(offspring):
+            if i in consumed_indices and i not in {j for j, _ in enumerate(result)}:
+                # Symbiont was consumed — don't add it
+                pass
+
+        return result
 
     def _evaluate_population(self, population: Population[G]) -> Population[G]:
         """Evaluate unevaluated individuals."""
@@ -408,6 +591,16 @@ class EvolutionEngine(Generic[G]):
         # Diversity metrics
         if "diversity" in categories:
             self._compute_diversity_metrics(population, metrics)
+
+        # Symbiogenesis metrics
+        if "symbiogenesis" in categories and self._merge_collector is not None:
+            from evolve.experiment.collectors.base import CollectionContext
+
+            merge_metrics = self._merge_collector.collect(
+                CollectionContext(population=population, generation=self._generation)
+            )
+            metrics.update(merge_metrics)
+            self._merge_collector.reset_generation()
 
         # Add timing metrics (selection, variation, evaluation, total)
         timing_metrics = self._timer.get_metrics(breakdown=True)

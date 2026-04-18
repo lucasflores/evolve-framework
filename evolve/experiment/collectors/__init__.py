@@ -21,6 +21,7 @@ from evolve.experiment.collectors.base import (
 from evolve.experiment.collectors.derived import DerivedAnalyticsCollector
 from evolve.experiment.collectors.erp import ERPMetricCollector
 from evolve.experiment.collectors.islands import IslandsMetricCollector
+from evolve.experiment.collectors.merge import MergeMetricCollector
 from evolve.experiment.collectors.metadata import FitnessMetadataCollector
 from evolve.experiment.collectors.multiobjective import MultiObjectiveMetricCollector
 from evolve.experiment.collectors.neat import NEATMetricCollector
@@ -34,6 +35,7 @@ __all__ = [
     "ERPMetricCollector",
     "FitnessMetadataCollector",
     "IslandsMetricCollector",
+    "MergeMetricCollector",
     "MultiObjectiveMetricCollector",
     "NEATMetricCollector",
     "SpeciationMetricCollector",

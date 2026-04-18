@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 
 from evolve.config.callbacks import CallbackConfig
 from evolve.config.erp import ERPSettings
+from evolve.config.merge import MergeConfig
 from evolve.config.meta import MetaEvolutionConfig
 from evolve.config.multiobjective import (
     ConstraintSpec,
@@ -108,6 +109,7 @@ class UnifiedConfig:
         multiobjective: Multi-objective settings (enables NSGA-II when present).
         meta: Meta-evolution settings (enables outer loop when present).
         tracking: Tracking configuration for experiment observability.
+        merge: Symbiogenetic merge settings (enables merge phase when present).
         training_data: Training dataset reference for MLflow logging.
         validation_data: Validation dataset reference for MLflow logging.
 
@@ -257,6 +259,9 @@ class UnifiedConfig:
     tracking: TrackingConfig | None = None
     """Tracking configuration for experiment observability (FR-002)."""
 
+    merge: MergeConfig | None = None
+    """Symbiogenetic merge settings (enables merge phase when present)."""
+
     training_data: DatasetConfig | None = None
     """Training dataset configuration for MLflow logging."""
 
@@ -356,6 +361,11 @@ class UnifiedConfig:
         """Check if tracking is enabled."""
         return self.tracking is not None and self.tracking.enabled
 
+    @property
+    def is_merge_enabled(self) -> bool:
+        """Check if symbiogenetic merge phase is enabled."""
+        return self.merge is not None and self.merge.merge_rate > 0.0
+
     # -------------------------------------------------------------------------
     # Serialization (FR-002)
     # -------------------------------------------------------------------------
@@ -401,6 +411,7 @@ class UnifiedConfig:
         result["multiobjective"] = self.multiobjective.to_dict() if self.multiobjective else None
         result["meta"] = self.meta.to_dict() if self.meta else None
         result["tracking"] = self.tracking.to_dict() if self.tracking else None
+        result["merge"] = self.merge.to_dict() if self.merge else None
         result["training_data"] = self.training_data.to_dict() if self.training_data else None
         result["validation_data"] = self.validation_data.to_dict() if self.validation_data else None
 
@@ -449,6 +460,10 @@ class UnifiedConfig:
         tracking = None
         if data.get("tracking"):
             tracking = TrackingConfig.from_dict(data["tracking"])
+
+        merge = None
+        if data.get("merge"):
+            merge = MergeConfig.from_dict(data["merge"])
 
         training_data = None
         if data.get("training_data"):
@@ -501,6 +516,7 @@ class UnifiedConfig:
             multiobjective=multiobjective,
             meta=meta,
             tracking=tracking,
+            merge=merge,
             training_data=training_data,
             validation_data=validation_data,
         )
@@ -726,3 +742,36 @@ class UnifiedConfig:
             tracking = tracking.with_category(MetricCategory.MULTIOBJECTIVE)
 
         return replace(self, multiobjective=mo, tracking=tracking)
+
+    def with_merge(
+        self,
+        merge_rate: float = 0.1,
+        operator: str = "graph_symbiogenetic",
+        **kwargs: Any,
+    ) -> UnifiedConfig:
+        """
+        Create a copy with symbiogenetic merge enabled.
+
+        Automatically enables SYMBIOGENESIS tracking category if tracking
+        is enabled.
+
+        Args:
+            merge_rate: Per-individual merge probability.
+            operator: Merge operator name.
+            **kwargs: Additional MergeConfig parameters.
+
+        Returns:
+            New UnifiedConfig with merge enabled.
+        """
+        merge = MergeConfig(operator=operator, merge_rate=merge_rate, **kwargs)
+
+        # Auto-enable SYMBIOGENESIS tracking category
+        tracking = self.tracking
+        if (
+            tracking is not None
+            and tracking.enabled
+            and not tracking.has_category(MetricCategory.SYMBIOGENESIS)
+        ):
+            tracking = tracking.with_category(MetricCategory.SYMBIOGENESIS)
+
+        return replace(self, merge=merge, tracking=tracking)

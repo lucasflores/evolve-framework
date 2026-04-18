@@ -40,6 +40,7 @@ class TestMetricCategory:
             "erp",
             "metadata",
             "derived",
+            "symbiogenesis",
         }
         actual = {c.value for c in MetricCategory}
         assert expected == actual

@@ -27,12 +27,14 @@ class IndividualMetadata:
         parent_ids: UUIDs of parent individuals (for lineage tracking)
         species_id: Species assignment (for NEAT-style speciation)
         origin: How this individual was created
+        source_strategy: Symbiont sourcing strategy used for merge events
     """
 
     age: int = 0
     parent_ids: tuple[UUID, ...] | None = None
     species_id: int | None = None
-    origin: str = "init"  # "init" | "crossover" | "mutation" | "migration"
+    origin: str = "init"  # "init" | "crossover" | "mutation" | "migration" | "symbiogenetic_merge"
+    source_strategy: str | None = None  # "cross_species" | "archive" (merge only)
 
 
 @dataclass(frozen=True)
