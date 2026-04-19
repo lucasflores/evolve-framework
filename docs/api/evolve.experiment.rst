@@ -20,6 +20,7 @@ Submodules
    :maxdepth: 4
 
    evolve.experiment.checkpoint
+   evolve.experiment.dry_run
    evolve.experiment.config
    evolve.experiment.metrics
    evolve.experiment.runner

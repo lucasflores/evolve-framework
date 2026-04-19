@@ -465,8 +465,13 @@ def run_meta_evolution(
 
     # Execute with or without MLflow parent run
     if mlflow_available:
-        with mlflow.start_run(run_name="meta-evolution") as parent_run:
-            mlflow.set_tag("meta_evolution", "true")
+        try:
+            with mlflow.start_run(run_name="meta-evolution") as parent_run:
+                mlflow.set_tag("meta_evolution", "true")
+                return _run_outer_loop()
+        except Exception:
+            # MLflow setup failed (e.g. deleted experiment, no server).
+            # Fall back to running without MLflow tracking.
             return _run_outer_loop()
     else:
         return _run_outer_loop()

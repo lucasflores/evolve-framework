@@ -1,6 +1,6 @@
 # evolve-framework Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-04-17
+Auto-generated from all feature plans. Last updated: 2026-04-18
 
 ## Active Technologies
 - File-based checkpoints (pickle/JSON), optional MLflow artifact store (001-core-framework-architecture)
@@ -24,6 +24,8 @@ Auto-generated from all feature plans. Last updated: 2026-04-17
 - N/A (documentation-only changes) (011-docs-unifiedconfig-refactor)
 - Python ≥3.10 + NumPy ≥1.24.0 (CPU-only, no ML frameworks) (012-es-hyperneat-decoder)
 - Python 3.10+, full type hints (mypy strict) + NumPy (numeric ops); no ML framework deps in core (013-symbiogenetic-merge)
+- Python 3.10+, full type hints (mypy strict) + NumPy (numeric ops), psutil or stdlib for resource detection; no new external deps in core (014-dry-run-statistics)
+- N/A (output is in-memory dataclass; no persistence) (014-dry-run-statistics)
 
 - Python 3.10+ + NumPy (core); Optional: PyTorch, JAX, MLflow, Ray (001-core-framework-architecture)
 
@@ -43,9 +45,9 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.10+: Follow standard conventions
 
 ## Recent Changes
+- 014-dry-run-statistics: Added Python 3.10+, full type hints (mypy strict) + NumPy (numeric ops), psutil or stdlib for resource detection; no new external deps in core
+- 014-dry-run-statistics: Added Python 3.10+, full type hints (mypy strict) + NumPy (numeric ops), psutil or stdlib for resource detection; no new external deps in core
 - 013-symbiogenetic-merge: Added Python 3.10+, full type hints (mypy strict) + NumPy (numeric ops); no ML framework deps in core
-- 012-es-hyperneat-decoder: Added Python ≥3.10 + NumPy ≥1.24.0 (CPU-only, no ML frameworks)
-- 011-docs-unifiedconfig-refactor: Added Python 3.11+ + evolve-framework (this project), Jupyter notebooks, Sphinx (docs build)
 
 
 <!-- MANUAL ADDITIONS START -->

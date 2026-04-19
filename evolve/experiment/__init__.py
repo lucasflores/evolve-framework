@@ -23,6 +23,14 @@ Example:
 
 from evolve.experiment.checkpoint import Checkpoint, CheckpointManager
 from evolve.experiment.config import ConfigValidationError, ExperimentConfig
+from evolve.experiment.dry_run import (
+    ComputeResources,
+    DryRunReport,
+    MemoryEstimate,
+    MetaEstimate,
+    PhaseEstimate,
+    dry_run,
+)
 from evolve.experiment.metrics import (
     CompositeTracker,
     LocalTracker,
@@ -53,4 +61,11 @@ __all__ = [
     "ExperimentRunner",
     "ExperimentComparison",
     "SweepConfig",
+    # Dry-run statistics
+    "dry_run",
+    "DryRunReport",
+    "PhaseEstimate",
+    "ComputeResources",
+    "MemoryEstimate",
+    "MetaEstimate",
 ]
