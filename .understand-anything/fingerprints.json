@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "gitCommitHash": "c6d86bb56e74a76b92eaf6d3cd09c4573bff63c8",
-  "generatedAt": "2026-04-21T21:51:45.388Z",
+  "gitCommitHash": "5777a633e6f404e2a94dde766227a6cdb64a3c17",
+  "generatedAt": "2026-04-24T18:21:55.000Z",
   "files": {
     ".dev-stack/hooks-manifest.json": {
       "filePath": ".dev-stack/hooks-manifest.json",
@@ -11586,12 +11586,12 @@
     },
     "docs/tutorials/07_evolvable_reproduction.ipynb": {
       "filePath": "docs/tutorials/07_evolvable_reproduction.ipynb",
-      "contentHash": "d1c610b348cb9c4d982037da25eed5f43292faccf87a6fe372ac77cfc780f66e",
+      "contentHash": "b24b7377ee76039c357f0b9cf5309ec0fc0443e11a21e4c42320612d87903b95",
       "functions": [],
       "classes": [],
       "imports": [],
       "exports": [],
-      "totalLines": 3132,
+      "totalLines": 3106,
       "hasStructuralAnalysis": false
     },
     "docs/tutorials/diagrams/diagram_03878cb2.png": {

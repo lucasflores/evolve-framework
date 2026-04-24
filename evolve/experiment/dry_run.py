@@ -690,11 +690,13 @@ def _detect_cpu_count() -> int:
     except (OSError, ValueError):
         pass
 
-    # Try sched_getaffinity (Linux)
-    try:
-        return len(os.sched_getaffinity(0))
-    except AttributeError:
-        pass
+    # Try sched_getaffinity (Linux) — use getattr to avoid mypy attr-defined on macOS
+    sched_getaffinity = getattr(os, "sched_getaffinity", None)
+    if sched_getaffinity is not None:
+        try:
+            return len(sched_getaffinity(0))
+        except OSError:
+            pass
 
     return os.cpu_count() or 1
 
