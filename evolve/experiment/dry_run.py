@@ -692,7 +692,7 @@ def _detect_cpu_count() -> int:
 
     # Try sched_getaffinity (Linux)
     try:
-        return len(os.sched_getaffinity(0))  # type: ignore[attr-defined]
+        return len(os.sched_getaffinity(0))
     except AttributeError:
         pass
 
