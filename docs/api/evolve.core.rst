@@ -2,7 +2,9 @@ evolve.core package
 ===================
 
 .. automodule:: evolve.core
+   :members:
    :show-inheritance:
+   :undoc-members:
 
 Subpackages
 -----------

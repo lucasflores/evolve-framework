@@ -2,7 +2,9 @@ evolve.reproduction package
 ===========================
 
 .. automodule:: evolve.reproduction
+   :members:
    :show-inheritance:
+   :undoc-members:
 
 Submodules
 ----------

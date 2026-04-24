@@ -2,7 +2,9 @@ evolve.diversity.islands package
 ================================
 
 .. automodule:: evolve.diversity.islands
+   :members:
    :show-inheritance:
+   :undoc-members:
 
 Submodules
 ----------
