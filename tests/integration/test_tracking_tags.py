@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
+mlflow = pytest.importorskip("mlflow")
+
 from evolve.config.tracking import TrackingConfig
 from evolve.config.unified import DatasetConfig, UnifiedConfig
 from evolve.experiment.tracking.callback import TrackingCallback
