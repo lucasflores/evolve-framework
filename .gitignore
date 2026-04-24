@@ -100,8 +100,7 @@ experiments/
 .mypy_cache/
 .ruff_cache/
 .venv/
-.codeboarding/cache/
-.codeboarding/logs/
+.codeboarding/
 
 
 # APM dependencies
