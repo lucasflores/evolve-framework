@@ -2,7 +2,9 @@ evolve.representation package
 =============================
 
 .. automodule:: evolve.representation
+   :members:
    :show-inheritance:
+   :undoc-members:
 
 Submodules
 ----------
@@ -10,6 +12,7 @@ Submodules
 .. toctree::
    :maxdepth: 4
 
+   evolve.representation.cppn_decoder
    evolve.representation.decoder
    evolve.representation.embedding
    evolve.representation.embedding_config

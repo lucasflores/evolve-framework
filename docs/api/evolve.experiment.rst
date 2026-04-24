@@ -2,7 +2,9 @@ evolve.experiment package
 =========================
 
 .. automodule:: evolve.experiment
+   :members:
    :show-inheritance:
+   :undoc-members:
 
 Subpackages
 -----------
@@ -20,7 +22,7 @@ Submodules
    :maxdepth: 4
 
    evolve.experiment.checkpoint
-   evolve.experiment.dry_run
    evolve.experiment.config
+   evolve.experiment.dry_run
    evolve.experiment.metrics
    evolve.experiment.runner

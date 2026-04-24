@@ -2,7 +2,9 @@ evolve.core.operators package
 =============================
 
 .. automodule:: evolve.core.operators
+   :members:
    :show-inheritance:
+   :undoc-members:
 
 Submodules
 ----------
@@ -11,6 +13,7 @@ Submodules
    :maxdepth: 4
 
    evolve.core.operators.crossover
+   evolve.core.operators.merge
    evolve.core.operators.mutation
    evolve.core.operators.selection
    evolve.core.operators.token_crossover

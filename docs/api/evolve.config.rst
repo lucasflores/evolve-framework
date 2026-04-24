@@ -2,7 +2,9 @@ evolve.config package
 =====================
 
 .. automodule:: evolve.config
+   :members:
    :show-inheritance:
+   :undoc-members:
 
 Submodules
 ----------
@@ -13,6 +15,7 @@ Submodules
    evolve.config.callbacks
    evolve.config.erp
    evolve.config.espo
+   evolve.config.merge
    evolve.config.meta
    evolve.config.multiobjective
    evolve.config.schema

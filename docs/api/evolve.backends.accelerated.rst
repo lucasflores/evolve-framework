@@ -2,7 +2,9 @@ evolve.backends.accelerated package
 ===================================
 
 .. automodule:: evolve.backends.accelerated
+   :members:
    :show-inheritance:
+   :undoc-members:
 
 Submodules
 ----------

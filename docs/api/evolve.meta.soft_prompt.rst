@@ -2,7 +2,9 @@ evolve.meta.soft\_prompt package
 ================================
 
 .. automodule:: evolve.meta.soft_prompt
+   :members:
    :show-inheritance:
+   :undoc-members:
 
 Submodules
 ----------

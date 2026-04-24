@@ -2,7 +2,9 @@ evolve.multiobjective package
 =============================
 
 .. automodule:: evolve.multiobjective
+   :members:
    :show-inheritance:
+   :undoc-members:
 
 Submodules
 ----------
