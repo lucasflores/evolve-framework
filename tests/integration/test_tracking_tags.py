@@ -8,9 +8,9 @@ import pytest
 
 mlflow = pytest.importorskip("mlflow")
 
-from evolve.config.tracking import TrackingConfig
-from evolve.config.unified import DatasetConfig, UnifiedConfig
-from evolve.experiment.tracking.callback import TrackingCallback
+from evolve.config.tracking import TrackingConfig  # noqa: E402
+from evolve.config.unified import DatasetConfig, UnifiedConfig  # noqa: E402
+from evolve.experiment.tracking.callback import TrackingCallback  # noqa: E402
 
 
 def _make_callback(

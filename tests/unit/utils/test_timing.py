@@ -29,7 +29,7 @@ class TestTimingContext:
         result = results[0]
         assert result.name == "test_phase"
         assert result.elapsed_ms >= 10.0
-        assert result.elapsed_ms < 100.0  # Reasonable upper bound
+        assert result.elapsed_ms < 5000.0  # Generous upper bound for loaded CI runners
 
     def test_cpu_time_captured(self) -> None:
         """timing_context should capture CPU time."""
