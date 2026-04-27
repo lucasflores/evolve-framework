@@ -1,5 +1,5 @@
-Welcome to evolve_framework
-===========================
+Welcome to evolve
+=================
 
 .. toctree::
    :maxdepth: 2

@@ -1,8 +1,8 @@
 [stack]
 version = "0.1.0"
 initialized = "2026-03-26T00:47:19Z"
-last_updated = "2026-04-08T02:33:22Z"
-rollback_ref = "dev-stack/rollback/20260408T023322Z"
+last_updated = "2026-04-26T23:27:02Z"
+rollback_ref = "dev-stack/rollback/20260426T232655Z"
 mode = "brownfield"
 
 [agent]
@@ -10,31 +10,31 @@ cli = "copilot"
 detected_at = "2026-03-26T00:47:19Z"
 
 [modules.uv_project]
-version = "0.1.0"
+version = "1.0.0"
 installed = true
 
 [modules.sphinx_docs]
-version = "0.1.0"
+version = "1.0.0"
 installed = true
 
 [modules.hooks]
-version = "0.1.0"
+version = "1.0.0"
 installed = true
 
 [modules.apm]
-version = "0.1.0"
+version = "1.0.0"
 installed = true
 
 [modules.vcs_hooks]
-version = "0.1.0"
+version = "1.0.0"
 installed = true
 
 [modules.ci-workflows]
-version = "0.1.0"
+version = "1.0.0"
 installed = true
 
 [modules.docker]
-version = "0.1.2"
+version = "1.0.0"
 installed = true
 
 [modules.visualization]

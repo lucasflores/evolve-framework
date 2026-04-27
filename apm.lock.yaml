@@ -1,32 +1,40 @@
 lockfile_version: '1'
-generated_at: '2026-04-13T17:43:02.171815+00:00'
-apm_version: 0.8.5
+generated_at: '2026-04-26T23:27:01.791323+00:00'
+apm_version: 0.9.2
 dependencies:
 - repo_url: lucasflores/agent-skills
   host: github.com
-  resolved_commit: c2419810ded1700459e097d5150f188444fd20cf
+  virtual_path: agents/idea-to-speckit.agent.md
+  is_virtual: true
   package_type: apm_package
   deployed_files:
-  - .claude/agents/research-assistant.md
-  - .claude/agents/research-assistant.md
-  - .claude/commands/AutoSpecKit.md
-  - .claude/skills/idea-to-speckit
-  - .claude/skills/research-assistant
-  - .claude/skills/research-project-init
-  - .github/agents/research-assistant.agent.md
+  - .github/agents/idea-to-speckit.agent.md
+  deployed_file_hashes:
+    .github/agents/idea-to-speckit.agent.md: sha256:f8effb30dcafbda0593e4dd19593acc90814d22ab75350a723e18ec959d5c999
+  content_hash: sha256:e91d9b3e108c800fd510cd0ee99335eb08e91ec91967e96d3cf613c069d03fe9
+- repo_url: lucasflores/agent-skills
+  host: github.com
+  virtual_path: prompts/AutoSpecKit.prompt.md
+  is_virtual: true
+  package_type: apm_package
+  deployed_files:
   - .github/prompts/AutoSpecKit.prompt.md
-  - .github/skills/idea-to-speckit
-  - .github/skills/research-assistant
-  - .github/skills/research-project-init
-  content_hash: sha256:13299198089843f0b4d71c15e03ba2d21e586cec852f5d47fe4957377b6f49c8
-mcp_servers:
-- huggingface/hf-mcp-server
-- io.github.github/github-mcp-server
-- io.github.upstash/context7
-mcp_configs:
-  huggingface/hf-mcp-server:
-    name: huggingface/hf-mcp-server
-  io.github.github/github-mcp-server:
-    name: io.github.github/github-mcp-server
-  io.github.upstash/context7:
-    name: io.github.upstash/context7
+  content_hash: sha256:ab0cbc8ad5c6cb233b9b9038685c5b31082bbf05c411b950b43ef88b4291b5c0
+- repo_url: lucasflores/agent-skills
+  host: github.com
+  resolved_commit: 1f5f1d099c2b2726ee40af736b50e6e8fe5b7283
+  virtual_path: skills/commit-pipeline
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .github/skills/commit-pipeline
+  content_hash: sha256:d1cca5e42f5203f40df8791695e4db21b7b00c5db5ae1ee425d1a657293565e7
+- repo_url: lucasflores/agent-skills
+  host: github.com
+  resolved_commit: 1f5f1d099c2b2726ee40af736b50e6e8fe5b7283
+  virtual_path: skills/dev-stack-update
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .github/skills/dev-stack-update
+  content_hash: sha256:4a8025e3c49c650bd9caf8402820af253e60628c9031a8b3ae8b5b76822eb10c
