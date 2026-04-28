@@ -9,6 +9,8 @@ Provides specialized metric collectors for different evolution domains:
 - NEATMetricCollector: Neuroevolution topology metrics
 - FitnessMetadataCollector: Fitness.metadata extraction
 - DerivedAnalyticsCollector: Computed analytical metrics
+- EnsembleMetricCollector: Gini, participation ratio, top-k concentration,
+  expert turnover, and specialization index
 
 All collectors implement the MetricCollector protocol.
 """
@@ -19,6 +21,7 @@ from evolve.experiment.collectors.base import (
     MetricCollector,
 )
 from evolve.experiment.collectors.derived import DerivedAnalyticsCollector
+from evolve.experiment.collectors.ensemble import EnsembleMetricCollector
 from evolve.experiment.collectors.erp import ERPMetricCollector
 from evolve.experiment.collectors.islands import IslandsMetricCollector
 from evolve.experiment.collectors.merge import MergeMetricCollector
@@ -32,6 +35,7 @@ __all__ = [
     "MetricCollector",
     "MatingStats",
     "DerivedAnalyticsCollector",
+    "EnsembleMetricCollector",
     "ERPMetricCollector",
     "FitnessMetadataCollector",
     "IslandsMetricCollector",

@@ -19,7 +19,6 @@ from evolve.config.tracking import TrackingConfig
 from evolve.config.unified import UnifiedConfig
 from evolve.core.population import Population
 from evolve.core.types import Individual
-from evolve.experiment.tracking.callback import TrackingCallback
 from evolve.factory import create_engine
 from evolve.representation.vector import VectorGenome
 
@@ -153,28 +152,10 @@ def run_comprehensive_tracking_demo():
     print(f"   Mutation: {config.mutation} (rate={config.mutation_rate})")
     print(f"   Genome: {config.genome_type} ({DIMENSIONS}D)")
 
-    # Create engine
+    # Create engine — tracking callback is registered automatically via create_engine
+    # when config.tracking is set (see factory/_build_callbacks).
     print("\n🔧 Creating evolution engine...")
     engine = create_engine(config, rastrigin)
-
-    # Create tracking callback with unified config and description
-    # Note: For pure math functions like Rastrigin/Sphere, there's no evaluation
-    # dataset - fitness is computed directly from the candidate solution.
-    #
-    # If your fitness function evaluates solutions against data (e.g., evolving
-    # a neural network, symbolic regression, or trading strategy), pass the data:
-    #
-    #   tracking_callback = TrackingCallback(
-    #       config=tracking,
-    #       evaluation_data=your_training_data,  # DataFrame, np.ndarray, etc.
-    #       evaluation_data_name="training_data",
-    #   )
-    #
-    tracking_callback = TrackingCallback(
-        config=tracking,
-        unified_config_dict=config.to_dict(),
-        description=config.description,
-    )
 
     # Create initial population
     print("🌱 Generating initial population...")
@@ -185,11 +166,11 @@ def run_comprehensive_tracking_demo():
         seed=SEED,
     )
 
-    # Run evolution with tracking callback
+    # Run evolution — no extra callbacks needed; tracking is wired by create_engine
     print(f"\n🚀 Running evolution for {GENERATIONS} generations...")
     print("-" * 70)
 
-    result = engine.run(initial_pop, callbacks=[tracking_callback])
+    result = engine.run(initial_pop)
 
     print("-" * 70)
     print("\n✅ Evolution Complete!")

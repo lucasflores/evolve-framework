@@ -445,6 +445,13 @@ def _create_standard_engine(
     Returns:
         Configured EvolutionEngine.
     """
+    # Derive metric_categories from tracking config (if enabled)
+    metric_cats: frozenset[str] = (
+        frozenset({"core", *(c.value for c in config.tracking.categories)})
+        if config.is_tracking_enabled and config.tracking is not None
+        else frozenset({"core"})
+    )
+
     # Convert to EvolutionConfig
     evo_config = EvolutionConfig(
         population_size=config.population_size,
@@ -457,6 +464,7 @@ def _create_standard_engine(
         symbiont_source=config.merge.symbiont_source if config.merge else "cross_species",
         symbiont_fate=config.merge.symbiont_fate if config.merge else "consumed",
         max_complexity=config.merge.max_complexity if config.merge else None,
+        metric_categories=metric_cats,
     )
 
     engine = EvolutionEngine(
@@ -578,6 +586,13 @@ def _create_multiobjective_engine(
     if config.selection != "crowded_tournament":
         selection = CrowdedTournamentSelection(tournament_size=2)
 
+    # Derive metric_categories from tracking config (if enabled)
+    mo_metric_cats: frozenset[str] = (
+        frozenset({"core", *(c.value for c in config.tracking.categories)})
+        if config.is_tracking_enabled and config.tracking is not None
+        else frozenset({"core"})
+    )
+
     # Convert to EvolutionConfig
     evo_config = EvolutionConfig(
         population_size=config.population_size,
@@ -587,6 +602,7 @@ def _create_multiobjective_engine(
         mutation_rate=config.mutation_rate,
         minimize=True,  # Multi-objective always minimizes (Pareto)
         merge_rate=config.merge.merge_rate if config.merge else 0.0,
+        metric_categories=mo_metric_cats,
     )
 
     engine = EvolutionEngine(

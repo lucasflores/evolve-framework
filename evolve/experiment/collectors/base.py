@@ -67,6 +67,7 @@ class CollectionContext:
     Attributes:
         generation: Current generation number.
         population: Current population of individuals.
+        minimize: True if the problem is a minimization problem (affects elite sort).
         previous_elites: Elite individuals from previous generation (for turnover).
         species_info: Species assignments when speciation enabled.
         mating_stats: ERP mating statistics when ERP enabled.
@@ -79,6 +80,7 @@ class CollectionContext:
 
     generation: int
     population: Population[Any]
+    minimize: bool = False  # True for minimization problems; controls elite sort direction
 
     # Optional context for specialized collectors
     previous_elites: list[Individual[Any]] | None = None
