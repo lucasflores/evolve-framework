@@ -15,6 +15,7 @@ All randomness flows through explicit RNG instances.
 from __future__ import annotations
 
 import contextlib
+import math
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from random import Random
@@ -30,6 +31,7 @@ from evolve.core.stopping import (
 )
 from evolve.core.types import Individual, IndividualMetadata
 from evolve.evaluation.evaluator import Evaluator
+from evolve.experiment.collectors.ensemble import EnsembleMetricCollector
 from evolve.utils.random import create_rng
 from evolve.utils.timing import GenerationTimer
 
@@ -190,6 +192,12 @@ class EvolutionEngine(Generic[G]):
             from evolve.experiment.collectors.merge import MergeMetricCollector
 
             self._merge_collector = MergeMetricCollector()
+
+        # Ensemble metric collector (enabled when 'ensemble' in metric_categories)
+        self._ensemble_collector: EnsembleMetricCollector | None = None
+        self._prev_ensemble_elites: list[Any] | None = None
+        if "ensemble" in config.metric_categories:
+            self._ensemble_collector = EnsembleMetricCollector()
 
     def run(
         self,
@@ -601,6 +609,35 @@ class EvolutionEngine(Generic[G]):
             )
             metrics.update(merge_metrics)
             self._merge_collector.reset_generation()
+
+        # Ensemble metrics
+        if "ensemble" in categories and self._ensemble_collector is not None:
+            from evolve.experiment.collectors.base import CollectionContext
+
+            ensemble_context = CollectionContext(
+                population=population,
+                generation=self._generation,
+                minimize=self.config.minimize,
+                previous_elites=self._prev_ensemble_elites,
+            )
+            ensemble_metrics = self._ensemble_collector.collect(ensemble_context)
+            metrics.update(ensemble_metrics)
+            # Update elite history for next generation using collector's top_k_percent
+            pop_list = list(population)
+            elite_count = max(
+                1,
+                math.ceil(self._ensemble_collector.top_k_percent / 100.0 * len(pop_list)),
+            )
+            sorted_pop = sorted(
+                pop_list,
+                key=lambda ind: (
+                    float(ind.fitness.values[0])
+                    if ind.fitness is not None
+                    else (float("inf") if self.config.minimize else float("-inf"))
+                ),
+                reverse=not self.config.minimize,
+            )
+            self._prev_ensemble_elites = sorted_pop[:elite_count]
 
         # Add timing metrics (selection, variation, evaluation, total)
         timing_metrics = self._timer.get_metrics(breakdown=True)

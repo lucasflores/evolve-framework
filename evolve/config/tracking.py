@@ -34,6 +34,9 @@ class MetricCategory(Enum):
         ERP: mating_success_rate (auto when ERP enabled)
         METADATA: Fitness.metadata extraction
         DERIVED: selection_pressure, velocity, entropy
+        ENSEMBLE: gini_coefficient, participation_ratio, top_k_concentration,
+            expert_turnover (when previous_elites available),
+            specialization_index (when species_info available)
     """
 
     CORE = "core"
@@ -46,6 +49,7 @@ class MetricCategory(Enum):
     METADATA = "metadata"
     DERIVED = "derived"
     SYMBIOGENESIS = "symbiogenesis"
+    ENSEMBLE = "ensemble"
 
 
 @dataclass(frozen=True)

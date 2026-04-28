@@ -240,6 +240,16 @@ class ResilientMLflowTracker:
             else:
                 experiment_id = experiment.experiment_id
 
+            # Clear any stale active run from a previous crashed session
+            if mlflow.active_run() is not None:
+                import logging
+
+                logging.warning(
+                    "Active MLflow run detected before start_run(); ending it. "
+                    "If this is a user-managed run, use mlflow.start_run(nested=True) instead."
+                )
+                mlflow.end_run()
+
             # Start run
             run = mlflow.start_run(
                 experiment_id=experiment_id,

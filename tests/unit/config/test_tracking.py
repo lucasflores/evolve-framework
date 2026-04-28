@@ -41,6 +41,7 @@ class TestMetricCategory:
             "metadata",
             "derived",
             "symbiogenesis",
+            "ensemble",
         }
         actual = {c.value for c in MetricCategory}
         assert expected == actual
