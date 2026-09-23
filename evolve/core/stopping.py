@@ -48,6 +48,8 @@ class FitnessThresholdStopping:
     """
     Stop when fitness reaches a target threshold.
 
+    Only a feasible fitness can meet the threshold.
+
     Attributes:
         threshold: Target fitness value
         minimize: If True, stop when fitness <= threshold
@@ -65,7 +67,8 @@ class FitnessThresholdStopping:
     ) -> bool:
         """Check if fitness threshold reached."""
         stats = population.statistics
-        if stats.best_fitness is None:
+        # Best is feasibility-first, so an infeasible best means nothing is feasible
+        if stats.best_fitness is None or not stats.best_fitness.is_feasible:
             return False
 
         best = float(stats.best_fitness.values[0])

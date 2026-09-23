@@ -197,3 +197,19 @@ def test_stagnation_unconstrained_uses_min_delta_on_value() -> None:
     assert not stagnation.should_stop(0, Population([_ind(3.0)]), [])
     assert not stagnation.should_stop(1, Population([_ind(2.0)]), [])
     assert stagnation.should_stop(2, Population([_ind(1.7)]), [])  # < min_delta better
+
+
+@pytest.mark.parametrize("minimize", [True, False])
+def test_threshold_stopping_needs_a_feasible_best(minimize: bool) -> None:
+    """An infeasible individual meeting the threshold is not a solution."""
+    from evolve.core.stopping import FitnessThresholdStopping
+
+    sign = 1.0 if minimize else -1.0
+    stopping = FitnessThresholdStopping(threshold=sign * 1.0, minimize=minimize)
+    infeasible_only = Population([_ind(sign * 0.0, [0.5])], minimize=minimize)
+    with_feasible = Population(
+        [_ind(sign * 0.0, [0.5]), _ind(sign * 0.5, [-1.0])], minimize=minimize
+    )
+
+    assert not stopping.should_stop(0, infeasible_only, [])
+    assert stopping.should_stop(0, with_feasible, [])
