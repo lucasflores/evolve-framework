@@ -464,6 +464,40 @@ def _build_callbacks(config: UnifiedConfig) -> list[Callback]:
     return callbacks
 
 
+def _evolution_config(config: UnifiedConfig) -> EvolutionConfig:
+    """
+    EvolutionConfig shared by the standard and multi-objective engines.
+
+    Built in one place so the two engine kinds cannot drift apart.
+
+    Args:
+        config: Unified configuration.
+
+    Returns:
+        EvolutionConfig with population, variation, merge and metric settings.
+    """
+    # Derive metric_categories from tracking config (if enabled)
+    metric_cats: frozenset[str] = (
+        frozenset({"core", *(c.value for c in config.tracking.categories)})
+        if config.is_tracking_enabled and config.tracking is not None
+        else frozenset({"core"})
+    )
+    merge = config.merge
+    return EvolutionConfig(
+        population_size=config.population_size,
+        max_generations=config.max_generations,
+        elitism=config.elitism,
+        crossover_rate=config.crossover_rate,
+        mutation_rate=config.mutation_rate,
+        minimize=config.minimize,
+        merge_rate=merge.merge_rate if merge else 0.0,
+        symbiont_source=merge.symbiont_source if merge else "cross_species",
+        symbiont_fate=merge.symbiont_fate if merge else "consumed",
+        max_complexity=merge.max_complexity if merge else None,
+        metric_categories=metric_cats,
+    )
+
+
 def _create_standard_engine(
     config: UnifiedConfig,
     evaluator: Evaluator,
@@ -491,30 +525,8 @@ def _create_standard_engine(
     Returns:
         Configured EvolutionEngine.
     """
-    # Derive metric_categories from tracking config (if enabled)
-    metric_cats: frozenset[str] = (
-        frozenset({"core", *(c.value for c in config.tracking.categories)})
-        if config.is_tracking_enabled and config.tracking is not None
-        else frozenset({"core"})
-    )
-
-    # Convert to EvolutionConfig
-    evo_config = EvolutionConfig(
-        population_size=config.population_size,
-        max_generations=config.max_generations,
-        elitism=config.elitism,
-        crossover_rate=config.crossover_rate,
-        mutation_rate=config.mutation_rate,
-        minimize=config.minimize,
-        merge_rate=config.merge.merge_rate if config.merge else 0.0,
-        symbiont_source=config.merge.symbiont_source if config.merge else "cross_species",
-        symbiont_fate=config.merge.symbiont_fate if config.merge else "consumed",
-        max_complexity=config.merge.max_complexity if config.merge else None,
-        metric_categories=metric_cats,
-    )
-
     engine = EvolutionEngine(
-        config=evo_config,
+        config=_evolution_config(config),
         evaluator=evaluator,
         selection=selection,
         crossover=crossover,
@@ -632,30 +644,11 @@ def _create_multiobjective_engine(
     if config.selection != "crowded_tournament":
         selection = CrowdedTournamentSelection(tournament_size=2)
 
-    # Derive metric_categories from tracking config (if enabled)
-    mo_metric_cats: frozenset[str] = (
-        frozenset({"core", *(c.value for c in config.tracking.categories)})
-        if config.is_tracking_enabled and config.tracking is not None
-        else frozenset({"core"})
-    )
-
-    # Convert to EvolutionConfig
-    evo_config = EvolutionConfig(
-        population_size=config.population_size,
-        max_generations=config.max_generations,
-        elitism=config.elitism,
-        crossover_rate=config.crossover_rate,
-        mutation_rate=config.mutation_rate,
-        # Not used for ranking in MO mode: populations (and the hall of fame)
-        # rank with the engine's NSGA-II ranker, which applies each
-        # ObjectiveSpec.direction.
-        minimize=True,
-        merge_rate=config.merge.merge_rate if config.merge else 0.0,
-        metric_categories=mo_metric_cats,
-    )
-
+    # config.minimize does not affect ranking here: populations (and the hall
+    # of fame) rank with the engine's NSGA-II ranker, which applies each
+    # ObjectiveSpec.direction.
     engine = EvolutionEngine(
-        config=evo_config,
+        config=_evolution_config(config),
         evaluator=evaluator,
         selection=selection,
         crossover=crossover,

@@ -732,3 +732,40 @@ class TestEngineMergeEdgeCases:
         from evolve.core.operators.merge import GraphSymbiogeneticMerge
 
         assert isinstance(engine.merge_operator, GraphSymbiogeneticMerge)
+
+    def test_multiobjective_engine_keeps_merge_settings(self) -> None:
+        """MO and single-objective engines get the same EvolutionConfig fields."""
+        from dataclasses import asdict
+
+        from evolve.config.multiobjective import ObjectiveSpec
+        from evolve.factory.engine import create_engine
+
+        config = UnifiedConfig(
+            population_size=10,
+            max_generations=3,
+            elitism=2,
+            selection="tournament",
+            crossover="neat",
+            mutation="neat",
+            genome_type="graph",
+            evaluator="benchmark",
+            evaluator_params={"function_name": "sphere"},
+            merge=MergeConfig(
+                operator="graph_symbiogenetic",
+                merge_rate=0.2,
+                symbiont_source="archive",
+                symbiont_fate="survives",
+                max_complexity=40,
+            ),
+        )
+        mo_config = config.with_multiobjective(
+            objectives=(ObjectiveSpec(name="a"), ObjectiveSpec(name="b")),
+        )
+
+        single = asdict(create_engine(config, seed=42).config)
+        multi = asdict(create_engine(mo_config, seed=42).config)
+
+        assert multi["symbiont_source"] == "archive"
+        assert multi["symbiont_fate"] == "survives"
+        assert multi["max_complexity"] == 40
+        assert multi == single
