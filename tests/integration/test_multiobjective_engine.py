@@ -14,11 +14,12 @@ from typing import Any
 import numpy as np
 import pytest
 
-from evolve.config import ObjectiveSpec, UnifiedConfig
+from evolve.config import ConstraintSpec, ObjectiveSpec, UnifiedConfig
 from evolve.core.types import Fitness, Individual
 from evolve.evaluation.evaluator import EvaluatorCapabilities
 from evolve.factory import create_engine, create_initial_population
-from evolve.multiobjective import NSGA2Selector
+from evolve.multiobjective import MultiObjectiveFitness, NSGA2Selector, hypervolume_2d, pareto_front
+from evolve.registry.evaluators import get_evaluator_registry, reset_evaluator_registry
 
 
 class SumAndFirstGene:
@@ -163,6 +164,95 @@ class TestMultiObjectiveEngine:
         )
         assert last["pareto_front_size"] == sum(1 for r in ranks.values() if r == 0)
         assert last["hypervolume"] > 0.0
+
+
+@pytest.mark.integration
+class TestConstrainedBiObjectiveEndToEnd:
+    """Maximize sum(genes), minimize genes[0], subject to genes[1] <= 0.4.
+
+    Declared entirely in UnifiedConfig (evaluator resolved from the registry)
+    and run with create_engine() + create_initial_population() + run().
+    """
+
+    REFERENCE = (0.0, 1.5)  # raw units: a worse than 0, b worse than 1.5
+
+    @pytest.fixture(autouse=True)
+    def _registered_evaluator(self):
+        reset_evaluator_registry()
+        get_evaluator_registry().register("sum_and_first_gene", SumAndFirstGene)
+        yield
+        reset_evaluator_registry()
+
+    @classmethod
+    def _hypervolume(cls, individuals: Any) -> float:
+        """Independent oracle: HV of feasible points in (a, -b) maximization space."""
+        points = np.array(
+            [
+                [ind.fitness.values[0], -ind.fitness.values[1]]
+                for ind in individuals
+                if ind.fitness.is_feasible
+            ]
+        ).reshape(-1, 2)
+        return hypervolume_2d(points, np.array([cls.REFERENCE[0], -cls.REFERENCE[1]]))
+
+    def test_constrained_front_improves(self) -> None:
+        config = UnifiedConfig(
+            name="constrained_biobjective",
+            population_size=24,
+            max_generations=15,
+            selection="tournament",
+            crossover="blend",
+            mutation="gaussian",
+            genome_type="vector",
+            genome_params={"dimensions": 3, "bounds": (0.0, 1.0)},
+            evaluator="sum_and_first_gene",
+            evaluator_params={"limit": 0.4},
+            seed=7,
+        ).with_multiobjective(
+            objectives=(
+                ObjectiveSpec(name="total", direction="maximize"),
+                ObjectiveSpec(name="first", direction="minimize"),
+            ),
+            reference_point=self.REFERENCE,
+            constraints=(ConstraintSpec(name="second_gene_limit"),),
+        )
+        engine = create_engine(config)
+        initial = create_initial_population(config)
+        first_generation: list[Individual[Any]] = []
+
+        class _FirstGeneration:
+            def on_generation_start(self, generation: int, population: Any) -> None:
+                if generation == 0:
+                    first_generation.extend(population)
+
+        result = engine.run(initial, callbacks=[_FirstGeneration()])
+
+        # It runs
+        assert result.generations == config.max_generations
+        assert len(result.population) == config.population_size
+
+        # A feasible region exists, so the final first front is all feasible
+        ranked = [
+            MultiObjectiveFitness(
+                objectives=np.array([ind.fitness.values[0], -ind.fitness.values[1]]),
+                constraint_violations=ind.fitness.constraints,
+            )
+            for ind in result.population
+        ]
+        front = [result.population[i] for i in pareto_front(ranked)]
+        assert front
+        assert all(ind.fitness.is_feasible for ind in front)
+        # Constrained domination drove every survivor into the feasible region
+        assert all(ind.fitness.is_feasible for ind in result.population)
+        assert result.best.fitness.is_feasible
+        assert any(not ind.fitness.is_feasible for ind in first_generation)
+
+        # The front improves against the fixed reference point
+        assert self._hypervolume(result.population) > self._hypervolume(first_generation)
+        assert result.history[-1]["hypervolume"] > result.history[0]["hypervolume"]
+        assert result.history[-1]["hypervolume"] == pytest.approx(
+            self._hypervolume(result.population)
+        )
 
 
 class _StepRecorder:
