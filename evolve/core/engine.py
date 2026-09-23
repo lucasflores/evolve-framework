@@ -115,7 +115,7 @@ class EvolutionEngine(Generic[G]):
     2. Fitness evaluation
     3. Selection
     4. Variation (crossover + mutation)
-    5. Replacement
+    5. Replacement (elitism + offspring; NSGA-II survival in multi-objective mode)
     6. Termination checking
 
     All randomness flows through explicit RNG instances for reproducibility.
@@ -296,6 +296,7 @@ class EvolutionEngine(Generic[G]):
         4. Preserve elites
         5. Create new generation
         6. Evaluate
+        7. Multi-objective only: NSGA-II survival over parents + offspring
 
         Timing is captured via self._timer for:
         - selection_time_ms
@@ -307,7 +308,10 @@ class EvolutionEngine(Generic[G]):
         self._timer.start_generation()
 
         pop_size = self.config.population_size
-        n_elites = self.config.elitism
+        nsga2 = self._nsga2()
+        # NSGA-II is elitist through (mu + lambda) survival below, so it breeds
+        # a full brood and config.elitism does not apply.
+        n_elites = self.config.elitism if nsga2 is None else 0
         n_offspring = pop_size - n_elites
 
         # Get elites (best individuals preserved unchanged)
@@ -316,7 +320,6 @@ class EvolutionEngine(Generic[G]):
         # Time selection phase
         self._timer.start("selection")
         n_parents = n_offspring * 2
-        nsga2 = self._nsga2()
         if nsga2 is not None:
             # Crowded tournament compares Pareto rank, then crowding distance
             ranks, crowding = nsga2.get_ranking_info(population.individuals)
@@ -382,8 +385,8 @@ class EvolutionEngine(Generic[G]):
             offspring = self._apply_merge(offspring)
             self._timer.stop("merge")
 
-        # Combine elites and offspring
-        new_individuals = elites + offspring
+        # Combine elites and offspring (NSGA-II: parents and offspring compete)
+        new_individuals = (elites if nsga2 is None else list(population.individuals)) + offspring
 
         # Create new population
         new_population = Population(
@@ -396,6 +399,14 @@ class EvolutionEngine(Generic[G]):
         self._timer.start("evaluation")
         evaluated_population = self._evaluate_population(new_population)
         self._timer.stop("evaluation")
+
+        # NSGA-II environmental selection: non-dominated fronts, then crowding
+        if nsga2 is not None:
+            evaluated_population = Population(
+                individuals=nsga2.select(evaluated_population.individuals, pop_size, self.rng),
+                generation=self._generation + 1,
+                minimize=self.config.minimize,
+            )
 
         # End generation timing
         self._timer.end_generation()
@@ -732,7 +743,11 @@ class EvolutionEngine(Generic[G]):
         return NSGA2Selector()
 
     def _get_best(self, population: Population[G]) -> Individual[G]:
-        """Get best individual from population."""
+        """Get best individual (multi-objective: a member of the first front)."""
+        nsga2 = self._nsga2()
+        if nsga2 is not None:
+            ranks, _ = nsga2.get_ranking_info(population.individuals)
+            return population[min(i for i, rank in ranks.items() if rank == 0)]
         best_list = population.best(1, minimize=self.config.minimize)
         return best_list[0]
 
