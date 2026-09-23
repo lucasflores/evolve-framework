@@ -36,7 +36,7 @@ class NSGA2Selector(Generic[G]):
     Attributes:
         directions: Direction of each raw objective value, ``"maximize"`` or
             ``"minimize"`` (e.g. from ``ObjectiveSpec.direction``). ``None``
-            means all maximize, the ``MultiObjectiveFitness`` convention.
+            means all maximize, the ``ObjectiveSpec`` default.
 
     Example:
         >>> selector = NSGA2Selector(directions=("maximize", "minimize"))

@@ -445,3 +445,61 @@ class TestNSGA2Integration:
 
         # Both runs should produce identical results
         assert results[0] == results[1]
+
+
+class TestObjectiveConvention:
+    """One convention: raw values, ranked in each ObjectiveSpec.direction."""
+
+    def test_default_direction_is_maximize(self):
+        """Directions used to be ignored (everything maximized); the default keeps that."""
+        from evolve.config.multiobjective import ObjectiveSpec
+
+        assert ObjectiveSpec(name="f").direction == "maximize"
+        assert ObjectiveSpec.from_dict({"name": "f"}).direction == "maximize"
+
+    def test_scm_with_default_specs_prefers_fewer_edges_and_rejects_failures(self):
+        """SCMEvaluator objectives are higher-is-better (negated counts, -inf on failure)."""
+        from evolve.config.multiobjective import ObjectiveSpec
+        from evolve.evaluation.scm_evaluator import SCMEvaluator, SCMFitnessConfig
+        from evolve.representation.scm import SCMConfig, SCMGenome
+
+        rng = np.random.default_rng(42)
+        x = rng.normal(size=100)
+        y = 2 * x + rng.normal(size=100) * 0.1
+        z = x + y + rng.normal(size=100) * 0.1
+        evaluator = SCMEvaluator(
+            data=np.column_stack([x, y, z]),
+            variable_names=("X", "Y", "Z"),
+            config=SCMFitnessConfig(
+                objectives=("data_fit", "sparsity"),
+                constraints=(),
+                cycle_penalty_per_cycle=0.0,
+                incomplete_coverage_penalty=0.0,
+                conflict_penalty=0.0,
+            ),
+        )
+        config = SCMConfig(observed_variables=("X", "Y", "Z"))
+        programs = {
+            "one_edge": ["X", 2.0, "*", "STORE_Y"],
+            "three_edges": ["X", 2.0, "*", "STORE_Y", "X", "Y", "+", "STORE_Z"],
+            "cyclic": ["Y", 1.0, "*", "STORE_X", "X", 1.0, "*", "STORE_Y"],
+            "div_zero": ["X", 0.0, "/", "STORE_Y"],
+        }
+        population = [
+            Individual(genome=SCMGenome(inner=inner, config=config)) for inner in programs.values()
+        ]
+        population = [
+            ind.with_fitness(fit)
+            for ind, fit in zip(population, evaluator.evaluate(population), strict=True)
+        ]
+        specs = (ObjectiveSpec(name="data_fit"), ObjectiveSpec(name="sparsity"))
+
+        ranks, _ = NSGA2Selector(directions=tuple(s.direction for s in specs)).get_ranking_info(
+            population
+        )
+
+        by_name = dict(zip(programs, (ranks[i] for i in range(len(programs))), strict=True))
+        assert by_name["one_edge"] == 0
+        assert by_name["three_edges"] > by_name["one_edge"]
+        assert by_name["cyclic"] > 0
+        assert by_name["div_zero"] > 0

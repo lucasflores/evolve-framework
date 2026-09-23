@@ -16,9 +16,14 @@ class ObjectiveSpec:
     """
     Specification for a single optimization objective.
 
+    The evaluator returns the objective's raw value; ranking applies
+    ``direction`` to it. The default is ``"maximize"``, which is how every
+    objective was treated before directions were applied, so specs written
+    without a direction keep their behaviour.
+
     Attributes:
         name: Objective identifier (used in fitness dictionaries).
-        direction: Whether to minimize or maximize this objective.
+        direction: Whether to minimize or maximize this objective's raw value.
         weight: Weight for weighted-sum scalarization (optional).
 
     Example:
@@ -28,8 +33,8 @@ class ObjectiveSpec:
     name: str
     """Objective identifier used in fitness dictionaries."""
 
-    direction: Literal["minimize", "maximize"] = "minimize"
-    """Whether to minimize or maximize this objective."""
+    direction: Literal["minimize", "maximize"] = "maximize"
+    """Whether to minimize or maximize this objective's raw value."""
 
     weight: float = 1.0
     """Weight for weighted-sum scalarization."""
@@ -56,7 +61,7 @@ class ObjectiveSpec:
         """Create from dictionary."""
         return cls(
             name=data["name"],
-            direction=data.get("direction", "minimize"),
+            direction=data.get("direction", "maximize"),
             weight=data.get("weight", 1.0),
         )
 
