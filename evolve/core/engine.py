@@ -727,8 +727,8 @@ class EvolutionEngine(Generic[G]):
             metrics[f"{spec.name}_best"] = float(raw[best, j])
             metrics[f"{spec.name}_mean"] = float(np.mean(raw[:, j]))
 
-        # ponytail: exact 2-D hypervolume only; MultiObjectiveMetricCollector has
-        # Monte Carlo estimates if 3+ objectives need one.
+        # Limitation: hypervolume is computed exactly for two objectives only; for
+        # 3+ objectives MultiObjectiveMetricCollector offers Monte Carlo estimates.
         if mo.reference_point is not None and len(mo.objectives) == 2:
             front = [i for i in first_front if feasible[i]]
             reference = nsga2.to_maximization(np.asarray(mo.reference_point, dtype=float))
