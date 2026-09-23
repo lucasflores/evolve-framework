@@ -497,9 +497,7 @@ class HallOfFameCallback:
                 candidates.append(ind)
 
         # Sort: best first (feasibility first)
-        candidates.sort(
-            key=lambda ind: fitness_sort_key(ind.fitness, minimize), reverse=not minimize
-        )
+        candidates.sort(key=lambda ind: fitness_sort_key(ind.fitness, minimize))
 
         # Deduplicate by id, keep best rank
         seen: set[Any] = set()

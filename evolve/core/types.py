@@ -231,29 +231,29 @@ class Fitness:
 
 def fitness_sort_key(fitness: Fitness | None, minimize: bool = True) -> tuple[int, float, float]:
     """
-    Feasibility-first sort key for single-objective fitness (Deb's rules).
+    Ascending sort key, best first (Deb's rules on ``values[0]``).
 
-    Drop-in replacement for ``float(fitness.values[0])`` as a key: use it
-    exactly as that key was used (``sorted(..., reverse=not minimize)``,
-    ``min`` when minimizing, ``max`` when maximizing). On top of the value,
-    feasible beats infeasible and, between infeasible fitnesses, lower
-    ``total_constraint_violation`` wins. When every fitness is feasible the
-    ordering is identical to ranking on ``values[0]``. ``None`` ranks last.
+    Feasible beats infeasible; between infeasible fitnesses, lower
+    ``total_constraint_violation`` wins; then the better ``values[0]`` in
+    the given direction. Use it with plain ``sorted()`` / ``min()`` in both
+    directions. When every fitness is feasible the order (and tie-breaking)
+    is the same as ranking on ``values[0]``. ``None`` ranks last.
 
     Args:
         fitness: Fitness to rank (``values[0]`` is the objective).
-        minimize: Direction the caller ranks ``values[0]`` in.
+        minimize: True if lower ``values[0]`` is better.
 
     Returns:
-        (feasibility class, violation term, objective value) tuple.
+        (infeasible flag, total violation, directed value) tuple.
     """
     if fitness is None:
-        return (2, 0.0, 0.0) if minimize else (-1, 0.0, 0.0)
+        return (2, 0.0, 0.0)
     value = float(fitness.values[0])
-    if fitness.is_feasible:
-        return (0, 0.0, value) if minimize else (1, 0.0, value)
-    violation = fitness.total_constraint_violation
-    return (1, violation, value) if minimize else (0, -violation, value)
+    return (
+        int(not fitness.is_feasible),
+        fitness.total_constraint_violation,
+        value if minimize else -value,
+    )
 
 
 @dataclass

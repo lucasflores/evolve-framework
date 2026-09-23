@@ -108,3 +108,20 @@ def test_roulette_ignores_constraints() -> None:
     reference = RouletteSelection(minimize=True).select(unconstrained, 50, Random(3))
 
     assert [ind.fitness.values[0] for ind in picked] == [ind.fitness.values[0] for ind in reference]
+
+
+def test_sort_key_is_ascending_in_both_directions() -> None:
+    """Best first with plain sorted()/min(); no reverse= or max() needed."""
+    from evolve.core.types import fitness_sort_key
+
+    for minimize in (True, False):
+        population, deb_order = _population(minimize)
+        shuffled = list(reversed(deb_order))
+
+        ranked = sorted(shuffled, key=lambda ind: fitness_sort_key(ind.fitness, minimize))
+
+        assert ranked == deb_order
+        assert (
+            min(shuffled, key=lambda ind: fitness_sort_key(ind.fitness, minimize)) is deb_order[0]
+        )
+    assert fitness_sort_key(None, True) == fitness_sort_key(None, False) == (2, 0.0, 0.0)
