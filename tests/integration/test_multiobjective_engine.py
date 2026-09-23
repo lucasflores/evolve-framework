@@ -34,15 +34,31 @@ class SumAndFirstGene:
         self.limit = limit
         self.evaluated: list[Individual[Any]] = []
 
+    @staticmethod
+    def objectives(g: np.ndarray) -> np.ndarray:
+        return np.array([g.sum(), g[0]])
+
     def evaluate(self, individuals: Any, seed: int | None = None) -> list[Fitness]:
         out = []
         for ind in individuals:
             g = np.asarray(ind.genome.genes)
             constraints = None if self.limit is None else np.array([g[1] - self.limit])
-            fitness = Fitness(values=np.array([g.sum(), g[0]]), constraints=constraints)
+            fitness = Fitness(values=self.objectives(g), constraints=constraints)
             self.evaluated.append(ind.with_fitness(fitness))
             out.append(fitness)
         return out
+
+
+class RestAndFirstGene(SumAndFirstGene):
+    """Objective ``a`` = sum(genes[1:]), ``b`` = genes[0]: no trade-off.
+
+    The objectives share no genes, so where the population goes depends only
+    on the declared directions.
+    """
+
+    @staticmethod
+    def objectives(g: np.ndarray) -> np.ndarray:
+        return np.array([g[1:].sum(), g[0]])
 
 
 def _config(
@@ -106,6 +122,25 @@ class TestMultiObjectiveEngine:
         ranks, _ = NSGA2Selector().get_ranking_info(result.population.individuals)
         best_index = [ind.id for ind in result.population].index(result.best.id)
         assert ranks[best_index] == 0
+
+    @pytest.mark.parametrize("directions", [("maximize", "minimize"), ("minimize", "maximize")])
+    def test_objectives_move_in_declared_directions(self, directions: tuple[str, str]) -> None:
+        """Each objective improves in its ObjectiveSpec.direction; raw values are kept."""
+        cfg = _config(directions, max_generations=15)
+        evaluator = RestAndFirstGene()
+
+        result = create_engine(cfg, evaluator=evaluator).run(create_initial_population(cfg))
+
+        initial = np.array(
+            [ind.fitness.values for ind in evaluator.evaluated[: cfg.population_size]]
+        )
+        final = np.array([ind.fitness.values for ind in result.population])
+        improvement = final.mean(axis=0) - initial.mean(axis=0)
+        signs = np.array([1.0 if d == "maximize" else -1.0 for d in directions])
+        assert np.all(signs * improvement > 0.2), improvement
+        for ind in result.population:
+            genes = np.asarray(ind.genome.genes)
+            assert ind.fitness.values.tolist() == RestAndFirstGene.objectives(genes).tolist()
 
 
 class _StepRecorder:

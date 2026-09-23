@@ -252,6 +252,45 @@ class TestNSGA2Constraints:
         assert population[0] not in selected
 
 
+class TestNSGA2Directions:
+    """Declared objective directions are applied when ranking raw values."""
+
+    @staticmethod
+    def _population() -> list[Individual[VectorGenome]]:
+        genome = VectorGenome(genes=np.zeros(1), bounds=(np.zeros(1), np.ones(1)))
+        return [
+            Individual(genome=genome, fitness=Fitness(values=np.array([3.0, 1.0]))),
+            Individual(genome=genome, fitness=Fitness(values=np.array([3.0, 5.0]))),
+        ]
+
+    def test_minimize_direction_prefers_lower_raw_value(self):
+        """With objective 1 minimized, (3, 1) dominates (3, 5)."""
+        selector = NSGA2Selector(directions=("maximize", "minimize"))
+
+        ranks, _ = selector.get_ranking_info(self._population())
+
+        assert ranks == {0: 0, 1: 1}
+
+    def test_default_is_all_maximize(self):
+        """Without directions, (3, 5) dominates (3, 1) (MultiObjectiveFitness convention)."""
+        ranks, _ = NSGA2Selector().get_ranking_info(self._population())
+
+        assert ranks == {0: 1, 1: 0}
+
+    def test_raw_values_are_not_modified(self):
+        """Ranking leaves the individuals' reported values untouched."""
+        population = self._population()
+
+        NSGA2Selector(directions=("maximize", "minimize")).select(population, 1, Random(0))
+
+        assert population[1].fitness.values.tolist() == [3.0, 5.0]
+
+    def test_mismatched_objective_count_raises(self):
+        """A fitness with more values than declared directions is an error, not a guess."""
+        with pytest.raises(ValueError, match="objective directions"):
+            NSGA2Selector(directions=("maximize",)).get_ranking_info(self._population())
+
+
 class TestHypervolume:
     """Test hypervolume calculation."""
 
