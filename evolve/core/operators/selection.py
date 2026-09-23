@@ -127,10 +127,7 @@ class TournamentSelection(Generic[G]):
             tournament = rng.sample(evaluated, min(self.tournament_size, len(evaluated)))
 
             # Find best in tournament (feasibility first)
-            if self.minimize:
-                winner = min(tournament, key=lambda ind: fitness_sort_key(ind.fitness, True))
-            else:
-                winner = max(tournament, key=lambda ind: fitness_sort_key(ind.fitness, False))
+            winner = min(tournament, key=lambda ind: fitness_sort_key(ind.fitness, self.minimize))
 
             selected.append(winner)
 
@@ -243,7 +240,6 @@ class RankSelection(Generic[G]):
         sorted_inds = sorted(
             evaluated,
             key=lambda ind: fitness_sort_key(ind.fitness, self.minimize),
-            reverse=not self.minimize,
         )
 
         # Compute rank-based probabilities (linear ranking)

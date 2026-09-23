@@ -145,10 +145,8 @@ class Population(Generic[G]):
             if not all(f.is_feasible for f in fitness_values):
                 # Feasibility first (Deb's rules), then the value
                 keys = [fitness_sort_key(f, self._minimize) for f in fitness_values]
-                by_key = range(len(keys))
-                best_of, worst_of = (min, max) if self._minimize else (max, min)
-                best_idx = best_of(by_key, key=keys.__getitem__)
-                worst_idx = worst_of(by_key, key=keys.__getitem__)
+                best_idx = min(range(len(keys)), key=keys.__getitem__)
+                worst_idx = max(range(len(keys)), key=keys.__getitem__)
             elif self._minimize:
                 best_idx = int(np.argmin(values))
                 worst_idx = int(np.argmax(values))
@@ -234,14 +232,18 @@ class Population(Generic[G]):
             sorted_individuals = sorted(
                 evaluated,
                 key=lambda ind: fitness_sort_key(ind.fitness, minimize),
-                reverse=not minimize,
             )
         else:
             # Multi-objective: no scalar order without objective directions (the
             # engine ranks those with NSGA-II). Feasibility still comes first;
             # the sort is stable, so unconstrained populations keep their order.
             sorted_individuals = sorted(
-                evaluated, key=lambda ind: fitness_sort_key(ind.fitness)[:2]
+                evaluated,
+                key=lambda ind: (
+                    (int(not ind.fitness.is_feasible), ind.fitness.total_constraint_violation)
+                    if ind.fitness is not None
+                    else (2, 0.0)
+                ),
             )
 
         return sorted_individuals[:n]
