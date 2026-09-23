@@ -128,3 +128,39 @@ class TestEnsembleEngineIntegration:
             assert ensemble_keys == [], (
                 f"Unexpected ensemble keys at generation {gen_idx}: {ensemble_keys}"
             )
+
+
+@pytest.mark.integration
+def test_ensemble_disabled_with_warning_in_multiobjective_mode() -> None:
+    """Scalar fitness-mass metrics have no meaning for vector fitness."""
+    from evolve.config import ObjectiveSpec, UnifiedConfig
+    from evolve.config.tracking import MetricCategory, TrackingConfig
+    from evolve.core.types import Fitness
+    from evolve.evaluation.evaluator import EvaluatorCapabilities
+    from evolve.factory import create_engine
+    from evolve.factory import create_initial_population as initial_population
+
+    class _TwoObjectives:
+        capabilities = EvaluatorCapabilities(n_objectives=2)
+
+        def evaluate(self, individuals, seed=None):
+            return [Fitness(values=np.asarray(ind.genome.genes[:2])) for ind in individuals]
+
+    config = UnifiedConfig(
+        population_size=10,
+        max_generations=2,
+        selection="tournament",
+        crossover="blend",
+        mutation="gaussian",
+        genome_type="vector",
+        genome_params={"dimensions": 3, "bounds": (0.0, 1.0)},
+        tracking=TrackingConfig(
+            backend="null", categories=frozenset({MetricCategory.CORE, MetricCategory.ENSEMBLE})
+        ),
+    ).with_multiobjective(objectives=(ObjectiveSpec(name="a"), ObjectiveSpec(name="b")))
+
+    with pytest.warns(UserWarning, match="ensemble metrics are disabled"):
+        engine = create_engine(config, evaluator=_TwoObjectives())
+    result = engine.run(initial_population(config))
+
+    assert not any(key.startswith("ensemble/") for key in result.history[-1])
