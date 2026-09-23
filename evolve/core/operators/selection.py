@@ -3,7 +3,11 @@ Selection operators - Choose individuals for reproduction.
 
 Registry names (for ``UnifiedConfig(selection=...)``)::
 
-    "tournament", "roulette", "rank", "elitist", "crowded_tournament"
+    "tournament", "roulette", "rank", "crowded_tournament"
+
+``"crowded_tournament"`` (evolve.multiobjective.selection) is for
+multi-objective configs only. Elitism is not a selection operator; it is
+set with ``UnifiedConfig.elitism``.
 
 Selection operators MUST:
 - Accept explicit RNG for determinism
