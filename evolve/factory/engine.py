@@ -138,7 +138,7 @@ def create_engine(
         # Factories that name a `decoder` parameter receive the declared one
         if decoder is not None and eval_registry.accepts_param(config.evaluator, "decoder"):
             merged_params.setdefault("decoder", decoder)
-            decoder_delivered = True
+            decoder_delivered = merged_params["decoder"] is decoder
         evaluator = eval_registry.get(config.evaluator, **merged_params)
     else:
         eval_registry = get_evaluator_registry()
@@ -149,19 +149,23 @@ def create_engine(
             f"Available evaluators: {available}"
         )
 
-    # Inject the decoder into a FunctionEvaluator that has none
-    if not decoder_delivered and isinstance(evaluator, FunctionEvaluator):
+    # Inject the decoder into a FunctionEvaluator that has none (including one a
+    # factory built without forwarding it); delivered only if it holds this one
+    if decoder is not None and isinstance(evaluator, FunctionEvaluator):
         if evaluator._decoder is None:
             evaluator._decoder = decoder
-        decoder_delivered = True
+        decoder_delivered = evaluator._decoder is decoder
     if not decoder_delivered:
         import warnings
 
-        reason = (
-            f"the {type(evaluator).__name__} passed to create_engine() is not a FunctionEvaluator"
-            if explicit_evaluator
-            else f"the factory registered as {config.evaluator!r} has no `decoder` parameter"
-        )
+        if isinstance(evaluator, FunctionEvaluator):
+            reason = "the FunctionEvaluator already has a decoder"
+        elif explicit_evaluator:
+            reason = f"the {type(evaluator).__name__} passed to create_engine() is not a FunctionEvaluator"
+        elif get_evaluator_registry().accepts_param(str(config.evaluator), "decoder"):
+            reason = "evaluator_params or runtime_overrides already set `decoder`"
+        else:
+            reason = f"the factory registered as {config.evaluator!r} has no `decoder` parameter"
         warnings.warn(
             f"config.decoder={config.decoder!r} is ignored: {reason}.",
             UserWarning,

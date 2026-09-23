@@ -623,11 +623,13 @@ class TestDecoderForRegisteredEvaluators:
             assert float(ind.fitness.values[0]) == pytest.approx(expected)
 
     def test_explicit_decoder_param_wins(self) -> None:
+        """An explicit decoder param is used; the ignored config.decoder is reported."""
         get_evaluator_registry().register("decoding_batch", _DecodingBatchEvaluator)
         mine = _ScaledGenes(factor=2.0)
         config = self._config("decoding_batch")
 
-        engine = create_engine(config, runtime_overrides={"decoder": mine})
+        with pytest.warns(UserWarning, match="runtime_overrides already set `decoder`"):
+            engine = create_engine(config, runtime_overrides={"decoder": mine})
 
         assert engine.evaluator.decoder is mine
 
@@ -648,3 +650,64 @@ class TestDecoderForRegisteredEvaluators:
 
         with pytest.warns(UserWarning, match="passed to create_engine"):
             create_engine(config, evaluator=_DecodingBatchEvaluator(decoder=_ScaledGenes()))
+
+
+class TestDecoderDeliveryIsVerified:
+    """The decoder counts as delivered only if the evaluator really holds it."""
+
+    @pytest.fixture(autouse=True)
+    def _fresh_evaluator_registry(self):
+        reset_evaluator_registry()
+        get_decoder_registry().register("scaled_genes", _ScaledGenes)
+        yield
+        reset_evaluator_registry()
+
+    @staticmethod
+    def _config(**overrides: Any) -> UnifiedConfig:
+        params: dict[str, Any] = {
+            "population_size": 6,
+            "selection": "tournament",
+            "crossover": "sbx",
+            "mutation": "gaussian",
+            "genome_type": "vector",
+            "genome_params": {"dimensions": 3, "bounds": (-1.0, 1.0)},
+            "evaluator": "dropping",
+            "decoder": "scaled_genes",
+        }
+        params.update(overrides)
+        return UnifiedConfig(**params)
+
+    @staticmethod
+    def _register_dropping_factory() -> None:
+        from evolve.evaluation.evaluator import FunctionEvaluator
+
+        def make(decoder: Any = None, **kwargs: Any) -> FunctionEvaluator:  # noqa: ARG001
+            # Names `decoder` but never forwards it
+            return FunctionEvaluator(lambda genes: float(sum(genes)), **kwargs)
+
+        get_evaluator_registry().register("dropping", make)
+
+    def test_factory_that_drops_decoder_gets_it_injected(self) -> None:
+        self._register_dropping_factory()
+
+        engine = create_engine(self._config())
+
+        assert isinstance(engine.evaluator._decoder, _ScaledGenes)
+
+    def test_decoder_none_in_params_still_gets_config_decoder(self) -> None:
+        self._register_dropping_factory()
+
+        engine = create_engine(self._config(evaluator_params={"decoder": None}))
+
+        assert isinstance(engine.evaluator._decoder, _ScaledGenes)
+
+    def test_function_evaluator_with_own_decoder_warns(self) -> None:
+        from evolve.evaluation.evaluator import FunctionEvaluator
+
+        own = _ScaledGenes(factor=2.0)
+        evaluator = FunctionEvaluator(lambda genes: float(sum(genes)), decoder=own)
+
+        with pytest.warns(UserWarning, match="FunctionEvaluator already has a decoder"):
+            engine = create_engine(self._config(evaluator=None), evaluator=evaluator)
+
+        assert engine.evaluator._decoder is own
