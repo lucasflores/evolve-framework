@@ -120,6 +120,32 @@ class TestMultiObjectiveEngine:
         assert engine._nsga2.directions == ("maximize", "minimize")
         assert single._nsga2 is None
 
+    def test_one_non_dominated_sort_per_generation(self, monkeypatch: Any) -> None:
+        """Survival sorts parents + offspring once; mating, metrics and best reuse it."""
+        import evolve.multiobjective.ranking as ranking
+        import evolve.multiobjective.selection as selection
+
+        sizes: list[int] = []
+        original = ranking.fast_non_dominated_sort
+
+        def counting_sort(fitnesses: Any) -> Any:
+            sizes.append(len(fitnesses))
+            return original(fitnesses)
+
+        monkeypatch.setattr(ranking, "fast_non_dominated_sort", counting_sort)
+        monkeypatch.setattr(selection, "fast_non_dominated_sort", counting_sort)
+        cfg = _config(("maximize", "minimize"), reference_point=(-1.0, 2.0), max_generations=3)
+
+        result = create_engine(cfg, evaluator=SumAndFirstGene()).run(create_initial_population(cfg))
+
+        n = cfg.population_size
+        # Initial population once (for the first mating), then one 2N survival sort
+        assert sizes == [n] + [2 * n] * 3
+        fresh_ranks, _ = NSGA2Selector(directions=("maximize", "minimize")).get_ranking_info(
+            result.population.individuals
+        )
+        assert result.population.ranking[0] == fresh_ranks
+
     def test_survivors_are_nsga2_selection_of_parents_plus_offspring(self) -> None:
         """Each generation keeps NSGA2Selector's pick from parents + a full brood."""
         cfg = _config(max_generations=4)

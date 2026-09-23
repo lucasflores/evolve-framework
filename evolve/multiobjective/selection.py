@@ -88,32 +88,49 @@ class NSGA2Selector(Generic[G]):
         """
         if n_select >= len(population):
             return list(population)
+        return self.select_ranked(population, n_select)[0]
 
+    def select_ranked(
+        self,
+        population: Sequence[Individual[G]],
+        n_select: int,
+    ) -> tuple[list[Individual[G]], tuple[dict[int, int], dict[int, float]]]:
+        """
+        Environmental selection that also returns the survivors' ranking.
+
+        Same survivors, in the same order, as ``select`` (for
+        ``n_select < len(population)``). The ranking gives each survivor's
+        Pareto rank and the crowding distance assigned at survival, keyed by
+        its position in the returned list, so callers need not sort again.
+        Ranks are unchanged by removing later fronts; crowding on a truncated
+        last front is the value used to truncate it, as in NSGA-II.
+
+        Args:
+            population: Population with multi-objective fitnesses
+            n_select: Number of individuals to select
+
+        Returns:
+            (survivors, (ranks, crowding)).
+        """
         fitnesses = self.ranking_fitnesses(population)
+        chosen: list[int] = []
+        ranks: dict[int, int] = {}
+        crowding: dict[int, float] = {}
 
-        # Non-dominated sorting
-        fronts = fast_non_dominated_sort(fitnesses)
-
-        # Build selected list front by front
-        selected: list[Individual[G]] = []
-
-        for front in fronts:
-            if len(selected) + len(front) <= n_select:
-                # Add entire front
-                selected.extend(population[i] for i in front)
-            else:
-                # Need to select subset using crowding distance
-                distances = crowding_distance(fitnesses, front)
-
-                # Sort by crowding distance (descending - higher is better)
-                sorted_front = sorted(front, key=lambda i: distances[i], reverse=True)
-
-                # Take remaining slots
-                remaining = n_select - len(selected)
-                selected.extend(population[i] for i in sorted_front[:remaining])
+        for rank, front in enumerate(fast_non_dominated_sort(fitnesses)):
+            if len(chosen) >= n_select:
                 break
+            distances = crowding_distance(fitnesses, front)
+            if len(chosen) + len(front) > n_select:
+                # Last front: keep the most isolated individuals
+                front = sorted(front, key=lambda i: distances[i], reverse=True)
+                front = front[: n_select - len(chosen)]
+            for i in front:
+                ranks[len(chosen)] = rank
+                crowding[len(chosen)] = distances[i]
+                chosen.append(i)
 
-        return selected
+        return [population[i] for i in chosen], (ranks, crowding)
 
     def ranking_fitnesses(
         self,
