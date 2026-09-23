@@ -15,7 +15,6 @@ All randomness flows through explicit RNG instances.
 from __future__ import annotations
 
 import contextlib
-import math
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from random import Random
@@ -228,7 +227,18 @@ class EvolutionEngine(Generic[G]):
         self._ensemble_collector: EnsembleMetricCollector | None = None
         self._prev_ensemble_elites: list[Any] | None = None
         if "ensemble" in config.metric_categories:
-            self._ensemble_collector = EnsembleMetricCollector()
+            if multiobjective is None:
+                self._ensemble_collector = EnsembleMetricCollector()
+            else:
+                import warnings
+
+                warnings.warn(
+                    "ensemble metrics are disabled in multi-objective mode: they measure "
+                    "how scalar fitness mass is distributed, which vector fitness does not "
+                    "have. Pareto-front metrics are reported instead.",
+                    UserWarning,
+                    stacklevel=2,
+                )
 
     def run(
         self,
@@ -687,13 +697,9 @@ class EvolutionEngine(Generic[G]):
             )
             ensemble_metrics = self._ensemble_collector.collect(ensemble_context)
             metrics.update(ensemble_metrics)
-            # Elite history for next generation, ranked the way elitism ranks
-            elite_count = max(
-                1,
-                math.ceil(self._ensemble_collector.top_k_percent / 100.0 * len(population)),
-            )
-            self._prev_ensemble_elites = list(
-                population.best(elite_count, minimize=self.config.minimize)
+            # Elite history for next generation's turnover, ranked by the collector
+            self._prev_ensemble_elites = self._ensemble_collector.elites(
+                population, self.config.minimize
             )
 
         # Add timing metrics (selection, variation, evaluation, total)

@@ -619,3 +619,38 @@ class TestSpecializationIndex:
         result = collector.collect(ctx)
         si = result["ensemble/specialization_index"]
         assert 0.0 <= si <= 1.0
+
+
+class TestEliteRanking:
+    """elites(): the expert set used for turnover, feasibility-first."""
+
+    @staticmethod
+    def _population(minimize: bool) -> tuple[MockPopulation, list[MockIndividual]]:
+        sign = 1.0 if minimize else -1.0
+        infeasible_best_value = MockIndividual(
+            fitness=Fitness(values=np.array([sign * -100.0]), constraints=np.array([1.0]))
+        )
+        good = MockIndividual(fitness=Fitness.scalar(sign * 1.0))
+        worse = MockIndividual(fitness=Fitness.scalar(sign * 2.0))
+        return MockPopulation([infeasible_best_value, worse, good]), [good, worse]
+
+    @pytest.mark.parametrize("minimize", [True, False])
+    def test_infeasible_never_an_expert_ahead_of_feasible(self, minimize: bool) -> None:
+        population, expected = self._population(minimize)
+        collector = EnsembleMetricCollector(elite_size=2)
+
+        assert collector.elites(population, minimize) == expected
+
+    def test_elite_size_sets_the_count(self) -> None:
+        population = MockPopulation([_ind(float(i)) for i in range(10)])
+
+        assert len(EnsembleMetricCollector(elite_size=3).elites(population, True)) == 3
+        assert len(EnsembleMetricCollector(top_k_percent=20.0).elites(population, True)) == 2
+
+    def test_scalar_value_fitness_still_ranked(self) -> None:
+        low = MockIndividualScalar(fitness=MockScalarFitnessOnly(value=1.0))
+        high = MockIndividualScalar(fitness=MockScalarFitnessOnly(value=5.0))
+
+        elites = EnsembleMetricCollector(elite_size=1).elites(MockPopulation([low, high]), False)
+
+        assert elites == [high]

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import logging
 import math
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -66,6 +67,32 @@ class EnsembleMetricCollector:
 
     def reset(self) -> None:
         """No-op: EnsembleMetricCollector is stateless."""
+
+    def elites(self, population: Iterable[Any], minimize: bool) -> list[Any]:
+        """
+        Current expert set: the best ``elite_size`` individuals (or the top
+        ``top_k_percent``), feasibility-first like the engine's elitism.
+
+        The engine stores this list as the next generation's
+        ``previous_elites``, so turnover compares like with like.
+
+        Args:
+            population: Individuals to rank.
+            minimize: True if lower fitness is better.
+
+        Returns:
+            Elite individuals, best first.
+        """
+        individuals = list(population)
+        count = (
+            self.elite_size
+            if self.elite_size is not None
+            else max(1, math.ceil(self.top_k_percent / 100.0 * len(individuals)))
+        )
+
+        return sorted(
+            individuals, key=lambda ind: fitness_sort_key(_as_fitness(ind.fitness), minimize)
+        )[:count]
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -172,18 +199,7 @@ class EnsembleMetricCollector:
 
         # ---- Expert Turnover (conditional) ---------------------------
         if context.previous_elites is not None:
-            elite_count = (
-                self.elite_size
-                if self.elite_size is not None
-                else max(1, math.ceil(self.top_k_percent / 100.0 * N))
-            )
-            # Derive current elite by identity (sort population by fitness desc)
-            population_list = list(context.population)
-            sorted_inds = sorted(
-                population_list,
-                key=lambda ind: fitness_sort_key(_as_fitness(ind.fitness), context.minimize),
-            )
-            current_elite = sorted_inds[:elite_count]
+            current_elite = self.elites(context.population, context.minimize)
 
             # Use UUID (.id) when available (Individual carries the same UUID
             # through with_fitness() calls), falling back to Python object

@@ -185,7 +185,10 @@ component.
 **Enabling mechanism**: Add `MetricCategory.ENSEMBLE` (or `"ensemble"`) to
 `TrackingConfig.categories`. This category is **not** auto-enabled — it must be explicitly added.
 Unlike other categories derived from `UnifiedConfig`, `ENSEMBLE` has no corresponding structural
-prerequisite; it is always safe to enable.
+prerequisite in single-objective runs. In multi-objective mode it is disabled with a warning:
+these metrics describe scalar fitness mass, which vector fitness does not have.
+The elite set used for expert turnover is ranked feasibility-first (feasible before infeasible,
+then lower total constraint violation, then fitness), like the engine's elitism.
 
 ```python
 from evolve.config.tracking import TrackingConfig, MetricCategory
