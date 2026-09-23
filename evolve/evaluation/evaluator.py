@@ -154,7 +154,7 @@ class FunctionEvaluator(Generic[G]):
 
     def __init__(
         self,
-        fitness_fn: Callable[[Any], float | np.ndarray],
+        fitness_fn: Callable[[Any], float | np.ndarray | Fitness],
         decoder: Decoder[G, Any] | None = None,  # type: ignore[type-var]
         n_objectives: int = 1,
         n_constraints: int = 0,
@@ -164,7 +164,9 @@ class FunctionEvaluator(Generic[G]):
         Create function evaluator.
 
         Args:
-            fitness_fn: Function mapping phenotype → fitness value(s)
+            fitness_fn: Function mapping phenotype → fitness value(s): a float,
+                an array of objective values, or a ``Fitness`` (returned as-is,
+                e.g. to report constraint values)
             decoder: Optional genome→phenotype decoder
             n_objectives: Number of objectives (inferred from fn output if 1)
             n_constraints: Number of constraints
@@ -213,8 +215,11 @@ class FunctionEvaluator(Generic[G]):
                 # Evaluate
                 raw_fitness = self._fitness_fn(phenotype)
 
-                # Convert to Fitness object
-                if isinstance(raw_fitness, int | float):
+                # Convert to Fitness object (a returned Fitness, e.g. one that
+                # carries constraint values, is used as-is)
+                if isinstance(raw_fitness, Fitness):
+                    fitness = raw_fitness
+                elif isinstance(raw_fitness, int | float):
                     fitness = Fitness.scalar(float(raw_fitness))
                 elif isinstance(raw_fitness, np.ndarray):
                     fitness = Fitness(values=raw_fitness.flatten())
