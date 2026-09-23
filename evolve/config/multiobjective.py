@@ -77,7 +77,8 @@ class ConstraintSpec:
 
     Attributes:
         name: Constraint identifier.
-        penalty_weight: Weight for penalty function approach (if used).
+        penalty_weight: Weight for this constraint's violation under
+            ``constraint_handling="penalty"`` (ignored under "dominance").
 
     Example:
         >>> constraint = ConstraintSpec(name="budget_limit", penalty_weight=1.0)
@@ -146,7 +147,14 @@ class MultiObjectiveConfig:
     """Constraint specifications for constraint dominance (FR-034)."""
 
     constraint_handling: Literal["dominance", "penalty"] = "dominance"
-    """How to handle constraints in Pareto ranking (FR-035, FR-036, FR-037)."""
+    """How to handle constraints in Pareto ranking (FR-035, FR-036, FR-037).
+
+    ``"dominance"``: feasible solutions dominate infeasible ones; between
+    infeasible ones, lower total violation wins.
+    ``"penalty"``: every objective (in ranking space, after directions) is
+    worsened by ``sum(penalty_weight_k * max(0, c_k))``, one weight per
+    ConstraintSpec in order, and plain Pareto dominance is used.
+    """
 
     def __post_init__(self) -> None:
         """Validate multi-objective configuration."""
@@ -158,6 +166,12 @@ class MultiObjectiveConfig:
             raise ValueError(
                 f"constraint_handling must be 'dominance' or 'penalty', "
                 f"got {self.constraint_handling}"
+            )
+        if self.constraint_handling == "penalty" and not self.constraints:
+            raise ValueError(
+                "constraint_handling='penalty' takes its weights from "
+                "ConstraintSpec.penalty_weight: declare one ConstraintSpec per "
+                "constraint value the evaluator returns"
             )
 
     @property

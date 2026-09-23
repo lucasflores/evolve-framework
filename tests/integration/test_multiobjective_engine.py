@@ -15,7 +15,7 @@ from typing import Any
 import numpy as np
 import pytest
 
-from evolve.config import ConstraintSpec, ObjectiveSpec, UnifiedConfig
+from evolve.config import ConstraintSpec, MultiObjectiveConfig, ObjectiveSpec, UnifiedConfig
 from evolve.core.types import Fitness, Individual
 from evolve.evaluation.evaluator import EvaluatorCapabilities
 from evolve.factory import create_engine, create_initial_population
@@ -248,6 +248,38 @@ class TestMultiObjectiveEngine:
         initial_g0 = np.mean([ind.genome.genes[0] for ind in evaluator.evaluated[:20]])
         final_g0 = np.mean([ind.genome.genes[0] for ind in result.population])
         assert final_g0 < initial_g0 - 0.2
+
+
+@pytest.mark.integration
+class TestPenaltyConstraintHandling:
+    """constraint_handling="penalty" ranks on penalised objectives."""
+
+    def test_survivors_use_penalised_ranking(self) -> None:
+        cfg = _config(("maximize", "minimize"), max_generations=3)
+        cfg = cfg.with_multiobjective(
+            objectives=cfg.multiobjective.objectives,
+            constraints=(ConstraintSpec(name="limit", penalty_weight=3.0),),
+            constraint_handling="penalty",
+        )
+        evaluator = SumAndFirstGene(limit=0.4)
+        recorder = _StepRecorder(evaluator)
+
+        create_engine(cfg, evaluator=evaluator).run(
+            create_initial_population(cfg), callbacks=[recorder]
+        )
+
+        selector = NSGA2Selector(directions=("maximize", "minimize"), penalty_weights=(3.0,))
+        for parents, offspring, survivors in recorder.steps:
+            expected = selector.select(parents + offspring, cfg.population_size, Random(0))
+            assert [ind.id for ind in survivors] == [ind.id for ind in expected]
+
+    def test_penalty_requires_constraint_specs(self) -> None:
+        """Weights come from ConstraintSpec.penalty_weight, so specs are required."""
+        with pytest.raises(ValueError, match="penalty"):
+            MultiObjectiveConfig(
+                objectives=(ObjectiveSpec(name="a"), ObjectiveSpec(name="b")),
+                constraint_handling="penalty",
+            )
 
 
 @pytest.mark.integration

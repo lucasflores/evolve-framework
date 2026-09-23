@@ -183,8 +183,12 @@ class EvolutionEngine(Generic[G]):
         if multiobjective is not None:
             from evolve.multiobjective.selection import NSGA2Selector
 
+            penalty = multiobjective.constraint_handling == "penalty"
             self._nsga2 = NSGA2Selector(
-                directions=tuple(obj.direction for obj in multiobjective.objectives)
+                directions=tuple(obj.direction for obj in multiobjective.objectives),
+                penalty_weights=(
+                    tuple(c.penalty_weight for c in multiobjective.constraints) if penalty else None
+                ),
             )
         self.seed = seed
         self.rng = create_rng(seed)
