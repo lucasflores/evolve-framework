@@ -146,6 +146,25 @@ class TestMultiObjectiveEngine:
         )
         assert result.population.ranking[0] == fresh_ranks
 
+    def test_hall_of_fame_keeps_non_dominated_individuals(self) -> None:
+        """The archive is ranked with the engine's NSGA-II ranker, not raw values[0]."""
+        from evolve.core.callbacks import HallOfFameCallback
+        from evolve.multiobjective import dominates
+
+        cfg = _config(("maximize", "minimize"), max_generations=5)
+        hall = HallOfFameCallback(max_size=3)
+
+        result = create_engine(cfg, evaluator=SumAndFirstGene()).run(
+            create_initial_population(cfg), callbacks=[hall]
+        )
+
+        selector = NSGA2Selector(directions=("maximize", "minimize"))
+        pool = selector.ranking_fitnesses(list(result.population) + hall.archive)
+        archived = pool[len(result.population) :]
+        assert len(archived) == 3
+        for fitness in archived:
+            assert not any(dominates(other, fitness) for other in pool)
+
     def test_survivors_are_nsga2_selection_of_parents_plus_offspring(self) -> None:
         """Each generation keeps NSGA2Selector's pick from parents + a full brood."""
         cfg = _config(max_generations=4)
