@@ -170,3 +170,30 @@ def test_derived_populations_keep_the_ranker() -> None:
     assert population.with_individuals(list(population)).ranker is ranker
     assert population.filter_evaluated().ranker is ranker
     assert population.increment_ages().ranker is ranker
+
+
+@pytest.mark.parametrize("minimize", [True, False])
+def test_stagnation_counts_feasibility_arriving_as_improvement(minimize: bool) -> None:
+    """The best's raw value may get worse when feasibility takes over; that is progress."""
+    from evolve.core.stopping import StagnationStopping
+
+    sign = 1.0 if minimize else -1.0
+    infeasible_only = Population([_ind(sign * 1.0, [0.5])], minimize=minimize)
+    feasible = Population([_ind(sign * 1.0, [0.5]), _ind(sign * 4.0, [-1.0])], minimize=minimize)
+    stagnation = StagnationStopping(patience=1, minimize=minimize)
+    stagnation.reset()
+
+    assert not stagnation.should_stop(0, infeasible_only, [])
+    assert not stagnation.should_stop(1, feasible, [])  # raw 1.0 -> 4.0, but now feasible
+    assert stagnation.should_stop(2, feasible, [])
+
+
+def test_stagnation_unconstrained_uses_min_delta_on_value() -> None:
+    from evolve.core.stopping import StagnationStopping
+
+    stagnation = StagnationStopping(patience=1, min_delta=0.5, minimize=True)
+    stagnation.reset()
+
+    assert not stagnation.should_stop(0, Population([_ind(3.0)]), [])
+    assert not stagnation.should_stop(1, Population([_ind(2.0)]), [])
+    assert stagnation.should_stop(2, Population([_ind(1.7)]), [])  # < min_delta better
