@@ -600,7 +600,8 @@ def _create_multiobjective_engine(
         elitism=config.elitism,
         crossover_rate=config.crossover_rate,
         mutation_rate=config.mutation_rate,
-        minimize=True,  # Multi-objective always minimizes (Pareto)
+        # Unused for ranking in MO mode: NSGA-II applies each ObjectiveSpec.direction
+        minimize=True,
         merge_rate=config.merge.merge_rate if config.merge else 0.0,
         metric_categories=mo_metric_cats,
     )

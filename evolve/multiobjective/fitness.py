@@ -20,6 +20,9 @@ class MultiObjectiveFitness:
 
     All objectives follow MAXIMIZATION convention.
     To minimize an objective, negate its value before creating fitness.
+    (Engines built from a ``MultiObjectiveConfig`` instead apply each
+    ``ObjectiveSpec.direction`` via ``NSGA2Selector.directions`` to the raw
+    values, so evaluators there return raw, un-negated values.)
 
     Attributes:
         objectives: Array of objective values, shape (n_objectives,)

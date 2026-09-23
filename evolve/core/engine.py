@@ -740,7 +740,8 @@ class EvolutionEngine(Generic[G]):
             return None
         from evolve.multiobjective.selection import NSGA2Selector
 
-        return NSGA2Selector()
+        objectives = self._multiobjective_config.objectives
+        return NSGA2Selector(directions=tuple(obj.direction for obj in objectives))
 
     def _get_best(self, population: Population[G]) -> Individual[G]:
         """Get best individual (multi-objective: a member of the first front)."""

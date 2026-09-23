@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from random import Random
 from typing import Generic, TypeVar
 
+import numpy as np
+
 from evolve.core.types import Individual
 from evolve.multiobjective.crowding import crowding_distance
 from evolve.multiobjective.fitness import MultiObjectiveFitness
@@ -31,10 +33,36 @@ class NSGA2Selector(Generic[G]):
     This is the environmental selection operator that maintains
     diversity while converging toward the Pareto front.
 
+    Attributes:
+        directions: Direction of each raw objective value, ``"maximize"`` or
+            ``"minimize"`` (e.g. from ``ObjectiveSpec.direction``). ``None``
+            means all maximize, the ``MultiObjectiveFitness`` convention.
+
     Example:
-        >>> selector = NSGA2Selector()
+        >>> selector = NSGA2Selector(directions=("maximize", "minimize"))
         >>> selected = selector.select(population, n_select=50, rng=rng)
     """
+
+    directions: tuple[str, ...] | None = None
+
+    def to_maximization(self, values: np.ndarray) -> np.ndarray:
+        """
+        Map raw objective values into the all-maximize space NSGA-II ranks in.
+
+        This is the one place objective directions are applied; fitness
+        objects keep their raw values for reporting.
+
+        Raises:
+            ValueError: If the number of values does not match ``directions``.
+        """
+        if self.directions is None:
+            return values
+        if len(values) != len(self.directions):
+            raise ValueError(
+                f"Fitness has {len(values)} objective values but "
+                f"{len(self.directions)} objective directions are declared"
+            )
+        return np.where(np.asarray(self.directions) == "minimize", -values, values)
 
     def select(
         self,
@@ -94,10 +122,10 @@ class NSGA2Selector(Generic[G]):
         """
         Fitnesses as NSGA-II ranks them, one per individual (same order).
 
-        A core ``Fitness`` is wrapped with its ``constraints`` carried over as
-        ``constraint_violations`` (both use > 0 = violated), so constrained
-        domination applies: feasible individuals always rank ahead of
-        infeasible ones.
+        Objectives go through ``to_maximization``. A core ``Fitness`` keeps its
+        ``constraints`` as ``constraint_violations`` (both use > 0 = violated),
+        so constrained domination applies: feasible individuals always rank
+        ahead of infeasible ones.
 
         Raises:
             TypeError: If an individual is unevaluated or has another fitness type.
@@ -106,19 +134,19 @@ class NSGA2Selector(Generic[G]):
 
         fitnesses: list[MultiObjectiveFitness] = []
         for ind in population:
-            if isinstance(ind.fitness, MultiObjectiveFitness):
-                fitnesses.append(ind.fitness)
-            elif isinstance(ind.fitness, Fitness):
-                fitnesses.append(
-                    MultiObjectiveFitness(
-                        objectives=ind.fitness.values,
-                        constraint_violations=ind.fitness.constraints,
-                    )
-                )
+            fitness = ind.fitness
+            if isinstance(fitness, MultiObjectiveFitness):
+                values, constraints = fitness.objectives, fitness.constraint_violations
+            elif isinstance(fitness, Fitness):
+                values, constraints = fitness.values, fitness.constraints
             else:
-                raise TypeError(
-                    f"Expected MultiObjectiveFitness or Fitness, got {type(ind.fitness)}"
+                raise TypeError(f"Expected MultiObjectiveFitness or Fitness, got {type(fitness)}")
+            fitnesses.append(
+                MultiObjectiveFitness(
+                    objectives=self.to_maximization(values),
+                    constraint_violations=constraints,
                 )
+            )
         return fitnesses
 
     def get_ranking_info(
