@@ -193,3 +193,24 @@ class TestCustomEvaluatorWorkflow:
         reg.register("my_eval", my_factory)
         result = reg.get("my_eval", threshold=0.9)
         assert result.threshold == 0.9
+
+
+class TestAcceptsParam:
+    """accepts_param() reports only explicitly named factory parameters."""
+
+    def test_named_parameter(self) -> None:
+        registry = get_evaluator_registry()
+
+        registry.register("with_decoder", lambda decoder=None: MagicMock(decoder=decoder))
+
+        assert registry.accepts_param("with_decoder", "decoder")
+
+    def test_kwargs_alone_does_not_count(self) -> None:
+        """benchmark forwards **kwargs, so it must not be handed arbitrary names."""
+        registry = get_evaluator_registry()
+
+        assert registry.accepts_param("benchmark", "function_name")
+        assert not registry.accepts_param("benchmark", "decoder")
+
+    def test_unknown_name(self) -> None:
+        assert not get_evaluator_registry().accepts_param("missing", "decoder")

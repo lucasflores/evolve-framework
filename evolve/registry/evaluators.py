@@ -7,6 +7,7 @@ for creating evaluator instances declaratively.
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Callable
 from typing import Any
 
@@ -94,6 +95,29 @@ class EvaluatorRegistry:
             raise type(exc)(
                 f"Failed to create evaluator '{name}' with params {params}: {exc}"
             ) from exc
+
+    def accepts_param(self, name: str, param: str) -> bool:
+        """
+        Check whether the factory registered as ``name`` declares ``param``.
+
+        Only an explicitly named parameter counts; a bare ``**kwargs`` does
+        not, because it may forward to a constructor that rejects the name.
+
+        Args:
+            name: Evaluator name.
+            param: Keyword argument name (e.g. ``"decoder"``).
+
+        Returns:
+            True if the factory's signature names ``param``.
+        """
+        self._ensure_initialized()
+        factory = self._factories.get(name)
+        if factory is None:
+            return False
+        try:
+            return param in inspect.signature(factory).parameters
+        except (TypeError, ValueError):  # builtins without a signature
+            return False
 
     def is_registered(self, name: str) -> bool:
         """
