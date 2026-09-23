@@ -16,6 +16,8 @@ from evolve.core.stopping import (
     CompositeStoppingCriterion,
     GenerationLimitStopping,
 )
+from evolve.core.types import Fitness
+from evolve.evaluation.evaluator import EvaluatorCapabilities
 from evolve.factory.engine import (
     OperatorCompatibilityError,
     _build_callbacks,
@@ -24,7 +26,8 @@ from evolve.factory.engine import (
     create_engine,
     create_initial_population,
 )
-from evolve.registry.decoders import reset_decoder_registry
+from evolve.registry.decoders import get_decoder_registry, reset_decoder_registry
+from evolve.registry.evaluators import get_evaluator_registry, reset_evaluator_registry
 from evolve.registry.genomes import reset_genome_registry
 from evolve.registry.operators import reset_operator_registry
 
@@ -550,3 +553,98 @@ class TestDecoderWiring:
         assert isinstance(engine.evaluator, FunctionEvaluator)
         assert engine.evaluator._decoder is mock_decoder
         assert mock_decoder.hidden_size == 128
+
+
+class _ScaledGenes:
+    """Decoder turning a VectorGenome into its genes times ``factor``."""
+
+    def __init__(self, factor: float = 10.0) -> None:
+        self.factor = factor
+
+    def decode(self, genome: Any) -> Any:
+        return genome.genes * self.factor
+
+
+class _DecodingBatchEvaluator:
+    """Custom batch evaluator whose factory accepts ``decoder``."""
+
+    capabilities = EvaluatorCapabilities()
+
+    def __init__(self, decoder: Any = None, offset: float = 0.0) -> None:
+        self.decoder = decoder
+        self.offset = offset
+
+    def evaluate(self, individuals: Any, seed: int | None = None) -> list[Any]:
+        return [
+            Fitness.scalar(float(sum(self.decoder.decode(ind.genome))) + self.offset)
+            for ind in individuals
+        ]
+
+
+class TestDecoderForRegisteredEvaluators:
+    """config.decoder reaches evaluators resolved from the EvaluatorRegistry."""
+
+    @pytest.fixture(autouse=True)
+    def _fresh_evaluator_registry(self):
+        reset_evaluator_registry()
+        get_decoder_registry().register("scaled_genes", _ScaledGenes)
+        yield
+        reset_evaluator_registry()
+
+    @staticmethod
+    def _config(evaluator: str, **overrides: Any) -> UnifiedConfig:
+        params: dict[str, Any] = {
+            "population_size": 6,
+            "max_generations": 1,
+            "selection": "tournament",
+            "crossover": "sbx",
+            "mutation": "gaussian",
+            "genome_type": "vector",
+            "genome_params": {"dimensions": 3, "bounds": (-1.0, 1.0)},
+            "evaluator": evaluator,
+            "decoder": "scaled_genes",
+            "decoder_params": {"factor": 10.0},
+            "seed": 3,
+        }
+        params.update(overrides)
+        return UnifiedConfig(**params)
+
+    def test_registered_batch_evaluator_receives_decoder(self) -> None:
+        get_evaluator_registry().register("decoding_batch", _DecodingBatchEvaluator)
+        config = self._config("decoding_batch", evaluator_params={"offset": 1.0})
+
+        engine = create_engine(config)
+        result = engine.run(create_initial_population(config))
+
+        assert isinstance(engine.evaluator.decoder, _ScaledGenes)
+        assert engine.evaluator.offset == 1.0
+        for ind in result.population:
+            expected = 10.0 * float(sum(ind.genome.genes)) + 1.0
+            assert float(ind.fitness.values[0]) == pytest.approx(expected)
+
+    def test_explicit_decoder_param_wins(self) -> None:
+        get_evaluator_registry().register("decoding_batch", _DecodingBatchEvaluator)
+        mine = _ScaledGenes(factor=2.0)
+        config = self._config("decoding_batch")
+
+        engine = create_engine(config, runtime_overrides={"decoder": mine})
+
+        assert engine.evaluator.decoder is mine
+
+    def test_factory_without_decoder_param_still_works_and_warns(self) -> None:
+        def no_decoder_factory(offset: float = 0.0) -> Any:
+            return _DecodingBatchEvaluator(decoder=_ScaledGenes(1.0), offset=offset)
+
+        get_evaluator_registry().register("no_decoder", no_decoder_factory)
+        config = self._config("no_decoder")
+
+        with pytest.warns(UserWarning, match="'no_decoder' has no `decoder` parameter"):
+            engine = create_engine(config)
+
+        assert engine.evaluator.decoder.factor == 1.0
+
+    def test_explicit_non_function_evaluator_warns(self) -> None:
+        config = self._config("unused")
+
+        with pytest.warns(UserWarning, match="passed to create_engine"):
+            create_engine(config, evaluator=_DecodingBatchEvaluator(decoder=_ScaledGenes()))

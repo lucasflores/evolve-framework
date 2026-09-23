@@ -75,6 +75,11 @@ def create_engine(
         2. ``config.evaluator`` resolved from EvaluatorRegistry.
         3. Neither → ValueError.
 
+    A declared ``config.decoder`` is passed as ``decoder=`` to a registered
+    evaluator factory that names that parameter (unless ``evaluator_params``
+    already set one), and injected into a ``FunctionEvaluator`` without a
+    decoder. Otherwise it cannot be delivered and a ``UserWarning`` says so.
+
     Args:
         config: Unified experiment configuration.
         evaluator: Fitness evaluator, callable, or None for declarative resolution.
@@ -115,31 +120,26 @@ def create_engine(
         decoder = dec_registry.get(config.decoder, **config.decoder_params)
 
     # --- Evaluator resolution ---
+    from evolve.evaluation.evaluator import FunctionEvaluator
+
+    decoder_delivered = decoder is None
+    explicit_evaluator = evaluator is not None
     if evaluator is not None:
         # Explicit evaluator argument: wrap callable if needed (FR-032)
-        from evolve.evaluation.evaluator import FunctionEvaluator
-
         if not isinstance(evaluator, Evaluator):
             evaluator = FunctionEvaluator(evaluator, decoder=decoder)
-        elif (
-            decoder is not None
-            and isinstance(evaluator, FunctionEvaluator)
-            and evaluator._decoder is None
-        ):
-            evaluator._decoder = decoder
+            decoder_delivered = True
     elif config.evaluator is not None:
         # Declarative resolution from registry
         eval_registry = get_evaluator_registry()
         merged_params = dict(config.evaluator_params)
         if runtime_overrides:
             merged_params.update(runtime_overrides)
+        # Factories that name a `decoder` parameter receive the declared one
+        if decoder is not None and eval_registry.accepts_param(config.evaluator, "decoder"):
+            merged_params.setdefault("decoder", decoder)
+            decoder_delivered = True
         evaluator = eval_registry.get(config.evaluator, **merged_params)
-        # Inject decoder into registry-resolved FunctionEvaluator if needed
-        if decoder is not None:
-            from evolve.evaluation.evaluator import FunctionEvaluator
-
-            if isinstance(evaluator, FunctionEvaluator) and evaluator._decoder is None:
-                evaluator._decoder = decoder
     else:
         eval_registry = get_evaluator_registry()
         available = eval_registry.list_evaluators()
@@ -147,6 +147,25 @@ def create_engine(
             "No evaluator provided. Either set config.evaluator to a registered "
             "evaluator name or pass an evaluator argument to create_engine(). "
             f"Available evaluators: {available}"
+        )
+
+    # Inject the decoder into a FunctionEvaluator that has none
+    if not decoder_delivered and isinstance(evaluator, FunctionEvaluator):
+        if evaluator._decoder is None:
+            evaluator._decoder = decoder
+        decoder_delivered = True
+    if not decoder_delivered:
+        import warnings
+
+        reason = (
+            f"the {type(evaluator).__name__} passed to create_engine() is not a FunctionEvaluator"
+            if explicit_evaluator
+            else f"the factory registered as {config.evaluator!r} has no `decoder` parameter"
+        )
+        warnings.warn(
+            f"config.decoder={config.decoder!r} is ignored: {reason}.",
+            UserWarning,
+            stacklevel=2,
         )
 
     # Validate operator compatibility (FR-031)
