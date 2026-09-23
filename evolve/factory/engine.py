@@ -305,12 +305,22 @@ def _validate_operator_compatibility(config: UnifiedConfig) -> None:
 
     Raises:
         OperatorCompatibilityError: If any operator is incompatible.
+        ValueError: If crowded_tournament is used without multi-objective settings.
 
     Note:
         This is a skeleton implementation. Full validation requires
         compatibility metadata from T047-T049.
     """
     op_registry = get_operator_registry()
+
+    # Crowded tournament compares Pareto rank and crowding distance
+    if config.selection == "crowded_tournament" and not config.is_multiobjective:
+        raise ValueError(
+            "selection='crowded_tournament' ranks individuals by Pareto front and needs "
+            "multi-objective settings: declare objectives with "
+            "UnifiedConfig(...).with_multiobjective(...), or choose a single-objective "
+            "selection such as 'tournament'."
+        )
 
     # Check selection
     if not op_registry.is_compatible(config.selection, config.genome_type):

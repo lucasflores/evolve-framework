@@ -766,3 +766,37 @@ class TestMinimizePlumbing:
         stagnation = StagnationStopping(patience=1, minimize=False)
 
         assert not stagnation.should_stop(0, population, [])
+
+
+class TestCrowdedTournamentNeedsMultiobjective:
+    """crowded_tournament ranks Pareto fronts; it has no single-objective meaning."""
+
+    def test_refused_without_multiobjective(self) -> None:
+        config = UnifiedConfig(
+            population_size=10,
+            selection="crowded_tournament",
+            crossover="sbx",
+            mutation="gaussian",
+            genome_type="vector",
+            genome_params={"dimensions": 3, "bounds": (-1.0, 1.0)},
+        )
+
+        with pytest.raises(ValueError, match="with_multiobjective"):
+            create_engine(config, simple_fitness)
+
+    def test_allowed_with_multiobjective(self) -> None:
+        config = UnifiedConfig(
+            population_size=10,
+            selection="crowded_tournament",
+            selection_params={"tournament_size": 3},
+            crossover="sbx",
+            mutation="gaussian",
+            genome_type="vector",
+            genome_params={"dimensions": 3, "bounds": (-1.0, 1.0)},
+        ).with_multiobjective(
+            objectives=(ObjectiveSpec(name="a"), ObjectiveSpec(name="b")),
+        )
+
+        engine = create_engine(config, simple_fitness)
+
+        assert engine.selection.tournament_size == 3
