@@ -91,20 +91,23 @@ class TestVectorFitnessSingleObjective:
 
 @pytest.mark.integration
 class TestUnconstrainedRegression:
-    """Pinned results from main before feasibility-first ranking.
+    """Pinned seeded results of unconstrained runs.
 
-    Unconstrained runs must not change. The tolerance only absorbs last-ulp
-    libm differences across CI platforms; any change in selection shows up
-    far above it.
+    Feasibility-first ranking was verified not to change these (at that
+    commit the pins were main's values). The brood fix, which draws one
+    parent per child instead of two, changes the RNG stream, so the pins
+    were re-captured in that commit; they differ from main only because of
+    it. The tolerance only absorbs last-ulp libm differences across CI
+    platforms; any change in selection shows up far above it.
     """
 
     @pytest.mark.parametrize(
         ("selection", "minimize", "best", "last_mean"),
         [
-            ("tournament", True, 0.010572214302964119, 0.17619207498360298),
-            ("rank", True, 0.4496181037594442, 0.9057238536359398),
-            ("tournament", False, 15.40464104400667, 14.503368873241659),
-            ("roulette", True, 0.0282603696801689, 0.3002451820312997),
+            ("tournament", True, 0.2694196831140802, 0.3865760074461476),
+            ("rank", True, 0.0945249796631048, 0.34445046101527094),
+            ("tournament", False, 16.0, 15.622126372980961),
+            ("roulette", True, 0.1677831782963016, 0.8133967483581461),
         ],
     )
     def test_sphere_run_is_unchanged(

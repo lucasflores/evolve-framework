@@ -327,7 +327,8 @@ class EvolutionEngine(Generic[G]):
 
         # Time selection phase
         self._timer.start("selection")
-        n_parents = n_offspring * 2
+        # Each pair yields two children, so an (even) n_offspring parents suffice
+        n_parents = n_offspring + n_offspring % 2
         if nsga2 is not None:
             # Crowded tournament compares Pareto rank, then crowding distance
             # (cached on the population: assigned at survival, or computed once)

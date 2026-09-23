@@ -269,3 +269,42 @@ class TestSearchMovementMetrics:
         metrics = engine._compute_metrics(pop)
 
         assert "centroid_drift" not in metrics
+
+
+def test_brood_draws_one_parent_per_child() -> None:
+    """Parents are drawn in pairs, one per child, not two per child."""
+    import numpy as np
+
+    from evolve.core.engine import EvolutionConfig, EvolutionEngine, create_initial_population
+    from evolve.core.operators.crossover import BlendCrossover
+    from evolve.core.operators.mutation import GaussianMutation
+    from evolve.core.operators.selection import TournamentSelection
+    from evolve.evaluation.evaluator import FunctionEvaluator
+    from evolve.representation.vector import VectorGenome
+    from evolve.utils.random import create_rng
+
+    drawn: list[int] = []
+
+    class CountingTournament(TournamentSelection):
+        def select(self, population, n, rng):  # type: ignore[no-untyped-def]
+            drawn.append(n)
+            return super().select(population, n, rng)
+
+    bounds = (np.full(2, -1.0), np.full(2, 1.0))
+    for elitism, expected in ((1, 10), (2, 8)):  # 9 children -> 10 parents; 8 -> 8
+        drawn.clear()
+        engine = EvolutionEngine(
+            config=EvolutionConfig(population_size=10, max_generations=2, elitism=elitism),
+            evaluator=FunctionEvaluator(lambda g: float(np.sum(g))),
+            selection=CountingTournament(),
+            crossover=BlendCrossover(),
+            mutation=GaussianMutation(),
+        )
+        population = create_initial_population(
+            lambda r: VectorGenome.random(2, bounds, r), 10, create_rng(0)
+        )
+
+        result = engine.run(population)
+
+        assert drawn == [expected, expected]
+        assert len(result.population) == 10
