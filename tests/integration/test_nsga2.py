@@ -337,6 +337,50 @@ class TestSelectWithPrecomputed:
         assert all(w is population[1] for w in winners)
 
 
+class TestNSGA2Penalty:
+    """constraint_handling="penalty": weighted violation subtracted in ranking space."""
+
+    @staticmethod
+    def _population() -> list[Individual[VectorGenome]]:
+        genome = VectorGenome(genes=np.zeros(1), bounds=(np.zeros(1), np.ones(1)))
+        return [
+            # Violations (1.0, 0.5): penalty = w1 * 1.0 + w2 * 0.5
+            Individual(
+                genome=genome,
+                fitness=Fitness(values=np.array([10.0, 10.0]), constraints=np.array([1.0, 0.5])),
+            ),
+            Individual(
+                genome=genome,
+                fitness=Fitness(values=np.array([1.0, 1.0]), constraints=np.array([-1.0, 0.0])),
+            ),
+        ]
+
+    def test_small_penalty_lets_infeasible_dominate(self):
+        """Penalty 1*1 + 2*0.5 = 2 leaves (8, 8), which dominates (1, 1)."""
+        ranks, _ = NSGA2Selector(penalty_weights=(1.0, 2.0)).get_ranking_info(self._population())
+
+        assert ranks == {0: 0, 1: 1}
+
+    def test_large_penalty_ranks_infeasible_last(self):
+        """Penalty 1*1 + 20*0.5 = 11 leaves (-1, -1), dominated by (1, 1)."""
+        ranks, _ = NSGA2Selector(penalty_weights=(1.0, 20.0)).get_ranking_info(self._population())
+
+        assert ranks == {0: 1, 1: 0}
+
+    def test_penalty_applies_after_directions(self):
+        """Minimized objectives are negated first, then penalised (worse either way)."""
+        selector = NSGA2Selector(directions=("minimize", "maximize"), penalty_weights=(1.0, 1.0))
+
+        penalised = selector.ranking_fitnesses(self._population())
+
+        assert penalised[0].objectives.tolist() == [-11.5, 8.5]
+        assert penalised[0].constraint_violations is None
+
+    def test_weight_count_must_match_constraints(self):
+        with pytest.raises(ValueError, match="2 constraint values but 1 penalty weights"):
+            NSGA2Selector(penalty_weights=(1.0,)).get_ranking_info(self._population())
+
+
 class TestHypervolume:
     """Test hypervolume calculation."""
 

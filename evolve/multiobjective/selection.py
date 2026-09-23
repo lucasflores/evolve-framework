@@ -37,6 +37,11 @@ class NSGA2Selector(Generic[G]):
         directions: Direction of each raw objective value, ``"maximize"`` or
             ``"minimize"`` (e.g. from ``ObjectiveSpec.direction``). ``None``
             means all maximize, the ``ObjectiveSpec`` default.
+        penalty_weights: One weight per constraint value (e.g. from
+            ``ConstraintSpec.penalty_weight``) for penalty constraint handling:
+            every objective, in ranking space, is reduced by
+            ``sum(w_k * max(0, c_k))`` and plain Pareto dominance is used.
+            ``None`` (default) uses constrained domination (feasibility first).
 
     Example:
         >>> selector = NSGA2Selector(directions=("maximize", "minimize"))
@@ -44,6 +49,7 @@ class NSGA2Selector(Generic[G]):
     """
 
     directions: tuple[str, ...] | None = None
+    penalty_weights: tuple[float, ...] | None = None
 
     def to_maximization(self, values: np.ndarray) -> np.ndarray:
         """
@@ -142,10 +148,13 @@ class NSGA2Selector(Generic[G]):
         Objectives go through ``to_maximization``. A core ``Fitness`` keeps its
         ``constraints`` as ``constraint_violations`` (both use > 0 = violated),
         so constrained domination applies: feasible individuals always rank
-        ahead of infeasible ones.
+        ahead of infeasible ones. With ``penalty_weights`` the weighted
+        violation is subtracted from every objective instead and no
+        constraint violations are attached.
 
         Raises:
             TypeError: If an individual is unevaluated or has another fitness type.
+            ValueError: If constraint values and ``penalty_weights`` differ in count.
         """
         from evolve.core.types import Fitness
 
@@ -158,13 +167,26 @@ class NSGA2Selector(Generic[G]):
                 values, constraints = fitness.values, fitness.constraints
             else:
                 raise TypeError(f"Expected MultiObjectiveFitness or Fitness, got {type(fitness)}")
+            objectives = self.to_maximization(values)
+            if self.penalty_weights is not None:
+                objectives = objectives - self._penalty(constraints)
+                constraints = None
             fitnesses.append(
-                MultiObjectiveFitness(
-                    objectives=self.to_maximization(values),
-                    constraint_violations=constraints,
-                )
+                MultiObjectiveFitness(objectives=objectives, constraint_violations=constraints)
             )
         return fitnesses
+
+    def _penalty(self, constraints: np.ndarray | None) -> float:
+        """Weighted total violation, sum(w_k * max(0, c_k)); 0 without constraints."""
+        assert self.penalty_weights is not None
+        if constraints is None:
+            return 0.0
+        if len(constraints) != len(self.penalty_weights):
+            raise ValueError(
+                f"Fitness has {len(constraints)} constraint values but "
+                f"{len(self.penalty_weights)} penalty weights are declared"
+            )
+        return float(np.dot(self.penalty_weights, np.maximum(constraints, 0)))
 
     def get_ranking_info(
         self,
