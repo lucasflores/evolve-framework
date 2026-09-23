@@ -184,10 +184,16 @@ def _register_builtin_evaluators(registry: EvaluatorRegistry) -> None:
     # -----------------------------------------
     # llm_judge: deferred import
     # -----------------------------------------
-    def create_llm_judge_evaluator(**kwargs: Any) -> Any:
-        """Create an LLMJudgeEvaluator (deferred import)."""
+    def create_llm_judge_evaluator(decoder: Any = None, **kwargs: Any) -> Any:
+        """Create an LLMJudgeEvaluator (deferred import).
+
+        ``decoder`` is named so create_engine() can pass ``config.decoder``;
+        LLMJudgeEvaluator still requires one.
+        """
         from evolve.evaluation.llm_judge import LLMJudgeEvaluator
 
+        if decoder is not None:
+            kwargs["decoder"] = decoder
         return LLMJudgeEvaluator(**kwargs)
 
     registry.register("llm_judge", create_llm_judge_evaluator)
@@ -206,11 +212,11 @@ def _register_builtin_evaluators(registry: EvaluatorRegistry) -> None:
     # -----------------------------------------
     # scm
     # -----------------------------------------
-    def create_scm_evaluator(**kwargs: Any) -> Any:
-        """Create an SCMEvaluator."""
+    def create_scm_evaluator(decoder: Any = None, **kwargs: Any) -> Any:
+        """Create an SCMEvaluator (``decoder`` named so config.decoder reaches it)."""
         from evolve.evaluation.scm_evaluator import SCMEvaluator
 
-        return SCMEvaluator(**kwargs)
+        return SCMEvaluator(decoder=decoder, **kwargs)
 
     registry.register("scm", create_scm_evaluator)
 

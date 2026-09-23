@@ -235,3 +235,54 @@ class TestAcceptsParam:
         registry.register("keyword_only", make)
 
         assert registry.accepts_param("keyword_only", "decoder")
+
+
+class TestBuiltinDecoderParameters:
+    """scm and llm_judge evaluators use a decoder, so their factories name it."""
+
+    def test_builtins_that_use_a_decoder_name_it(self) -> None:
+        registry = get_evaluator_registry()
+
+        assert registry.accepts_param("scm", "decoder")
+        assert registry.accepts_param("llm_judge", "decoder")
+        assert not registry.accepts_param("rl", "decoder")
+
+    def test_scm_receives_decoder(self) -> None:
+        import numpy as np
+
+        from evolve.evaluation.scm_evaluator import SCMEvaluator, SCMFitnessConfig
+
+        decoder = MagicMock()
+        params = {
+            "data": np.zeros((4, 2)),
+            "variable_names": ("X", "Y"),
+            "config": SCMFitnessConfig(),
+        }
+
+        with_decoder = get_evaluator_registry().get("scm", decoder=decoder, **params)
+        without = get_evaluator_registry().get("scm", **params)
+
+        assert isinstance(with_decoder, SCMEvaluator)
+        assert with_decoder._decoder is decoder
+        assert without._decoder is None
+
+    def test_llm_judge_receives_decoder(self) -> None:
+        from evolve.evaluation.task_spec import RubricCriterion, TaskSpec
+
+        decoder = MagicMock()
+        task_spec = TaskSpec(
+            task_type="generation",
+            inputs=({"input": "q"},),
+            rubric=(RubricCriterion(name="r", description="d"),),
+        )
+
+        evaluator = get_evaluator_registry().get(
+            "llm_judge", decoder=decoder, task_spec=task_spec, judge_model_id="m"
+        )
+
+        assert evaluator.decoder is decoder
+
+    def test_llm_judge_still_requires_a_decoder(self) -> None:
+        """Naming the parameter does not make the required decoder optional."""
+        with pytest.raises(TypeError, match="decoder"):
+            get_evaluator_registry().get("llm_judge", task_spec=MagicMock(), judge_model_id="m")
