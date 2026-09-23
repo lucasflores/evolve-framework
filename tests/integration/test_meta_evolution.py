@@ -79,8 +79,9 @@ class TestMultiObjectiveWorkflow:
 
         engine = create_engine(config, fitness)
 
-        assert hasattr(engine, "_reference_point")
-        assert engine._reference_point == [5.0, 5.0]
+        # One source of truth: the settings the engine ranks and measures with
+        assert not hasattr(engine, "_reference_point")
+        assert engine._multiobjective_config.reference_point == [5.0, 5.0]
 
     def test_multiobjective_config_serialization(self) -> None:
         """Test multi-objective config survives JSON round-trip."""
@@ -332,6 +333,7 @@ class TestConstrainedMultiObjective:
 
         engine = create_engine(config, fitness)
 
-        assert hasattr(engine, "_constraint_specs")
-        assert hasattr(engine, "_constraint_handling")
-        assert engine._constraint_handling == "penalty"
+        assert not hasattr(engine, "_constraint_specs")
+        assert not hasattr(engine, "_constraint_handling")
+        assert engine._multiobjective_config.constraint_handling == "penalty"
+        assert [c.name for c in engine._multiobjective_config.constraints] == ["g1"]

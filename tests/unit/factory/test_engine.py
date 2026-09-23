@@ -410,8 +410,8 @@ class TestMultiObjectiveEngine:
 
         engine = create_engine(config, simple_fitness)
 
-        assert hasattr(engine, "_reference_point")
-        assert engine._reference_point == [10.0, 10.0]
+        assert not hasattr(engine, "_reference_point")
+        assert engine._multiobjective_config.reference_point == [10.0, 10.0]
 
 
 class TestCreateInitialPopulation:

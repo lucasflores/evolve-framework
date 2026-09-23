@@ -637,15 +637,6 @@ def _create_multiobjective_engine(
         multiobjective=mo_settings,
     )
 
-    # Store reference point for hypervolume tracking (T055)
-    if mo_settings.reference_point is not None:
-        engine._reference_point = mo_settings.reference_point  # type: ignore[attr-defined]
-
-    # Store constraint handling settings (T056a-T056c)
-    if mo_settings.has_constraints:
-        engine._constraint_specs = mo_settings.constraints  # type: ignore[attr-defined]
-        engine._constraint_handling = mo_settings.constraint_handling  # type: ignore[attr-defined]
-
     # Attach callbacks as creation callbacks for persistence
     engine._creation_callbacks = callbacks
 
