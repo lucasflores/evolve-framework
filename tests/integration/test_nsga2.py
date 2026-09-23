@@ -306,6 +306,37 @@ class TestNSGA2Directions:
             NSGA2Selector(directions=("maximize",)).get_ranking_info(self._population())
 
 
+class TestSelectWithPrecomputed:
+    """The convenience helper can rank with the engine's directions."""
+
+    @staticmethod
+    def _population() -> list[Individual[VectorGenome]]:
+        genome = VectorGenome(genes=np.zeros(1), bounds=(np.zeros(1), np.ones(1)))
+        return [
+            Individual(genome=genome, fitness=Fitness(values=np.array([1.0, 1.0]))),
+            Individual(genome=genome, fitness=Fitness(values=np.array([1.0, 5.0]))),
+        ]
+
+    def test_prebuilt_ranker_applies_directions(self, rng):
+        population = self._population()
+        ranker = NSGA2Selector(directions=("maximize", "minimize"))
+
+        winners = CrowdedTournamentSelection(tournament_size=2).select_with_precomputed(
+            population, 10, rng, ranker=ranker
+        )
+
+        assert all(w is population[0] for w in winners)
+
+    def test_default_is_unchanged(self, rng):
+        population = self._population()
+
+        winners = CrowdedTournamentSelection(tournament_size=2).select_with_precomputed(
+            population, 10, rng
+        )
+
+        assert all(w is population[1] for w in winners)
+
+
 class TestHypervolume:
     """Test hypervolume calculation."""
 
