@@ -825,3 +825,48 @@ class TestEdgeCases:
 
         report = dry_run(config, evaluator=evaluator, seed=42)
         assert report.early_stop_possible is False
+
+
+class TestMultiObjectiveCostModel:
+    """The MO cost model matches what the engine does per generation."""
+
+    @staticmethod
+    def _mo_config() -> UnifiedConfig:
+        from evolve.config.multiobjective import MultiObjectiveConfig, ObjectiveSpec
+
+        return _make_config(
+            population_size=100,
+            elitism=5,
+            multiobjective=MultiObjectiveConfig(
+                objectives=(ObjectiveSpec(name="f1"), ObjectiveSpec(name="f2")),
+            ),
+        )
+
+    def test_full_brood_and_n_evaluations(self) -> None:
+        """No elitism in MO mode: N offspring, N evaluations, one survival sort."""
+        constants = _derive_structural_constants(self._mo_config())
+
+        assert constants["evaluation"] == 100
+        assert constants["selection"] == 100
+        assert constants["crossover"] == 50
+        assert constants["mutation"] == 100
+        assert constants["ranking"] == 1
+
+    def test_ranking_benchmark_sorts_parents_plus_offspring(self, monkeypatch: Any) -> None:
+        """The timed ranking is one survival sort over 2N, as in the engine."""
+        import evolve.multiobjective.selection as selection
+        from evolve.experiment.dry_run import _benchmark_ranking
+
+        sizes: list[int] = []
+        original = selection.fast_non_dominated_sort
+
+        def counting_sort(fitnesses: Any) -> Any:
+            sizes.append(len(fitnesses))
+            return original(fitnesses)
+
+        monkeypatch.setattr(selection, "fast_non_dominated_sort", counting_sort)
+
+        (phase,) = _benchmark_ranking(self._mo_config(), timeout=30.0)
+
+        assert sizes and set(sizes) == {200}
+        assert phase.operations_per_generation == 1

@@ -264,7 +264,8 @@ def _create_sample_population(
 def _derive_structural_constants(config: UnifiedConfig) -> dict[str, int]:
     """Compute per-generation operation counts from config."""
     pop = config.population_size
-    elite = config.elitism
+    # NSGA-II keeps its elites through survival and breeds a full brood
+    elite = 0 if config.is_multiobjective else config.elitism
     n_offspring = max(pop - elite, 0)
     # The engine draws one parent per child (rounded up to a pair) and
     # every pair yields two children
@@ -286,7 +287,9 @@ def _derive_structural_constants(config: UnifiedConfig) -> dict[str, int]:
         constants["erp_matchability"] = pop  # ~pop matchability checks
 
     if config.is_multiobjective:
-        constants["ranking"] = 1  # one sort per generation
+        # One survival sort over parents + offspring (2N) per generation;
+        # mating, metrics and the best reuse its ranking
+        constants["ranking"] = 1
 
     if config.decoder is not None:
         constants["decoding"] = pop  # one decode per individual
@@ -921,7 +924,7 @@ def _benchmark_ranking(
     config: UnifiedConfig,
     timeout: float,
 ) -> list[PhaseEstimate]:
-    """Benchmark NSGA-II non-dominated sorting and crowding distance."""
+    """Benchmark one NSGA-II survival step: sort 2N, keep N by rank and crowding."""
     constants = _derive_structural_constants(config)
     generations = config.max_generations
 
@@ -931,21 +934,19 @@ def _benchmark_ranking(
 
     pop_size = config.population_size
 
-    # Create random fitness values for a full-size population
+    # Random fitness values for parents + offspring, as the engine's survival sees
+    from evolve.core.types import Fitness, Individual
+    from evolve.multiobjective.selection import NSGA2Selector
+
     rng = np.random.default_rng(42)
-    random_fitnesses_array = rng.random((pop_size, n_objectives))
+    combined = [
+        Individual(genome=None, fitness=Fitness(values=values))
+        for values in rng.random((2 * pop_size, n_objectives))
+    ]
+    selector: NSGA2Selector[Any] = NSGA2Selector()
 
     def bench_ranking() -> None:
-        from evolve.multiobjective.crowding import crowding_distance
-        from evolve.multiobjective.fitness import MultiObjectiveFitness
-        from evolve.multiobjective.ranking import fast_non_dominated_sort
-
-        fitnesses = [
-            MultiObjectiveFitness(objectives=random_fitnesses_array[i]) for i in range(pop_size)
-        ]
-        fronts = fast_non_dominated_sort(fitnesses)
-        if fronts:
-            crowding_distance(fitnesses, fronts[0])
+        selector.select_ranked(combined, pop_size)
 
     ranking_ms = _benchmark_phase(bench_ranking, timeout)
     if ranking_ms < 0:
