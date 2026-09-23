@@ -302,6 +302,7 @@ class CrowdedTournamentSelection(Generic[G]):
         population: Sequence[Individual[G]],
         n_select: int,
         rng: Random,
+        ranker: NSGA2Selector[G] | None = None,
     ) -> list[Individual[G]]:
         """
         Select individuals, computing ranks and crowding internally.
@@ -312,10 +313,13 @@ class CrowdedTournamentSelection(Generic[G]):
             population: Population to select from
             n_select: Number to select
             rng: Random number generator
+            ranker: Selector that ranks the population, e.g. one built with the
+                config's objective directions. Default: ``NSGA2Selector()``
+                (every objective maximized).
 
         Returns:
             Selected individuals
         """
-        selector = NSGA2Selector[G]()
+        selector = ranker if ranker is not None else NSGA2Selector[G]()
         ranks, crowding = selector.get_ranking_info(population)
         return self.select(population, n_select, ranks, crowding, rng)
