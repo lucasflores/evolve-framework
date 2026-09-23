@@ -214,3 +214,24 @@ class TestAcceptsParam:
 
     def test_unknown_name(self) -> None:
         assert not get_evaluator_registry().accepts_param("missing", "decoder")
+
+    def test_positional_only_does_not_count(self) -> None:
+        """Factories are called with keywords; a positional-only decoder can't receive it."""
+        registry = get_evaluator_registry()
+
+        def make(decoder=None, /, **kwargs):  # type: ignore[no-untyped-def]
+            return MagicMock(decoder=decoder, **kwargs)
+
+        registry.register("positional_only", make)
+
+        assert not registry.accepts_param("positional_only", "decoder")
+
+    def test_keyword_only_counts(self) -> None:
+        registry = get_evaluator_registry()
+
+        def make(*, decoder=None):  # type: ignore[no-untyped-def]
+            return MagicMock(decoder=decoder)
+
+        registry.register("keyword_only", make)
+
+        assert registry.accepts_param("keyword_only", "decoder")

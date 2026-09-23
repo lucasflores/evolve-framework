@@ -7,9 +7,10 @@ for creating evaluator instances declaratively.
 
 from __future__ import annotations
 
-import inspect
 from collections.abc import Callable
 from typing import Any
+
+from evolve.registry._params import accepts_keyword
 
 __all__ = [
     "EvaluatorRegistry",
@@ -100,8 +101,9 @@ class EvaluatorRegistry:
         """
         Check whether the factory registered as ``name`` declares ``param``.
 
-        Only an explicitly named parameter counts; a bare ``**kwargs`` does
-        not, because it may forward to a constructor that rejects the name.
+        Only a parameter that can be passed by keyword counts: factories are
+        called as ``factory(**params)``, so positional-only parameters and a
+        bare ``**kwargs`` do not (see ``accepts_keyword``).
 
         Args:
             name: Evaluator name.
@@ -112,12 +114,7 @@ class EvaluatorRegistry:
         """
         self._ensure_initialized()
         factory = self._factories.get(name)
-        if factory is None:
-            return False
-        try:
-            return param in inspect.signature(factory).parameters
-        except (TypeError, ValueError):  # builtins without a signature
-            return False
+        return factory is not None and accepts_keyword(factory, param)
 
     def is_registered(self, name: str) -> bool:
         """
