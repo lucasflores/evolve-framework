@@ -614,10 +614,8 @@ def _create_multiobjective_engine(
         seed=seed,
         stopping=stopping,
         merge=merge,
+        multiobjective=mo_settings,
     )
-
-    # Store multi-objective settings for later use (runtime attribute)
-    engine._multiobjective_config = mo_settings  # type: ignore[attr-defined]
 
     # Store reference point for hypervolume tracking (T055)
     if mo_settings.reference_point is not None:

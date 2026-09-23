@@ -19,7 +19,7 @@ import math
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from random import Random
-from typing import Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 from uuid import uuid4
 
 import numpy as np
@@ -34,6 +34,10 @@ from evolve.evaluation.evaluator import Evaluator
 from evolve.experiment.collectors.ensemble import EnsembleMetricCollector
 from evolve.utils.random import create_rng
 from evolve.utils.timing import GenerationTimer
+
+if TYPE_CHECKING:
+    from evolve.config.multiobjective import MultiObjectiveConfig
+    from evolve.multiobjective.selection import NSGA2Selector
 
 G = TypeVar("G")
 
@@ -147,6 +151,7 @@ class EvolutionEngine(Generic[G]):
         stopping: Any | None = None,
         callbacks: Sequence[Callback[G]] | None = None,
         merge: Any | None = None,  # SymbiogeneticMerge[G]
+        multiobjective: MultiObjectiveConfig | None = None,
     ) -> None:
         """
         Initialize engine with configuration.
@@ -161,6 +166,10 @@ class EvolutionEngine(Generic[G]):
             stopping: Optional stopping criterion (default: generation limit)
             callbacks: Optional callbacks to persist across all run() calls
             merge: Optional symbiogenetic merge operator
+            multiobjective: Optional multi-objective settings. When set, the
+                engine runs NSGA-II and ``selection`` must accept
+                ``(population, n, ranks, crowding, rng)``, e.g.
+                ``CrowdedTournamentSelection``.
         """
         self.config = config
         self.evaluator = evaluator
@@ -168,6 +177,7 @@ class EvolutionEngine(Generic[G]):
         self.crossover = crossover
         self.mutation = mutation
         self.merge_operator = merge
+        self._multiobjective_config = multiobjective
         self.seed = seed
         self.rng = create_rng(seed)
 
@@ -306,7 +316,15 @@ class EvolutionEngine(Generic[G]):
         # Time selection phase
         self._timer.start("selection")
         n_parents = n_offspring * 2
-        parents = list(self.selection.select(population, n_parents, self.rng))
+        nsga2 = self._nsga2()
+        if nsga2 is not None:
+            # Crowded tournament compares Pareto rank, then crowding distance
+            ranks, crowding = nsga2.get_ranking_info(population.individuals)
+            parents = list(
+                self.selection.select(population.individuals, n_parents, ranks, crowding, self.rng)
+            )
+        else:
+            parents = list(self.selection.select(population, n_parents, self.rng))
         self._timer.stop("selection")
 
         # Time variation phase (crossover + mutation)
@@ -704,6 +722,14 @@ class EvolutionEngine(Generic[G]):
                 self._prev_best_genome is None or current_best_genome != self._prev_best_genome
             )
             self._prev_best_genome = current_best_genome
+
+    def _nsga2(self) -> NSGA2Selector[G] | None:
+        """NSGA-II ranker in multi-objective mode, None in single-objective mode."""
+        if self._multiobjective_config is None:
+            return None
+        from evolve.multiobjective.selection import NSGA2Selector
+
+        return NSGA2Selector()
 
     def _get_best(self, population: Population[G]) -> Individual[G]:
         """Get best individual from population."""
