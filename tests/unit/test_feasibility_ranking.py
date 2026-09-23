@@ -125,3 +125,19 @@ def test_sort_key_is_ascending_in_both_directions() -> None:
             min(shuffled, key=lambda ind: fitness_sort_key(ind.fitness, minimize)) is deb_order[0]
         )
     assert fitness_sort_key(None, True) == fitness_sort_key(None, False) == (2, 0.0, 0.0)
+
+
+def test_one_violation_formula() -> None:
+    """Fitness, MultiObjectiveFitness and dominance agree on total violation."""
+    from evolve.core.types import total_violation
+    from evolve.multiobjective.fitness import MultiObjectiveFitness
+
+    constraints = np.array([0.5, -2.0, 1.25])
+    core = Fitness(values=np.array([1.0]), constraints=constraints)
+    mo = MultiObjectiveFitness(objectives=np.array([1.0, 2.0]), constraint_violations=constraints)
+    worse = Fitness(values=np.array([1.0]), constraints=np.array([2.0]))
+
+    assert total_violation(constraints) == 1.75
+    assert core.total_constraint_violation == mo.total_constraint_violation == 1.75
+    assert core.dominates(worse) and not worse.dominates(core)
+    assert total_violation(None) == 0.0

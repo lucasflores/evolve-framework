@@ -17,6 +17,19 @@ import numpy as np
 G = TypeVar("G")
 
 
+def total_violation(constraints: np.ndarray | None) -> float:
+    """
+    Total constraint violation, sum(max(0, c)); 0.0 without constraints.
+
+    The one violation formula: ``Fitness``, ``MultiObjectiveFitness``,
+    ``Fitness.dominates`` and the feasibility-first sort key all use it.
+    Constraint values <= 0 are satisfied.
+    """
+    if constraints is None:
+        return 0.0
+    return float(np.sum(np.maximum(constraints, 0)))
+
+
 @dataclass(frozen=True)
 class IndividualMetadata:
     """
@@ -95,9 +108,7 @@ class Fitness:
     @property
     def total_constraint_violation(self) -> float:
         """Sum of positive constraint values, sum(max(0, c)); 0.0 when feasible."""
-        if self.constraints is None:
-            return 0.0
-        return float(np.sum(np.maximum(self.constraints, 0)))
+        return total_violation(self.constraints)
 
     @property
     def is_valid(self) -> bool:
@@ -177,11 +188,7 @@ class Fitness:
 
         # Both infeasible: compare by constraint violation
         if not self_feasible and not other_feasible:
-            if self.constraints is not None and other.constraints is not None:
-                self_violation = float(np.sum(np.maximum(0, self.constraints)))
-                other_violation = float(np.sum(np.maximum(0, other.constraints)))
-                return self_violation < other_violation
-            return False
+            return self.total_constraint_violation < other.total_constraint_violation
 
         # Both feasible: Pareto dominance
         if minimize:
