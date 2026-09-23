@@ -8,6 +8,7 @@ Every test here goes through the declarative path only:
 
 from __future__ import annotations
 
+from random import Random
 from typing import Any
 
 import numpy as np
@@ -17,6 +18,7 @@ from evolve.config import ObjectiveSpec, UnifiedConfig
 from evolve.core.types import Fitness, Individual
 from evolve.evaluation.evaluator import EvaluatorCapabilities
 from evolve.factory import create_engine, create_initial_population
+from evolve.multiobjective import NSGA2Selector
 
 
 class SumAndFirstGene:
@@ -32,7 +34,7 @@ class SumAndFirstGene:
         self.limit = limit
         self.evaluated: list[Individual[Any]] = []
 
-    def evaluate(self, individuals: Any, seed: int | None = None) -> list[Fitness]:  # noqa: ARG002
+    def evaluate(self, individuals: Any, seed: int | None = None) -> list[Fitness]:
         out = []
         for ind in individuals:
             g = np.asarray(ind.genome.genes)
@@ -80,3 +82,45 @@ class TestMultiObjectiveEngine:
 
         assert result.generations == 3
         assert len(result.population) == cfg.population_size
+
+    def test_survivors_are_nsga2_selection_of_parents_plus_offspring(self) -> None:
+        """Each generation keeps NSGA2Selector's pick from parents + a full brood."""
+        cfg = _config(max_generations=4)
+        evaluator = SumAndFirstGene()
+        recorder = _StepRecorder(evaluator)
+        engine = create_engine(cfg, evaluator=evaluator)
+
+        engine.run(create_initial_population(cfg), callbacks=[recorder])
+
+        assert len(recorder.steps) == 4
+        for parents, offspring, survivors in recorder.steps:
+            assert len(offspring) == cfg.population_size
+            expected = NSGA2Selector().select(parents + offspring, cfg.population_size, Random(0))
+            assert [ind.id for ind in survivors] == [ind.id for ind in expected]
+
+    def test_best_is_on_first_front(self) -> None:
+        """result.best is a non-dominated member of the final population."""
+        cfg = _config(max_generations=3)
+        result = create_engine(cfg, evaluator=SumAndFirstGene()).run(create_initial_population(cfg))
+
+        ranks, _ = NSGA2Selector().get_ranking_info(result.population.individuals)
+        best_index = [ind.id for ind in result.population].index(result.best.id)
+        assert ranks[best_index] == 0
+
+
+class _StepRecorder:
+    """Callback recording (parents, evaluated offspring, survivors) per generation."""
+
+    def __init__(self, evaluator: SumAndFirstGene) -> None:
+        self.evaluator = evaluator
+        self.steps: list[tuple[list[Individual[Any]], ...]] = []
+        self._parents: list[Individual[Any]] = []
+        self._log_start = 0
+
+    def on_generation_start(self, generation: int, population: Any) -> None:
+        self._parents = list(population)
+        self._log_start = len(self.evaluator.evaluated)
+
+    def on_generation_end(self, generation: int, population: Any, metrics: Any) -> None:
+        offspring = self.evaluator.evaluated[self._log_start :]
+        self.steps.append((self._parents, offspring, list(population)))
