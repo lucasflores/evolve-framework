@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any, cast
 
 from evolve.core.population import Population
+from evolve.core.types import fitness_sort_key
 
 
 @dataclass
@@ -91,11 +92,15 @@ class StagnationStopping:
     """
     Stop when fitness doesn't improve for N generations.
 
-    Detects convergence/stagnation.
+    Detects convergence/stagnation. Progress is measured on the best
+    individual's feasibility-first key: becoming feasible, or reducing the
+    total constraint violation, is an improvement even when the raw value
+    gets worse.
 
     Attributes:
         patience: Number of generations without improvement
-        min_delta: Minimum improvement to count as progress
+        min_delta: Minimum improvement to count as progress (on the value, or
+            on the violation while infeasible)
         minimize: If True, improvement means fitness decreased
     """
 
@@ -103,7 +108,7 @@ class StagnationStopping:
     min_delta: float = 1e-6
     minimize: bool = True
     _reason: str = field(default="", init=False)
-    _best_fitness: float = field(default=float("inf"), init=False)
+    _best_key: tuple[int, float, float] | None = field(default=None, init=False)
     _stagnant_gens: int = field(default=0, init=False)
 
     def should_stop(
@@ -117,16 +122,22 @@ class StagnationStopping:
         if stats.best_fitness is None:
             return False
 
-        current = float(stats.best_fitness.values[0])
-
-        # Check for improvement
-        if self.minimize:
-            improved = current < self._best_fitness - self.min_delta
+        # Compare feasibility-first keys, so feasibility arriving (or less
+        # violation) counts as progress even if the raw value gets worse
+        current = fitness_sort_key(stats.best_fitness, self.minimize)
+        if self._best_key is None:
+            improved = True
         else:
-            improved = current > self._best_fitness + self.min_delta
+            infeasible, violation, value = self._best_key
+            threshold = (
+                infeasible,
+                violation - self.min_delta if infeasible else violation,
+                value - self.min_delta,
+            )
+            improved = current < threshold
 
         if improved:
-            self._best_fitness = current
+            self._best_key = current
             self._stagnant_gens = 0
         else:
             self._stagnant_gens += 1
@@ -144,7 +155,7 @@ class StagnationStopping:
 
     def reset(self) -> None:
         """Reset stagnation counter for new run."""
-        self._best_fitness = float("inf") if self.minimize else float("-inf")
+        self._best_key = None
         self._stagnant_gens = 0
 
 
