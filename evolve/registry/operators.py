@@ -13,6 +13,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from evolve.registry._params import accepts_keyword
+
 if TYPE_CHECKING:
     pass
 
@@ -110,6 +112,23 @@ class OperatorRegistry:
 
         cls = self._operators[key]
         return cls(**params)
+
+    def accepts_param(self, category: str, name: str, param: str) -> bool:
+        """
+        Check whether the operator class registered as ``name`` takes ``param``.
+
+        Args:
+            category: Operator category.
+            name: Registered operator name.
+            param: Constructor keyword (e.g. ``"minimize"``).
+
+        Returns:
+            True if ``param`` can be passed to the constructor by keyword
+            (see ``accepts_keyword``).
+        """
+        self._ensure_initialized()
+        cls = self._operators.get((category, name))
+        return cls is not None and accepts_keyword(cls, param)
 
     def is_compatible(self, operator_name: str, genome_type: str) -> bool:
         """
