@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Generic, TypeVar, cast
 
-from evolve.core.types import Individual
+from evolve.core.types import Individual, fitness_sort_key
 
 G = TypeVar("G")
 
@@ -75,9 +75,8 @@ class Island(Generic[G]):
         if not evaluated:
             return self.population[0]
 
-        return max(
-            evaluated, key=lambda ind: ind.fitness.values[0] if ind.fitness else float("-inf")
-        )
+        # Highest fitness, feasibility first (an island has no direction setting)
+        return min(evaluated, key=lambda ind: fitness_sort_key(ind.fitness, minimize=False))
 
     @property
     def average_fitness(self) -> float:

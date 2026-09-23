@@ -18,7 +18,7 @@ from typing import Generic, Protocol, TypeVar
 
 import numpy as np
 
-from evolve.core.types import Fitness, Individual
+from evolve.core.types import Fitness, Individual, fitness_sort_key
 
 G = TypeVar("G")
 
@@ -352,10 +352,10 @@ class QDArchive(Generic[G]):
             self._total_improved += 1
             return True
 
-        new_fit = individual.fitness.values[0]
-        old_fit = current.fitness.values[0]
-
-        improved = new_fit < old_fit if minimize else new_fit > old_fit
+        # Feasibility first, then the value
+        improved = fitness_sort_key(individual.fitness, minimize) < fitness_sort_key(
+            current.fitness, minimize
+        )
 
         if improved:
             self.archive[cell] = individual
@@ -410,15 +410,13 @@ class QDArchive(Generic[G]):
 
     @property
     def best_fitness(self) -> float | None:
-        """Best fitness in archive."""
-        if not self.archive:
+        """Best fitness in archive (highest, feasibility first)."""
+        evaluated = [ind for ind in self.archive.values() if ind.fitness is not None]
+        if not evaluated:
             return None
 
-        fitnesses = [
-            ind.fitness.values[0] for ind in self.archive.values() if ind.fitness is not None
-        ]
-
-        return max(fitnesses) if fitnesses else None
+        best = min(evaluated, key=lambda ind: fitness_sort_key(ind.fitness, minimize=False))
+        return float(best.fitness.values[0]) if best.fitness is not None else None
 
     @property
     def mean_fitness(self) -> float | None:
@@ -468,10 +466,7 @@ class QDArchive(Generic[G]):
 
         individuals = [ind for ind in self.archive.values() if ind.fitness is not None]
 
-        individuals.sort(
-            key=lambda ind: ind.fitness.values[0] if ind.fitness else float("inf"),
-            reverse=not minimize,
-        )
+        individuals.sort(key=lambda ind: fitness_sort_key(ind.fitness, minimize))
 
         return individuals[:n]
 

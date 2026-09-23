@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Generic, Protocol, TypeVar, cast
 
 import numpy as np
 
-from evolve.core.types import Individual
+from evolve.core.types import Individual, fitness_sort_key
 
 if TYPE_CHECKING:
     from evolve.representation.graph import GraphGenome
@@ -256,13 +256,11 @@ class Species(Generic[G]):
 
     @property
     def best_fitness(self) -> float | None:
-        """Best current fitness in the species."""
-        evaluated = [m.fitness.values[0] for m in self.members if m.fitness is not None]
-
-        if not evaluated:
+        """Best current fitness in the species (highest, feasibility first)."""
+        best = self.get_best_member(minimize=False)
+        if best is None or best.fitness is None:
             return None
-
-        return cast(float, max(evaluated))
+        return float(best.fitness.values[0])
 
     @property
     def fitness_variance(self) -> float:
@@ -282,17 +280,19 @@ class Species(Generic[G]):
         Args:
             minimize: If True, lower fitness is better
         """
-        evaluated = [m.fitness.values[0] for m in self.members if m.fitness is not None]
+        best = self.get_best_member(minimize=minimize)
 
-        if not evaluated:
+        # Only a feasible best can improve on the best fitness ever
+        if best is None or best.fitness is None or not best.fitness.is_feasible:
             self.stagnation_counter += 1
             return
 
-        if minimize:
-            current_best = min(evaluated)
+        current_best = float(best.fitness.values[0])
+        if self.best_fitness_ever == float("-inf"):  # unset (also when minimizing)
+            improved = True
+        elif minimize:
             improved = current_best < self.best_fitness_ever
         else:
-            current_best = max(evaluated)
             improved = current_best > self.best_fitness_ever
 
         if improved:
@@ -314,16 +314,13 @@ class Species(Generic[G]):
         return self.stagnation_counter >= threshold
 
     def get_best_member(self, minimize: bool = False) -> Individual[G] | None:
-        """Get the best member by fitness."""
+        """Get the best member by fitness (feasibility first)."""
         evaluated = [m for m in self.members if m.fitness is not None]
 
         if not evaluated:
             return self.members[0] if self.members else None
 
-        if minimize:
-            return min(evaluated, key=lambda m: m.fitness.values[0] if m.fitness else float("inf"))
-        else:
-            return max(evaluated, key=lambda m: m.fitness.values[0] if m.fitness else float("-inf"))
+        return min(evaluated, key=lambda m: fitness_sort_key(m.fitness, minimize))
 
     def clear_members(self) -> None:
         """Clear member list for re-speciation."""

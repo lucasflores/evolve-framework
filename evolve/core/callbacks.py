@@ -505,7 +505,7 @@ class HallOfFameCallback:
         if not unique:
             return
 
-        minimize = population._minimize
+        minimize = population.minimize
         pool = Population(unique, minimize=minimize, ranker=population.ranker)
         self.archive = list(pool.best(min(self.max_size, len(unique)), minimize=minimize))
 

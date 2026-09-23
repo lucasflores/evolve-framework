@@ -14,7 +14,7 @@ from typing import TypeVar
 
 import numpy as np
 
-from evolve.core.types import Individual
+from evolve.core.types import Individual, fitness_sort_key
 
 G = TypeVar("G")
 
@@ -177,8 +177,8 @@ def clearing(
     Clearing procedure for niching.
 
     Within each niche (defined by sigma_clear), only the best
-    kappa individuals keep their fitness. Others get zero.
-    This creates strong separation between niches.
+    kappa individuals (highest fitness, feasibility first) keep their
+    fitness. Others get zero. This creates strong separation between niches.
 
     Args:
         individuals: Population with fitness values
@@ -202,8 +202,10 @@ def clearing(
         else:
             raw_fitness.append(0.0)
 
-    # Sort by fitness (descending)
-    sorted_indices = sorted(range(n), key=lambda i: raw_fitness[i], reverse=True)
+    # Best first: highest fitness, feasibility first
+    sorted_indices = sorted(
+        range(n), key=lambda i: fitness_sort_key(individuals[i].fitness, minimize=False)
+    )
 
     # Track which individuals are cleared
     cleared = [False] * n
@@ -249,17 +251,20 @@ def deterministic_crowding_pairing(
     parents: Sequence[Individual[G]],
     offspring: Sequence[Individual[G]],
     distance_fn: Callable[[G, G], float],
+    minimize: bool = False,
 ) -> list[Individual[G]]:
     """
     Deterministic crowding for speciation-free niching.
 
     Each offspring competes against the nearest parent.
-    The winner survives to the next generation.
+    The winner (feasibility first, then fitness; the parent on ties)
+    survives to the next generation.
 
     Args:
         parents: Parent population
         offspring: Offspring population (same size as parents)
         distance_fn: Function to compute genome distance
+        minimize: If True, lower fitness is better (default False)
 
     Returns:
         Surviving individuals
@@ -290,11 +295,10 @@ def deterministic_crowding_pairing(
             used_parents.add(nearest_idx)
             parent = parents[nearest_idx]
 
-            # Compare fitness - winner survives
-            child_fit = child.fitness.values[0] if child.fitness else float("-inf")
-            parent_fit = parent.fitness.values[0] if parent.fitness else float("-inf")
-
-            if child_fit > parent_fit:
+            # Compare fitness (feasibility first) - winner survives
+            if fitness_sort_key(child.fitness, minimize) < fitness_sort_key(
+                parent.fitness, minimize
+            ):
                 survivors.append(child)
             else:
                 survivors.append(parent)

@@ -108,6 +108,11 @@ class Population(Generic[G]):
         self._statistics: PopulationStatistics | None = None
 
     @property
+    def minimize(self) -> bool:
+        """True if lower fitness is better (single-objective mode)."""
+        return self._minimize
+
+    @property
     def ranker(self) -> NSGA2Selector[G] | None:
         """NSGA-II ranker in multi-objective mode, None in single-objective mode."""
         return self._ranker
