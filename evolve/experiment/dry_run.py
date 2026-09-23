@@ -266,13 +266,16 @@ def _derive_structural_constants(config: UnifiedConfig) -> dict[str, int]:
     pop = config.population_size
     elite = config.elitism
     n_offspring = max(pop - elite, 0)
+    # The engine draws one parent per child (rounded up to a pair) and
+    # every pair yields two children
+    n_parents = n_offspring + n_offspring % 2
 
     constants: dict[str, int] = {
         "initialization": pop,  # one-shot, not per-generation
         "evaluation": pop,
-        "selection": n_offspring * 2,  # 2 parents per offspring
-        "crossover": n_offspring,
-        "mutation": n_offspring,
+        "selection": n_parents,
+        "crossover": n_parents // 2,  # one crossover per pair
+        "mutation": n_parents,  # one mutation draw per child
     }
 
     if config.is_merge_enabled and config.merge is not None:

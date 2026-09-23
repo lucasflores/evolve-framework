@@ -316,11 +316,11 @@ class TestDryRunCorePhases:
         # Evaluation: population_size
         assert phase_map["evaluation"].operations_per_generation == 50
 
-        # Selection: (pop - elitism) * 2
-        assert phase_map["selection"].operations_per_generation == (50 - 5) * 2
+        # Selection: one parent per child, rounded up to a pair: 45 -> 46
+        assert phase_map["selection"].operations_per_generation == 46
 
-        # Variation: pop - elitism
-        assert phase_map["variation"].operations_per_generation == 50 - 5
+        # Variation: one mutation draw per child bred (46, one is trimmed)
+        assert phase_map["variation"].operations_per_generation == 46
 
 
 # ============================================================================
@@ -353,9 +353,9 @@ class TestDeriveStructuralConstants:
 
         assert constants["initialization"] == 100
         assert constants["evaluation"] == 100
-        assert constants["selection"] == (100 - 5) * 2
-        assert constants["crossover"] == 95
-        assert constants["mutation"] == 95
+        assert constants["selection"] == 96  # 95 children -> 48 pairs
+        assert constants["crossover"] == 48
+        assert constants["mutation"] == 96
 
     def test_merge_constants_when_enabled(self) -> None:
         """Merge ops count when merge enabled."""
