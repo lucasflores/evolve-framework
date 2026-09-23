@@ -12,6 +12,8 @@ from typing import Any
 
 import numpy as np
 
+from evolve.core.types import total_violation
+
 
 @dataclass(frozen=True)
 class MultiObjectiveFitness:
@@ -97,9 +99,7 @@ class MultiObjectiveFitness:
 
         Returns 0.0 if feasible or no constraints.
         """
-        if self.constraint_violations is None:
-            return 0.0
-        return float(np.sum(np.maximum(self.constraint_violations, 0)))
+        return total_violation(self.constraint_violations)
 
     @property
     def values(self) -> tuple[float, ...]:
