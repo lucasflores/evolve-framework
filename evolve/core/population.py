@@ -18,6 +18,8 @@ from evolve.core.types import Fitness, Individual, fitness_sort_key
 if TYPE_CHECKING:
     from random import Random
 
+    from evolve.multiobjective.selection import NSGA2Selector
+
 G = TypeVar("G")
 
 
@@ -76,6 +78,7 @@ class Population(Generic[G]):
         individuals: Sequence[Individual[G]],
         generation: int = 0,
         minimize: bool = True,
+        ranker: NSGA2Selector[G] | None = None,
     ) -> None:
         """
         Create population from individuals.
@@ -83,7 +86,10 @@ class Population(Generic[G]):
         Args:
             individuals: Sequence of individuals (must not be empty)
             generation: Current generation number
-            minimize: If True, lower fitness is better
+            minimize: If True, lower fitness is better (single-objective mode)
+            ranker: The engine's NSGA-II ranker in multi-objective mode, None in
+                single-objective mode. It decides how individuals are ranked;
+                the number of fitness values cannot tell the two modes apart.
 
         Raises:
             ValueError: If individuals is empty
@@ -94,7 +100,30 @@ class Population(Generic[G]):
         self._individuals: tuple[Individual[G], ...] = tuple(individuals)
         self._generation = generation
         self._minimize = minimize
+        self._ranker = ranker
+        self._ranking: tuple[dict[int, int], dict[int, float]] | None = None
         self._statistics: PopulationStatistics | None = None
+
+    @property
+    def ranker(self) -> NSGA2Selector[G] | None:
+        """NSGA-II ranker in multi-objective mode, None in single-objective mode."""
+        return self._ranker
+
+    @property
+    def ranking(self) -> tuple[dict[int, int], dict[int, float]]:
+        """
+        Pareto rank and crowding distance per individual index (cached).
+
+        Multi-objective mode only; every individual must be evaluated.
+
+        Raises:
+            ValueError: If the population has no ranker.
+        """
+        if self._ranker is None:
+            raise ValueError("Population has no ranker (single-objective mode)")
+        if self._ranking is None:
+            self._ranking = self._ranker.get_ranking_info(self._individuals)
+        return self._ranking
 
     @property
     def individuals(self) -> Sequence[Individual[G]]:
@@ -139,8 +168,8 @@ class Population(Generic[G]):
         # Get fitness values (use minimize flag for best/worst)
         fitness_values = [ind.fitness for ind in evaluated if ind.fitness is not None]
 
-        # For single-objective, compute simple statistics
-        if fitness_values and fitness_values[0].n_objectives == 1:
+        # Single-objective mode ranks values[0], whatever the number of values
+        if self._ranker is None:
             values = np.array([f.values[0] for f in fitness_values])
             if not all(f.is_feasible for f in fitness_values):
                 # Feasibility first (Deb's rules), then the value
@@ -158,10 +187,13 @@ class Population(Generic[G]):
 
             best_fitness = fitness_values[best_idx]
             worst_fitness = fitness_values[worst_idx]
-            mean_fitness = Fitness.scalar(mean_val)
+            if fitness_values[0].n_objectives == 1:
+                mean_fitness = Fitness.scalar(mean_val)
+            else:
+                mean_fitness = Fitness(values=np.mean([f.values for f in fitness_values], axis=0))
         else:
-            # Multi-objective: no scalar best/worst without objective directions
-            # (the engine reports per-objective and Pareto-front metrics instead)
+            # Multi-objective: no scalar best/worst (the engine reports
+            # per-objective and Pareto-front metrics instead)
             best_fitness = None
             worst_fitness = None
             mean_values = np.mean([f.values for f in fitness_values], axis=0)
@@ -203,8 +235,10 @@ class Population(Generic[G]):
         """
         Return n best individuals by fitness.
 
-        Feasible individuals rank ahead of infeasible ones; between infeasible
-        ones, lower total constraint violation ranks first.
+        Single-objective mode ranks ``values[0]`` feasibility first (feasible
+        before infeasible, then lower total violation). Multi-objective mode
+        (a ranker is set) ranks by Pareto front, then crowding distance, and
+        ignores ``minimize``.
 
         Args:
             n: Number of individuals to return
@@ -227,26 +261,17 @@ class Population(Generic[G]):
         if not evaluated:
             raise ValueError("No evaluated individuals in population")
 
-        # Sort by fitness, feasibility first (Deb's rules)
-        if evaluated[0].fitness is not None and evaluated[0].fitness.n_objectives == 1:
-            sorted_individuals = sorted(
-                evaluated,
-                key=lambda ind: fitness_sort_key(ind.fitness, minimize),
-            )
-        else:
-            # Multi-objective: no scalar order without objective directions (the
-            # engine ranks those with NSGA-II). Feasibility still comes first;
-            # the sort is stable, so unconstrained populations keep their order.
-            sorted_individuals = sorted(
-                evaluated,
-                key=lambda ind: (
-                    (int(not ind.fitness.is_feasible), ind.fitness.total_constraint_violation)
-                    if ind.fitness is not None
-                    else (2, 0.0)
-                ),
-            )
+        if self._ranker is not None:
+            # Multi-objective: Pareto front first, then larger crowding distance
+            if len(evaluated) == len(self._individuals):
+                ranks, crowding = self.ranking
+            else:
+                ranks, crowding = self._ranker.get_ranking_info(evaluated)
+            order = sorted(range(len(evaluated)), key=lambda i: (ranks[i], -crowding[i]))
+            return [evaluated[i] for i in order[:n]]
 
-        return sorted_individuals[:n]
+        # Single-objective: values[0], feasibility first (Deb's rules)
+        return sorted(evaluated, key=lambda ind: fitness_sort_key(ind.fitness, minimize))[:n]
 
     def with_individuals(
         self,
@@ -264,7 +289,7 @@ class Population(Generic[G]):
             New Population instance
         """
         new_gen = generation if generation is not None else self._generation + 1
-        return Population(individuals=individuals, generation=new_gen)
+        return Population(individuals=individuals, generation=new_gen, ranker=self._ranker)
 
     def increment_ages(self) -> Population[G]:
         """Return new population with all individual ages incremented."""
@@ -276,7 +301,7 @@ class Population(Generic[G]):
         evaluated = [ind for ind in self._individuals if ind.fitness is not None]
         if not evaluated:
             raise ValueError("No evaluated individuals to filter")
-        return Population(individuals=evaluated, generation=self._generation)
+        return Population(individuals=evaluated, generation=self._generation, ranker=self._ranker)
 
     def sample(
         self,

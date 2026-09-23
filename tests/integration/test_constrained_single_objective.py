@@ -10,7 +10,7 @@ from typing import Any
 import numpy as np
 import pytest
 
-from evolve.config import UnifiedConfig
+from evolve.config import StoppingConfig, UnifiedConfig
 from evolve.core.types import Fitness
 from evolve.evaluation.evaluator import EvaluatorCapabilities
 from evolve.factory import create_engine, create_initial_population
@@ -56,6 +56,37 @@ class TestConstrainedSingleObjective:
 
         assert result.best.fitness is not None
         assert result.best.fitness.is_feasible
+
+
+class SumAndSecond:
+    """Two values, but a single-objective config: rank on values[0] = sum(genes)."""
+
+    capabilities = EvaluatorCapabilities(n_objectives=2, n_constraints=1)
+
+    def evaluate(self, individuals: Any, seed: int | None = None) -> list[Fitness]:
+        out = []
+        for ind in individuals:
+            g = np.asarray(ind.genome.genes)
+            out.append(
+                Fitness(values=np.array([g.sum(), g[1]]), constraints=np.array([0.5 - g[0]]))
+            )
+        return out
+
+
+@pytest.mark.integration
+class TestVectorFitnessSingleObjective:
+    """llm_judge rubrics, batch evaluators: several values, ranked on the first."""
+
+    def test_history_and_stopping_rank_on_first_value(self) -> None:
+        cfg = _config(max_generations=30, stopping=StoppingConfig(fitness_threshold=-4.5))
+
+        result = create_engine(cfg, evaluator=SumAndSecond()).run(create_initial_population(cfg))
+
+        assert "best_fitness" in result.history[0]
+        assert result.best.fitness is not None
+        assert result.best.fitness.is_feasible
+        assert result.history[-1]["best_fitness"] == float(result.best.fitness.values[0])
+        assert result.stop_reason.startswith("Fitness")
 
 
 @pytest.mark.integration

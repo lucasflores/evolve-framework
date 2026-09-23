@@ -401,6 +401,7 @@ class EvolutionEngine(Generic[G]):
             individuals=new_individuals,
             generation=self._generation + 1,
             minimize=self.config.minimize,
+            ranker=nsga2,
         )
 
         # Time evaluation phase
@@ -414,6 +415,7 @@ class EvolutionEngine(Generic[G]):
                 individuals=nsga2.select(evaluated_population.individuals, pop_size, self.rng),
                 generation=self._generation + 1,
                 minimize=self.config.minimize,
+                ranker=nsga2,
             )
 
         # End generation timing
@@ -574,21 +576,26 @@ class EvolutionEngine(Generic[G]):
         to_evaluate = [ind for ind in population.individuals if ind.fitness is None]
 
         if not to_evaluate:
-            return population
+            if population.ranker is self._nsga2:
+                return population
+            updated = list(population.individuals)
+        else:
+            # Evaluate
+            fitness_values = self.evaluator.evaluate(to_evaluate, seed=self.rng.randint(0, 2**31))
 
-        # Evaluate
-        fitness_values = self.evaluator.evaluate(to_evaluate, seed=self.rng.randint(0, 2**31))
+            # Update individuals with fitness
+            fitness_map = {to_evaluate[i].id: fitness_values[i] for i in range(len(to_evaluate))}
 
-        # Update individuals with fitness
-        fitness_map = {to_evaluate[i].id: fitness_values[i] for i in range(len(to_evaluate))}
-
-        updated = [
-            ind.with_fitness(fitness_map[ind.id]) if ind.id in fitness_map else ind
-            for ind in population.individuals
-        ]
+            updated = [
+                ind.with_fitness(fitness_map[ind.id]) if ind.id in fitness_map else ind
+                for ind in population.individuals
+            ]
 
         return Population(
-            individuals=updated, generation=population.generation, minimize=self.config.minimize
+            individuals=updated,
+            generation=population.generation,
+            minimize=self.config.minimize,
+            ranker=self._nsga2,
         )
 
     def _compute_metrics(self, population: Population[G]) -> dict[str, Any]:
@@ -792,13 +799,8 @@ class EvolutionEngine(Generic[G]):
             self._prev_best_genome = current_best_genome
 
     def _get_best(self, population: Population[G]) -> Individual[G]:
-        """Get best individual (multi-objective: a member of the first front)."""
-        nsga2 = self._nsga2
-        if nsga2 is not None:
-            ranks, _ = nsga2.get_ranking_info(population.individuals)
-            return population[min(i for i, rank in ranks.items() if rank == 0)]
-        best_list = population.best(1, minimize=self.config.minimize)
-        return best_list[0]
+        """Get best individual (multi-objective: first front, most isolated)."""
+        return population.best(1, minimize=self.config.minimize)[0]
 
     @property
     def generation(self) -> int:

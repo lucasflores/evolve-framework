@@ -87,8 +87,8 @@ class TestFeasibilityFirst:
         assert hall.archive == deb_order
 
 
-def test_multiobjective_best_puts_feasible_first() -> None:
-    """Vector fitness has no scalar order, but feasibility still ranks first (stable)."""
+def test_vector_fitness_best_ranks_first_value_feasibility_first() -> None:
+    """Without a ranker (single-objective mode) vector fitness ranks on values[0]."""
     genome = VectorGenome(genes=np.zeros(1))
     infeasible = Individual(genome=genome, fitness=Fitness(np.array([9.0, 9.0]), np.array([1.0])))
     feasible_a = Individual(genome=genome, fitness=Fitness(np.array([1.0, 2.0])))
@@ -141,3 +141,32 @@ def test_one_violation_formula() -> None:
     assert core.total_constraint_violation == mo.total_constraint_violation == 1.75
     assert core.dominates(worse) and not worse.dominates(core)
     assert total_violation(None) == 0.0
+
+
+def test_ranker_orders_best_by_front_then_crowding() -> None:
+    """With an NSGA-II ranker, best(n) follows Pareto fronts, then crowding distance."""
+    from evolve.multiobjective import NSGA2Selector
+
+    genome = VectorGenome(genes=np.zeros(1))
+    points = [(1.0, 1.0), (3.0, 1.0), (2.0, 2.0), (1.0, 3.0), (2.1, 2.1)]
+    individuals = [Individual(genome=genome, fitness=Fitness(np.array(p))) for p in points]
+    population = Population(individuals, ranker=NSGA2Selector())
+
+    best = population.best(5)
+
+    # Front 0 = (3,1), (1,3) boundaries (infinite crowding), then (2.1,2.1); (2,2), (1,1) after
+    assert best[:2] == [individuals[1], individuals[3]]
+    assert best[2] is individuals[4]
+    assert best[3:] == [individuals[2], individuals[0]]
+    assert population.ranking == NSGA2Selector().get_ranking_info(individuals)
+
+
+def test_derived_populations_keep_the_ranker() -> None:
+    from evolve.multiobjective import NSGA2Selector
+
+    ranker = NSGA2Selector()
+    population = Population([_ind(1.0), _ind(2.0)], ranker=ranker)
+
+    assert population.with_individuals(list(population)).ranker is ranker
+    assert population.filter_evaluated().ranker is ranker
+    assert population.increment_ages().ranker is ranker

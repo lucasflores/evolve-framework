@@ -7,6 +7,7 @@ Covers T007 (minimize-aware stats), T012 (stats.minimize field).
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from evolve.core.population import Population
 from evolve.core.types import Fitness, Individual
@@ -62,20 +63,38 @@ class TestMinimizeAwareStatistics:
         assert stats.worst_fitness is not None
         assert float(stats.worst_fitness.values[0]) == 1.0
 
-    def test_multi_objective_has_no_scalar_best(self):
-        """Multi-objective populations report no best/worst: there is no scalar order."""
+    def test_multi_objective_ranker_has_no_scalar_best(self):
+        """With an NSGA-II ranker (MO mode) there is no scalar best/worst."""
+        from evolve.multiobjective import NSGA2Selector
+
         genomes = [VectorGenome(genes=np.array([float(i)])) for i in range(3)]
         individuals = [
             Individual(genome=genomes[0], fitness=Fitness(values=np.array([1.0, 2.0]))),
             Individual(genome=genomes[1], fitness=Fitness(values=np.array([3.0, 1.0]))),
             Individual(genome=genomes[2], fitness=Fitness(values=np.array([2.0, 3.0]))),
         ]
-        pop = Population(individuals=individuals, minimize=True)
+        pop = Population(individuals=individuals, minimize=True, ranker=NSGA2Selector())
         stats = pop.statistics
 
         assert stats.best_fitness is None
         assert stats.worst_fitness is None
         assert stats.mean_fitness is not None
+        assert stats.mean_fitness.values.tolist() == [2.0, 2.0]
+
+    def test_vector_fitness_without_ranker_ranks_first_value(self):
+        """Single-objective mode ranks values[0] whatever the vector length."""
+        genomes = [VectorGenome(genes=np.array([float(i)])) for i in range(3)]
+        individuals = [
+            Individual(genome=genomes[0], fitness=Fitness(values=np.array([1.0, 2.0]))),
+            Individual(genome=genomes[1], fitness=Fitness(values=np.array([3.0, 1.0]))),
+            Individual(genome=genomes[2], fitness=Fitness(values=np.array([2.0, 3.0]))),
+        ]
+
+        stats = Population(individuals=individuals, minimize=False).statistics
+
+        assert stats.best_fitness is individuals[1].fitness
+        assert stats.worst_fitness is individuals[0].fitness
+        assert stats.std_fitness == pytest.approx(np.std([1.0, 3.0, 2.0]))
         assert stats.mean_fitness.values.tolist() == [2.0, 2.0]
 
     def test_empty_fitness_population(self):
