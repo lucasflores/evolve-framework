@@ -20,7 +20,7 @@ or the denominator is zero.
 | `FitnessMetadataCollector` | `MetricCategory.METADATA` | Dynamic: `meta_<field>_mean`, `meta_<field>_std`, etc. |
 | `IslandsMetricCollector` | Auto-enabled when island model active | `inter_island_variance`, `intra_island_variance`, `migration_events` |
 | `MergeMetricCollector` | `MetricCategory.SYMBIOGENESIS` engine guard (manual instantiation) | `merge/count`, `merge/mean_genome_complexity`, `merge/complexity_delta` |
-| `MultiObjectiveMetricCollector` | `MetricCategory.MULTIOBJECTIVE` (auto-enabled when MO active) | `pareto_front_size`, `hypervolume`, `crowding_diversity`, `spread` |
+| `MultiObjectiveMetricCollector` | Run by the engine in multi-objective mode (`MetricCategory.MULTIOBJECTIVE` is always on there) | `hypervolume` (needs a reference point), `spread`, `crowding_diversity`; the engine adds `pareto_front_size`, `<objective>_best`, `<objective>_mean` |
 | `NEATMetricCollector` | Manual instantiation (no `MetricCategory` gate) | `average_node_count`, `average_connection_count`, `topology_innovations` |
 | `SpeciationMetricCollector` | `MetricCategory.SPECIATION` | `species_count`, `average_species_size`, `species_births`, `species_extinctions`, `stagnation_count` |
 | `EnsembleMetricCollector` | `MetricCategory.ENSEMBLE` (explicit only, not auto-enabled) | `ensemble/gini_coefficient`, `ensemble/participation_ratio`, `ensemble/top_k_concentration`, `ensemble/expert_turnover`\*, `ensemble/specialization_index`\* |
@@ -111,18 +111,38 @@ it is not a pure-context collector.
 
 ## MultiObjectiveMetricCollector
 
-**Enabling mechanism**: Add `MetricCategory.MULTIOBJECTIVE` (or `"multiobjective"`) to
-`TrackingConfig.categories`. Auto-enabled when multi-objective fitness is active.
-Requires `context.pareto_front` to be populated.
+**Enabling mechanism**: Automatic. An engine built by `create_engine()` from a
+config with `with_multiobjective(...)` always has the `multiobjective` metric
+category and runs this collector every generation on the feasible members of
+the first non-dominated front. Its metrics are the only multi-objective quality
+metrics in the history; single-objective keys (`best_fitness`, `mean_fitness`,
+...) are not emitted in multi-objective mode.
 
-**Class**: `evolve.experiment.collectors.multiobjective.MultiObjectiveMetricCollector`
+**Reference point**: `MultiObjectiveConfig.reference_point`, or
+`TrackingConfig.hypervolume_reference` when only that one is set (declaring both
+with different values is an error). Both are in raw objective units, a point
+worse than every solution of interest on each objective in its declared
+direction. Without a reference point no `hypervolume` is reported, because an
+estimate that moves with the front is not comparable across generations.
+
+**Engine metrics alongside it** (always in multi-objective mode):
+`pareto_front_size` (individuals on the first front), `<objective>_best` (best
+raw value of that objective in its declared direction among feasible
+individuals, or all when none is feasible) and `<objective>_mean` (population
+mean of the raw value), where `<objective>` is `ObjectiveSpec.name`.
+
+**Class**: `evolve.experiment.collectors.multiobjective.MultiObjectiveMetricCollector`.
+Used standalone, `collect(context)` reads `context.pareto_front` (or computes it
+from `MultiObjectiveFitness` individuals) and expects objectives in the
+maximization convention; the engine calls `front_metrics()` with points already
+mapped to that space.
 
 | Metric Key | Formula | Intuition | Evolutionary Interpretation | Degenerate-Case Behavior |
 |-----------|---------|-----------|----------------------------|--------------------------|
-| `pareto_front_size` | $\lvert\mathcal{F}_0\rvert$ (cardinality of front) | How many non-dominated solutions exist | **Growing**: increasing solution diversity. **Shrinking**: convergence to a narrow region of the Pareto front. | Returns `0` when no Pareto front is provided or it is empty. |
-| `hypervolume` | Dominated volume $\lambda\bigl(\bigcup_{x \in \mathcal{F}_0} [x, r]\bigr)$ relative to reference point $r$ | Total quality of the front as a single scalar | **High**: front dominates a large objective space volume. **Low**: front near the reference point; quality and spread are poor. | Returns `0.0` when the front is empty or all front points are dominated by the reference point. |
-| `crowding_diversity` | $\frac{1}{\lvert\mathcal{F}_0\rvert}\sum_{i} d_i^{\text{crowd}}$ mean crowding distance | How evenly spread the front solutions are | **High**: well-distributed front. **Low**: solutions clustered in one region. | Returns `0.0` when the front has fewer than 3 solutions (crowding distance is undefined). |
-| `spread` | $\Delta = \frac{d_f + d_l + \sum_{i=1}^{n-1}\lvert d_i - \bar{d}\rvert}{d_f + d_l + (n-1)\bar{d}}$ | Uniformity of distribution along the front | **Near 0**: perfect spread. **Near 1**: clustered, poor coverage of extreme solutions. | Returns `0.0` when fewer than 2 solutions exist on the front. |
+| `pareto_front_size` | $\lvert\mathcal{F}_0\rvert$ (cardinality of front) | How many non-dominated solutions exist | **Growing**: increasing solution diversity. **Shrinking**: convergence to a narrow region of the Pareto front. | `0` when the front is empty. |
+| `hypervolume` | Dominated volume $\lambda\bigl(\bigcup_{x \in \mathcal{F}_0} [x, r]\bigr)$ relative to reference point $r$ (exact for 2 objectives, Monte Carlo for 3+) | Total quality of the front as a single scalar | **High**: front dominates a large objective space volume. **Low**: front near the reference point; quality and spread are poor. | Absent without a reference point; `0.0` when no feasible front member exists or all are dominated by the reference point. |
+| `crowding_diversity` | $\frac{1}{\lvert\mathcal{F}_0\rvert}\sum_{i} d_i^{\text{crowd}}$ mean finite crowding distance | How evenly spread the front solutions are | **High**: well-distributed front. **Low**: solutions clustered in one region. | Absent when the front has fewer than 3 solutions or no finite distance. |
+| `spread` | $\Delta = \frac{d_f + d_l + \sum_{i=1}^{n-1}\lvert d_i - \bar{d}\rvert}{d_f + d_l + (n-1)\bar{d}}$ (2 objectives only) | Uniformity of distribution along the front | **Near 0**: perfect spread. **Near 1**: clustered, poor coverage of extreme solutions. | `1.0` when fewer than 2 solutions are on the front; absent for 3+ objectives. |
 
 ---
 

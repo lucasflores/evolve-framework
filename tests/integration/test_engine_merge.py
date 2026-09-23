@@ -768,4 +768,8 @@ class TestEngineMergeEdgeCases:
         assert multi["symbiont_source"] == "archive"
         assert multi["symbiont_fate"] == "survives"
         assert multi["max_complexity"] == 40
+        # Only the MO front metrics differ
+        assert multi.pop("metric_categories") == single.pop("metric_categories") | {
+            "multiobjective"
+        }
         assert multi == single
