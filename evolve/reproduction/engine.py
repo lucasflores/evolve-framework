@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 # Import core modules here (not in __init__ to avoid circular imports)
 from evolve.core.engine import EvolutionConfig, EvolutionEngine
 from evolve.core.population import Population
-from evolve.core.types import Individual, IndividualMetadata
+from evolve.core.types import Individual, IndividualMetadata, fitness_sort_key
 from evolve.reproduction.crossover_protocol import (
     inherit_protocol,
     safe_execute_crossover,
@@ -561,18 +561,11 @@ class ERPEngine(EvolutionEngine[G]):
 
     def _compute_fitness_ranks(self, population: Population[G]) -> dict[UUID, int]:
         """Compute fitness rankings for all individuals."""
-        # Sort by fitness (handle None fitness)
-        individuals = list(population.individuals)
-
-        def get_fitness_value(ind: Individual[G]) -> float:
-            if ind.fitness is None:
-                return float("inf") if self.config.minimize else float("-inf")
-            if hasattr(ind.fitness, "values"):
-                return float(ind.fitness.values[0])
-            return float(ind.fitness.values[0])
-
-        individuals.sort(key=get_fitness_value, reverse=not self.config.minimize)
-
+        # Feasibility first, then values[0]; unevaluated last
+        individuals = sorted(
+            population.individuals,
+            key=lambda ind: fitness_sort_key(ind.fitness, self.config.minimize),
+        )
         return {ind.id: rank for rank, ind in enumerate(individuals)}
 
     def _compute_population_diversity(self, population: Population[G]) -> float:

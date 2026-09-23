@@ -300,25 +300,15 @@ class TrackingCallback(Callback):
             import tempfile
             from pathlib import Path
 
-            # Find best individual
-            best = None
-            best_fitness = None
-            for ind in population.individuals:
-                if ind.fitness is not None:
-                    fitness_val = (
-                        ind.fitness.values[0]
-                        if hasattr(ind.fitness, "values") and len(ind.fitness.values) > 0
-                        else 0.0
-                    )
-                    if best_fitness is None or fitness_val < best_fitness:  # Assume minimization
-                        best = ind
-                        best_fitness = fitness_val
-
-            if best is None:
+            # Best individual, ranked the way the population ranks itself
+            if not any(ind.fitness is not None for ind in population.individuals):
                 return
+            best = population.best(1, minimize=population.minimize)[0]
+            assert best.fitness is not None
+            best_fitness = float(best.fitness.values[0]) if len(best.fitness.values) else 0.0
 
             # Build solution dict
-            solution = {
+            solution: dict[str, Any] = {
                 "fitness": best_fitness,
             }
 

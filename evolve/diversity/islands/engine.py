@@ -20,7 +20,7 @@ import numpy as np
 
 from evolve.core.callbacks import Callback
 from evolve.core.population import Population
-from evolve.core.types import Individual
+from evolve.core.types import Individual, fitness_sort_key
 from evolve.diversity.islands.island import Island
 from evolve.diversity.islands.migration import BestMigration, MigrationController
 from evolve.diversity.islands.topology import ring_topology
@@ -161,8 +161,9 @@ class IslandEvolutionEngine(Generic[G]):
         # Set up migration
         if migration_controller is None:
             migration_controller = MigrationController(
-                policy=BestMigration(),
+                policy=BestMigration(minimize=config.minimize),
                 migration_interval=config.migration_interval,
+                minimize=config.minimize,
             )
         self.migration_controller = migration_controller
 
@@ -326,11 +327,10 @@ class IslandEvolutionEngine(Generic[G]):
         gen_seed = self.rng.randint(0, 2**31 - 1)
         gen_rng = Random(gen_seed)
 
-        # Sort by fitness for elitism
+        # Sort by fitness for elitism (feasibility first)
         sorted_pop = sorted(
             island.population,
-            key=lambda ind: ind.fitness.values[0] if ind.fitness else float("-inf"),
-            reverse=not self.config.minimize,
+            key=lambda ind: fitness_sort_key(ind.fitness, self.config.minimize),
         )
 
         # Preserve elites
@@ -399,18 +399,10 @@ class IslandEvolutionEngine(Generic[G]):
 
     def _find_global_best(self) -> Individual[G]:
         """Find best individual across all islands."""
-        all_individuals = self._get_combined_population()
-
-        if self.config.minimize:
-            return min(
-                all_individuals,
-                key=lambda ind: ind.fitness.values[0] if ind.fitness else float("inf"),
-            )
-        else:
-            return max(
-                all_individuals,
-                key=lambda ind: ind.fitness.values[0] if ind.fitness else float("-inf"),
-            )
+        return min(
+            self._get_combined_population(),
+            key=lambda ind: fitness_sort_key(ind.fitness, self.config.minimize),
+        )
 
     def _get_combined_population(self) -> Population[G]:
         """Get all individuals from all islands as a Population."""
@@ -425,6 +417,7 @@ class IslandEvolutionEngine(Generic[G]):
         }
 
         all_fitness = []
+        minimize = self.config.minimize
 
         for island in self._islands:
             island_fitness = [
@@ -432,11 +425,10 @@ class IslandEvolutionEngine(Generic[G]):
             ]
 
             if island_fitness:
+                best = min(island.population, key=lambda i: fitness_sort_key(i.fitness, minimize))
                 stats["islands"][island.id] = {
                     "size": island.size,
-                    "best_fitness": min(island_fitness)
-                    if self.config.minimize
-                    else max(island_fitness),
+                    "best_fitness": float(best.fitness.values[0]) if best.fitness else None,
                     "avg_fitness": sum(island_fitness) / len(island_fitness),
                     "fitness_variance": np.var(island_fitness),
                     "isolation_time": island.isolation_time,
@@ -444,7 +436,9 @@ class IslandEvolutionEngine(Generic[G]):
                 all_fitness.extend(island_fitness)
 
         if all_fitness:
-            stats["global_best"] = min(all_fitness) if self.config.minimize else max(all_fitness)
+            global_best = self._find_global_best()
+            if global_best.fitness is not None:
+                stats["global_best"] = float(global_best.fitness.values[0])
             stats["global_avg"] = sum(all_fitness) / len(all_fitness)
             stats["global_variance"] = float(np.var(all_fitness))
 

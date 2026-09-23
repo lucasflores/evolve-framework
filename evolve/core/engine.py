@@ -674,22 +674,14 @@ class EvolutionEngine(Generic[G]):
             )
             ensemble_metrics = self._ensemble_collector.collect(ensemble_context)
             metrics.update(ensemble_metrics)
-            # Update elite history for next generation using collector's top_k_percent
-            pop_list = list(population)
+            # Elite history for next generation, ranked the way elitism ranks
             elite_count = max(
                 1,
-                math.ceil(self._ensemble_collector.top_k_percent / 100.0 * len(pop_list)),
+                math.ceil(self._ensemble_collector.top_k_percent / 100.0 * len(population)),
             )
-            sorted_pop = sorted(
-                pop_list,
-                key=lambda ind: (
-                    float(ind.fitness.values[0])
-                    if ind.fitness is not None
-                    else (float("inf") if self.config.minimize else float("-inf"))
-                ),
-                reverse=not self.config.minimize,
+            self._prev_ensemble_elites = list(
+                population.best(elite_count, minimize=self.config.minimize)
             )
-            self._prev_ensemble_elites = sorted_pop[:elite_count]
 
         # Add timing metrics (selection, variation, evaluation, total)
         timing_metrics = self._timer.get_metrics(breakdown=True)

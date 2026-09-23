@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from random import Random
 from typing import Generic, Protocol, TypeVar
 
-from evolve.core.types import Individual
+from evolve.core.types import Individual, fitness_sort_key
 from evolve.diversity.islands.island import Island
 
 G = TypeVar("G")
@@ -75,14 +75,20 @@ class BestMigration(Generic[G]):
     """
     Migrate best individuals from each island.
 
-    Selects the highest-fitness individuals as emigrants.
+    Selects the best individuals (feasibility first) as emigrants.
     This is the most common migration policy, promoting
     spread of good solutions while maintaining exploration.
+
+    Attributes:
+        minimize: If True, lower fitness is better (default False: highest
+            fitness migrates, as before directions were configurable)
 
     Example:
         >>> policy = BestMigration()
         >>> emigrants = policy.select_emigrants(island, n=3, rng=rng)
     """
+
+    minimize: bool = False
 
     def select_emigrants(
         self,
@@ -94,11 +100,10 @@ class BestMigration(Generic[G]):
         if not island.population or n_emigrants <= 0:
             return []
 
-        # Sort by fitness (descending - best first)
+        # Best first (feasibility first)
         sorted_pop = sorted(
             island.population,
-            key=lambda ind: ind.fitness.values[0] if ind.fitness else float("-inf"),
-            reverse=True,
+            key=lambda ind: fitness_sort_key(ind.fitness, self.minimize),
         )
 
         # Return copies to avoid modifying originals
@@ -164,9 +169,11 @@ class TournamentMigration(Generic[G]):
 
     Attributes:
         tournament_size: Number of individuals per tournament
+        minimize: If True, lower fitness is better (default False)
     """
 
     tournament_size: int = 3
+    minimize: bool = False
 
     def select_emigrants(
         self,
@@ -186,10 +193,7 @@ class TournamentMigration(Generic[G]):
             k = min(self.tournament_size, len(available))
             contestants = rng.sample(available, k)
 
-            winner = max(
-                contestants,
-                key=lambda ind: ind.fitness.values[0] if ind.fitness else float("-inf"),
-            )
+            winner = min(contestants, key=lambda ind: fitness_sort_key(ind.fitness, self.minimize))
 
             emigrants.append(copy.deepcopy(winner))
             # Don't remove - same individual can migrate multiple times
@@ -218,6 +222,8 @@ class MigrationController(Generic[G]):
     Attributes:
         policy: Migration policy for selecting emigrants/immigrants
         migration_interval: Generations between migrations
+        minimize: If True, lower fitness is better when choosing whom
+            immigrants replace (default False)
 
     Example:
         >>> controller = MigrationController(
@@ -230,6 +236,7 @@ class MigrationController(Generic[G]):
 
     policy: MigrationPolicy[G]
     migration_interval: int = 10
+    minimize: bool = False
 
     def should_migrate(self, generation: int) -> bool:
         """
@@ -328,9 +335,9 @@ class MigrationController(Generic[G]):
         if not immigrants or not island.population:
             return
 
-        # Sort population by fitness (ascending - worst first)
+        # Worst first: reverse of the best-first feasibility key
         island.population.sort(
-            key=lambda ind: ind.fitness.values[0] if ind.fitness else float("-inf")
+            key=lambda ind: fitness_sort_key(ind.fitness, self.minimize), reverse=True
         )
 
         # Replace worst with immigrants

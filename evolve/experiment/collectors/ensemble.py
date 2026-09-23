@@ -25,10 +25,19 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import numpy.typing as npt
 
+from evolve.core.types import Fitness, fitness_sort_key
+
 if TYPE_CHECKING:
     from evolve.experiment.collectors.base import CollectionContext
 
 _logger = logging.getLogger(__name__)
+
+
+def _as_fitness(fitness: Any) -> Fitness | None:
+    """Core Fitness as-is; a scalar custom fitness exposing ``.value`` wrapped."""
+    if fitness is None or isinstance(fitness, Fitness):
+        return fitness
+    return Fitness.scalar(float(fitness.value))
 
 
 @dataclass
@@ -172,14 +181,7 @@ class EnsembleMetricCollector:
             population_list = list(context.population)
             sorted_inds = sorted(
                 population_list,
-                key=lambda ind: (
-                    float(ind.fitness.values[0])
-                    if ind.fitness is not None and hasattr(ind.fitness, "values")
-                    else float(ind.fitness.value)  # type: ignore[attr-defined]
-                    if ind.fitness is not None
-                    else (float("inf") if context.minimize else float("-inf"))
-                ),
-                reverse=not context.minimize,
+                key=lambda ind: fitness_sort_key(_as_fitness(ind.fitness), context.minimize),
             )
             current_elite = sorted_inds[:elite_count]
 
