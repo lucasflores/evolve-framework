@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 
 from evolve.core.population import Population
-from evolve.core.types import Individual
+from evolve.core.types import Individual, fitness_sort_key
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -496,10 +496,9 @@ class HallOfFameCallback:
             if ind.fitness is not None:
                 candidates.append(ind)
 
-        # Sort: best first
+        # Sort: best first (feasibility first)
         candidates.sort(
-            key=lambda ind: ind.fitness.values[0] if ind.fitness is not None else float("inf"),
-            reverse=not minimize,
+            key=lambda ind: fitness_sort_key(ind.fitness, minimize), reverse=not minimize
         )
 
         # Deduplicate by id, keep best rank

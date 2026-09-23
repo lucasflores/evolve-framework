@@ -93,6 +93,13 @@ class Fitness:
         return bool(np.all(self.constraints <= 0))
 
     @property
+    def total_constraint_violation(self) -> float:
+        """Sum of positive constraint values, sum(max(0, c)); 0.0 when feasible."""
+        if self.constraints is None:
+            return 0.0
+        return float(np.sum(np.maximum(self.constraints, 0)))
+
+    @property
     def is_valid(self) -> bool:
         """True if no NaN or inf values in fitness."""
         return bool(np.all(np.isfinite(self.values)))
@@ -220,6 +227,33 @@ class Fitness:
             constraints=constraints,
             metadata=data.get("metadata", {}),
         )
+
+
+def fitness_sort_key(fitness: Fitness | None, minimize: bool = True) -> tuple[int, float, float]:
+    """
+    Feasibility-first sort key for single-objective fitness (Deb's rules).
+
+    Drop-in replacement for ``float(fitness.values[0])`` as a key: use it
+    exactly as that key was used (``sorted(..., reverse=not minimize)``,
+    ``min`` when minimizing, ``max`` when maximizing). On top of the value,
+    feasible beats infeasible and, between infeasible fitnesses, lower
+    ``total_constraint_violation`` wins. When every fitness is feasible the
+    ordering is identical to ranking on ``values[0]``. ``None`` ranks last.
+
+    Args:
+        fitness: Fitness to rank (``values[0]`` is the objective).
+        minimize: Direction the caller ranks ``values[0]`` in.
+
+    Returns:
+        (feasibility class, violation term, objective value) tuple.
+    """
+    if fitness is None:
+        return (2, 0.0, 0.0) if minimize else (-1, 0.0, 0.0)
+    value = float(fitness.values[0])
+    if fitness.is_feasible:
+        return (0, 0.0, value) if minimize else (1, 0.0, value)
+    violation = fitness.total_constraint_violation
+    return (1, violation, value) if minimize else (0, -violation, value)
 
 
 @dataclass

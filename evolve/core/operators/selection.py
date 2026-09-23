@@ -19,7 +19,7 @@ from random import Random
 from typing import Generic, Protocol, TypeVar, runtime_checkable
 
 from evolve.core.population import Population
-from evolve.core.types import Individual
+from evolve.core.types import Individual, fitness_sort_key
 
 G = TypeVar("G")
 
@@ -89,6 +89,10 @@ class TournamentSelection(Generic[G]):
     Selects k random individuals, returns best.
     Larger k = higher selection pressure.
 
+    "Best" is feasibility-first (Deb's rules): feasible beats infeasible;
+    between infeasible, lower total constraint violation wins; otherwise
+    ``values[0]`` decides.
+
     Attributes:
         tournament_size: Number of individuals in each tournament (default: 3)
         minimize: If True, lower fitness is better (default: True)
@@ -122,17 +126,11 @@ class TournamentSelection(Generic[G]):
             # Random tournament
             tournament = rng.sample(evaluated, min(self.tournament_size, len(evaluated)))
 
-            # Find best in tournament
+            # Find best in tournament (feasibility first)
             if self.minimize:
-                winner = min(
-                    tournament,
-                    key=lambda ind: float(ind.fitness.values[0]) if ind.fitness else float("inf"),
-                )
+                winner = min(tournament, key=lambda ind: fitness_sort_key(ind.fitness, True))
             else:
-                winner = max(
-                    tournament,
-                    key=lambda ind: float(ind.fitness.values[0]) if ind.fitness else float("-inf"),
-                )
+                winner = max(tournament, key=lambda ind: fitness_sort_key(ind.fitness, False))
 
             selected.append(winner)
 
@@ -158,6 +156,13 @@ class RouletteSelection(Generic[G]):
 
     Probability of selection proportional to fitness.
     Only valid for positive fitness values.
+
+    Constraints are ignored: probabilities come from raw ``values[0]`` only.
+    Feasibility-first ranking has no proportional analogue, and giving
+    infeasible individuals zero weight would collapse the wheel onto the
+    few feasible ones early in a run. Elitism (``Population.best``) still
+    ranks feasibility first; use tournament or rank selection when
+    constraints should steer parent choice.
 
     Attributes:
         minimize: If True, inverts fitness for selection
@@ -208,7 +213,8 @@ class RankSelection(Generic[G]):
     Rank-based selection.
 
     Selection probability based on rank, not raw fitness.
-    More robust to fitness scaling issues.
+    More robust to fitness scaling issues. Ranks are feasibility-first
+    (Deb's rules), as in tournament selection.
 
     Attributes:
         selection_pressure: 1.0 = uniform, 2.0 = strong pressure
@@ -233,10 +239,10 @@ class RankSelection(Generic[G]):
         if not evaluated:
             raise ValueError("Cannot select from unevaluated population")
 
-        # Sort by fitness
+        # Sort by fitness (feasibility first)
         sorted_inds = sorted(
             evaluated,
-            key=lambda ind: float(ind.fitness.values[0]) if ind.fitness else float("inf"),
+            key=lambda ind: fitness_sort_key(ind.fitness, self.minimize),
             reverse=not self.minimize,
         )
 
