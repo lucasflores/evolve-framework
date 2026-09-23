@@ -594,17 +594,21 @@ class EvolutionEngine(Generic[G]):
             "evaluated_count": stats.evaluated_count,
         }
 
-        if stats.best_fitness is not None:
-            metrics["best_fitness"] = float(stats.best_fitness.values[0])
+        nsga2 = self._nsga2()
+        if nsga2 is not None:
+            self._compute_multiobjective_metrics(population, nsga2, metrics)
+        else:
+            if stats.best_fitness is not None:
+                metrics["best_fitness"] = float(stats.best_fitness.values[0])
 
-        if stats.worst_fitness is not None:
-            metrics["worst_fitness"] = float(stats.worst_fitness.values[0])
+            if stats.worst_fitness is not None:
+                metrics["worst_fitness"] = float(stats.worst_fitness.values[0])
 
-        if stats.mean_fitness is not None:
-            metrics["mean_fitness"] = float(stats.mean_fitness.values[0])
+            if stats.mean_fitness is not None:
+                metrics["mean_fitness"] = float(stats.mean_fitness.values[0])
 
-        if stats.std_fitness is not None:
-            metrics["std_fitness"] = stats.std_fitness
+            if stats.std_fitness is not None:
+                metrics["std_fitness"] = stats.std_fitness
 
         # Extended population metrics (fitness distribution)
         if "extended_population" in categories:
@@ -673,6 +677,51 @@ class EvolutionEngine(Generic[G]):
         metrics.update(timing_metrics)
 
         return metrics
+
+    def _compute_multiobjective_metrics(
+        self,
+        population: Population[G],
+        nsga2: NSGA2Selector[G],
+        metrics: dict[str, Any],
+    ) -> None:
+        """
+        Multi-objective generation metrics (there is no scalar best).
+
+        - ``pareto_front_size``: individuals on the first non-dominated front
+        - ``<objective>_best``: best raw value of that objective in its declared
+          direction, among feasible individuals (all, if none is feasible)
+        - ``<objective>_mean``: population mean of the raw value
+        - ``hypervolume``: of the feasible first front against the configured
+          ``reference_point`` (two objectives only)
+        """
+        from evolve.multiobjective.metrics import hypervolume_2d
+        from evolve.multiobjective.ranking import fast_non_dominated_sort
+
+        mo = self._multiobjective_config
+        assert mo is not None
+        evaluated = [ind for ind in population.individuals if ind.fitness is not None]
+        if not evaluated:
+            return
+
+        ranked = nsga2.ranking_fitnesses(evaluated)
+        first_front = fast_non_dominated_sort(ranked)[0]
+        metrics["pareto_front_size"] = len(first_front)
+
+        raw = np.array([ind.fitness.values for ind in evaluated if ind.fitness is not None])
+        maximized = np.array([f.objectives for f in ranked])
+        feasible = np.array([f.is_feasible for f in ranked])
+        pool = np.flatnonzero(feasible) if feasible.any() else np.arange(len(ranked))
+        for j, spec in enumerate(mo.objectives):
+            best = pool[np.argmax(maximized[pool, j])]
+            metrics[f"{spec.name}_best"] = float(raw[best, j])
+            metrics[f"{spec.name}_mean"] = float(np.mean(raw[:, j]))
+
+        # ponytail: exact 2-D hypervolume only; MultiObjectiveMetricCollector has
+        # Monte Carlo estimates if 3+ objectives need one.
+        if mo.reference_point is not None and len(mo.objectives) == 2:
+            front = [i for i in first_front if ranked[i].is_feasible]
+            reference = nsga2.to_maximization(np.asarray(mo.reference_point, dtype=float))
+            metrics["hypervolume"] = hypervolume_2d(maximized[front], reference)
 
     def _compute_diversity_metrics(
         self, population: Population[G], metrics: dict[str, Any]

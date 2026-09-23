@@ -155,10 +155,10 @@ class Population(Generic[G]):
             worst_fitness = fitness_values[worst_idx]
             mean_fitness = Fitness.scalar(mean_val)
         else:
-            # Multi-objective: best is first Pareto front representative
-            # For now, just return first individual's fitness as "best"
-            best_fitness = fitness_values[0]
-            worst_fitness = fitness_values[-1]
+            # Multi-objective: no scalar best/worst without objective directions
+            # (the engine reports per-objective and Pareto-front metrics instead)
+            best_fitness = None
+            worst_fitness = None
             mean_values = np.mean([f.values for f in fitness_values], axis=0)
             mean_fitness = Fitness(values=mean_values)
             std_val = None

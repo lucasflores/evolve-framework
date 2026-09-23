@@ -62,8 +62,8 @@ class TestMinimizeAwareStatistics:
         assert stats.worst_fitness is not None
         assert float(stats.worst_fitness.values[0]) == 1.0
 
-    def test_multi_objective_fallback(self):
-        """Multi-objective populations fall back to first-element heuristic."""
+    def test_multi_objective_has_no_scalar_best(self):
+        """Multi-objective populations report no best/worst: there is no scalar order."""
         genomes = [VectorGenome(genes=np.array([float(i)])) for i in range(3)]
         individuals = [
             Individual(genome=genomes[0], fitness=Fitness(values=np.array([1.0, 2.0]))),
@@ -73,9 +73,10 @@ class TestMinimizeAwareStatistics:
         pop = Population(individuals=individuals, minimize=True)
         stats = pop.statistics
 
-        # Multi-objective: best/worst still set (fallback behavior)
-        assert stats.best_fitness is not None
-        assert stats.worst_fitness is not None
+        assert stats.best_fitness is None
+        assert stats.worst_fitness is None
+        assert stats.mean_fitness is not None
+        assert stats.mean_fitness.values.tolist() == [2.0, 2.0]
 
     def test_empty_fitness_population(self):
         """Population with no evaluated individuals returns None stats."""
