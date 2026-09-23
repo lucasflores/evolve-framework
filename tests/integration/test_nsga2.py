@@ -16,7 +16,7 @@ import numpy as np
 import pytest
 
 from evolve.core.operators import GaussianMutation, UniformCrossover
-from evolve.core.types import Individual
+from evolve.core.types import Fitness, Individual
 from evolve.evaluation.reference.functions import zdt1
 from evolve.multiobjective import (
     CrowdedTournamentSelection,
@@ -215,6 +215,41 @@ class TestNSGA2Selection:
         selected = tournament.select(population, 5, ranks, crowding, rng)
 
         assert len(selected) == 5
+
+
+class TestNSGA2Constraints:
+    """Core Fitness constraints survive the wrap into MultiObjectiveFitness."""
+
+    @staticmethod
+    def _population() -> list[Individual[VectorGenome]]:
+        genome = VectorGenome(genes=np.zeros(1), bounds=(np.zeros(1), np.ones(1)))
+        return [
+            # Infeasible, but dominates every other point on raw objectives
+            Individual(
+                genome=genome,
+                fitness=Fitness(values=np.array([10.0, 10.0]), constraints=np.array([0.5])),
+            ),
+            Individual(
+                genome=genome,
+                fitness=Fitness(values=np.array([1.0, 2.0]), constraints=np.array([-1.0])),
+            ),
+            Individual(genome=genome, fitness=Fitness(values=np.array([2.0, 1.0]))),
+        ]
+
+    def test_feasible_never_ranked_behind_infeasible(self):
+        """get_ranking_info puts every feasible individual ahead of the infeasible one."""
+        ranks, _ = NSGA2Selector().get_ranking_info(self._population())
+
+        assert ranks[1] == ranks[2] == 0
+        assert ranks[0] > ranks[1]
+
+    def test_select_keeps_feasible_first(self, rng):
+        """Environmental selection drops the infeasible individual first."""
+        population = self._population()
+
+        selected = NSGA2Selector().select(population, n_select=2, rng=rng)
+
+        assert population[0] not in selected
 
 
 class TestHypervolume:
