@@ -79,6 +79,7 @@ class Population(Generic[G]):
         generation: int = 0,
         minimize: bool = True,
         ranker: NSGA2Selector[G] | None = None,
+        ranking: tuple[dict[int, int], dict[int, float]] | None = None,
     ) -> None:
         """
         Create population from individuals.
@@ -90,6 +91,8 @@ class Population(Generic[G]):
             ranker: The engine's NSGA-II ranker in multi-objective mode, None in
                 single-objective mode. It decides how individuals are ranked;
                 the number of fitness values cannot tell the two modes apart.
+            ranking: Known (ranks, crowding) per index, e.g. from survival
+                selection; computed from ``ranker`` on first use when None.
 
         Raises:
             ValueError: If individuals is empty
@@ -101,7 +104,7 @@ class Population(Generic[G]):
         self._generation = generation
         self._minimize = minimize
         self._ranker = ranker
-        self._ranking: tuple[dict[int, int], dict[int, float]] | None = None
+        self._ranking = ranking
         self._statistics: PopulationStatistics | None = None
 
     @property

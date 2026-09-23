@@ -198,6 +198,21 @@ class TestNSGA2Selection:
         selected_indices = [population.index(ind) for ind in selected]
         assert all(idx < 5 for idx in selected_indices)
 
+    def test_select_ranked_matches_select_and_keeps_fronts(self, rng):
+        """select_ranked returns select's survivors plus their ranks (fronts unchanged)."""
+        population = []
+        for i in range(12):
+            genome = VectorGenome(genes=np.array([0.0]), bounds=(np.zeros(1), np.ones(1)))
+            fitness = MultiObjectiveFitness(np.array([float(i % 5), float((7 * i) % 6)]))
+            population.append(Individual(genome=genome, fitness=fitness))
+        selector = NSGA2Selector()
+
+        survivors, (ranks, crowding) = selector.select_ranked(population, 7)
+
+        assert survivors == selector.select(population, 7, rng)
+        assert ranks == selector.get_ranking_info(survivors)[0]
+        assert sorted(crowding) == list(range(7))
+
     def test_crowded_tournament_selection(self, rng):
         """Test crowded tournament selection."""
         population = []

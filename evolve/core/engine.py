@@ -330,7 +330,8 @@ class EvolutionEngine(Generic[G]):
         n_parents = n_offspring * 2
         if nsga2 is not None:
             # Crowded tournament compares Pareto rank, then crowding distance
-            ranks, crowding = nsga2.get_ranking_info(population.individuals)
+            # (cached on the population: assigned at survival, or computed once)
+            ranks, crowding = population.ranking
             parents = list(
                 self.selection.select(population.individuals, n_parents, ranks, crowding, self.rng)
             )
@@ -411,11 +412,13 @@ class EvolutionEngine(Generic[G]):
 
         # NSGA-II environmental selection: non-dominated fronts, then crowding
         if nsga2 is not None:
+            survivors, ranking = nsga2.select_ranked(evaluated_population.individuals, pop_size)
             evaluated_population = Population(
-                individuals=nsga2.select(evaluated_population.individuals, pop_size, self.rng),
+                individuals=survivors,
                 generation=self._generation + 1,
                 minimize=self.config.minimize,
                 ranker=nsga2,
+                ranking=ranking,
             )
 
         # End generation timing
@@ -710,22 +713,22 @@ class EvolutionEngine(Generic[G]):
           ``reference_point`` (two objectives only)
         """
         from evolve.multiobjective.metrics import hypervolume_2d
-        from evolve.multiobjective.ranking import fast_non_dominated_sort
 
         mo = self._multiobjective_config
         assert mo is not None
-        evaluated = [ind for ind in population.individuals if ind.fitness is not None]
-        if not evaluated:
+        fitnesses = [ind.fitness for ind in population.individuals]
+        if any(f is None for f in fitnesses):
             return
 
-        ranked = nsga2.ranking_fitnesses(evaluated)
-        first_front = fast_non_dominated_sort(ranked)[0]
+        # Fronts come from the population's cached ranking (no extra sort)
+        ranks, _ = population.ranking
+        first_front = [i for i, rank in ranks.items() if rank == 0]
         metrics["pareto_front_size"] = len(first_front)
 
-        raw = np.array([ind.fitness.values for ind in evaluated if ind.fitness is not None])
-        maximized = np.array([f.objectives for f in ranked])
-        feasible = np.array([f.is_feasible for f in ranked])
-        pool = np.flatnonzero(feasible) if feasible.any() else np.arange(len(ranked))
+        raw = np.array([f.values for f in fitnesses if f is not None])
+        maximized = np.array([nsga2.to_maximization(v) for v in raw])
+        feasible = np.array([f.is_feasible for f in fitnesses if f is not None])
+        pool = np.flatnonzero(feasible) if feasible.any() else np.arange(len(raw))
         for j, spec in enumerate(mo.objectives):
             best = pool[np.argmax(maximized[pool, j])]
             metrics[f"{spec.name}_best"] = float(raw[best, j])
@@ -734,7 +737,7 @@ class EvolutionEngine(Generic[G]):
         # ponytail: exact 2-D hypervolume only; MultiObjectiveMetricCollector has
         # Monte Carlo estimates if 3+ objectives need one.
         if mo.reference_point is not None and len(mo.objectives) == 2:
-            front = [i for i in first_front if ranked[i].is_feasible]
+            front = [i for i in first_front if feasible[i]]
             reference = nsga2.to_maximization(np.asarray(mo.reference_point, dtype=float))
             metrics["hypervolume"] = hypervolume_2d(maximized[front], reference)
 
