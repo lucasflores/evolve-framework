@@ -90,6 +90,28 @@ class TestVectorFitnessSingleObjective:
 
 
 @pytest.mark.integration
+class TestMaximization:
+    """config.minimize=False reaches every operator that ranks fitness."""
+
+    @pytest.mark.parametrize("selection", ["tournament", "rank", "roulette"])
+    def test_maximizing_run_improves(self, selection: str) -> None:
+        cfg = _config(selection=selection, minimize=False, max_generations=15)
+        history: list[float] = []
+
+        class _Means:
+            def on_generation_start(self, generation: int, population: Any) -> None:
+                if generation == 0:
+                    history.append(float(np.mean([i.fitness.values[0] for i in population])))
+
+        result = create_engine(cfg, evaluator=lambda genes: float(np.sum(genes))).run(
+            create_initial_population(cfg), callbacks=[_Means()]
+        )
+
+        assert result.history[-1]["mean_fitness"] > history[0] + 1.0
+        assert result.history[-1]["best_fitness"] > 4.0
+
+
+@pytest.mark.integration
 class TestUnconstrainedRegression:
     """Pinned seeded results of unconstrained runs.
 

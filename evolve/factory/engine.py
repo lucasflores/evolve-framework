@@ -181,10 +181,21 @@ def create_engine(
     # Build operators from registry (FR-028)
     op_registry = get_operator_registry()
 
+    selection_params = dict(config.selection_params)
+    # One direction for the whole run: selection ranks like elitism does
+    if (
+        op_registry.accepts_param("selection", config.selection, "minimize")
+        and selection_params.setdefault("minimize", config.minimize) != config.minimize
+    ):
+        raise ValueError(
+            f"selection_params minimize={selection_params['minimize']} contradicts "
+            f"config.minimize={config.minimize}; set the direction once, on "
+            "UnifiedConfig.minimize."
+        )
     selection = op_registry.get(
         "selection",
         config.selection,
-        **config.selection_params,
+        **selection_params,
     )
     crossover = op_registry.get(
         "crossover",
@@ -374,7 +385,9 @@ def _build_stopping_criteria(config: UnifiedConfig) -> Any:
 
         # Stagnation detection (FR-011)
         if stop_cfg.stagnation_generations is not None:
-            criteria.append(StagnationStopping(stop_cfg.stagnation_generations))
+            criteria.append(
+                StagnationStopping(stop_cfg.stagnation_generations, minimize=config.minimize)
+            )
 
         # Time limit (FR-012)
         if stop_cfg.time_limit_seconds is not None:

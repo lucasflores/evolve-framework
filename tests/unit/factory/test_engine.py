@@ -15,6 +15,7 @@ from evolve.config.unified import UnifiedConfig
 from evolve.core.stopping import (
     CompositeStoppingCriterion,
     GenerationLimitStopping,
+    StagnationStopping,
 )
 from evolve.core.types import Fitness
 from evolve.evaluation.evaluator import EvaluatorCapabilities
@@ -711,3 +712,57 @@ class TestDecoderDeliveryIsVerified:
             engine = create_engine(self._config(evaluator=None), evaluator=evaluator)
 
         assert engine.evaluator._decoder is own
+
+
+class TestMinimizePlumbing:
+    """config.minimize reaches selection operators and stagnation stopping."""
+
+    @staticmethod
+    def _config(**overrides: Any) -> UnifiedConfig:
+        params: dict[str, Any] = {
+            "population_size": 10,
+            "selection": "tournament",
+            "crossover": "sbx",
+            "mutation": "gaussian",
+            "genome_type": "vector",
+            "genome_params": {"dimensions": 3, "bounds": (-1.0, 1.0)},
+        }
+        params.update(overrides)
+        return UnifiedConfig(**params)
+
+    @pytest.mark.parametrize("selection", ["tournament", "rank", "roulette"])
+    @pytest.mark.parametrize("minimize", [True, False])
+    def test_selection_follows_config(self, selection: str, minimize: bool) -> None:
+        engine = create_engine(self._config(selection=selection, minimize=minimize), simple_fitness)
+
+        assert engine.selection.minimize is minimize
+
+    def test_conflicting_selection_params_refused(self) -> None:
+        config = self._config(minimize=False, selection_params={"minimize": True})
+
+        with pytest.raises(ValueError, match="contradicts config.minimize=False"):
+            create_engine(config, simple_fitness)
+
+    def test_stagnation_follows_config(self) -> None:
+        config = self._config(minimize=False, stopping=StoppingConfig(stagnation_generations=5))
+
+        criteria = _build_stopping_criteria(config)
+
+        assert isinstance(criteria, CompositeStoppingCriterion)
+        stagnation = [c for c in criteria.criteria if isinstance(c, StagnationStopping)]
+        assert len(stagnation) == 1
+        assert stagnation[0].minimize is False
+
+    def test_stagnation_maximizing_counts_first_value_as_improvement(self) -> None:
+        """Without a prior reset(), a maximizing criterion must not start from +inf."""
+        from evolve.core.population import Population
+        from evolve.core.types import Fitness, Individual
+        from evolve.representation.vector import VectorGenome
+
+        population = Population(
+            [Individual(genome=VectorGenome(genes=[0.0]), fitness=Fitness.scalar(1.0))],
+            minimize=False,
+        )
+        stagnation = StagnationStopping(patience=1, minimize=False)
+
+        assert not stagnation.should_stop(0, population, [])
