@@ -63,6 +63,7 @@ class RestAndFirstGene(SumAndFirstGene):
 
 def _config(
     directions: tuple[str, str] = ("maximize", "maximize"),
+    reference_point: tuple[float, float] | None = None,
     **overrides: Any,
 ) -> UnifiedConfig:
     params: dict[str, Any] = {
@@ -82,6 +83,7 @@ def _config(
             ObjectiveSpec(name=name, direction=d)  # type: ignore[arg-type]
             for name, d in zip("ab", directions, strict=True)
         ),
+        reference_point=reference_point,
     )
 
 
@@ -141,6 +143,26 @@ class TestMultiObjectiveEngine:
         for ind in result.population:
             genes = np.asarray(ind.genome.genes)
             assert ind.fitness.values.tolist() == RestAndFirstGene.objectives(genes).tolist()
+
+    def test_generation_metrics_are_per_objective(self) -> None:
+        """MO history carries honest per-objective values, not a values[0] 'best'."""
+        cfg = _config(("maximize", "minimize"), reference_point=(-1.0, 2.0), max_generations=3)
+
+        result = create_engine(cfg, evaluator=SumAndFirstGene()).run(create_initial_population(cfg))
+
+        last = result.history[-1]
+        for key in ("best_fitness", "worst_fitness", "mean_fitness", "std_fitness"):
+            assert key not in last
+        values = np.array([ind.fitness.values for ind in result.population])
+        assert last["a_best"] == values[:, 0].max()
+        assert last["b_best"] == values[:, 1].min()
+        assert last["a_mean"] == pytest.approx(values[:, 0].mean())
+        assert last["b_mean"] == pytest.approx(values[:, 1].mean())
+        ranks, _ = NSGA2Selector(directions=("maximize", "minimize")).get_ranking_info(
+            result.population.individuals
+        )
+        assert last["pareto_front_size"] == sum(1 for r in ranks.values() if r == 0)
+        assert last["hypervolume"] > 0.0
 
 
 class _StepRecorder:
