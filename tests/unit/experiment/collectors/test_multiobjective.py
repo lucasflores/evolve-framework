@@ -20,6 +20,7 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 import numpy as np
+import pytest
 
 from evolve.experiment.collectors.base import CollectionContext
 from evolve.experiment.collectors.multiobjective import MultiObjectiveMetricCollector
@@ -467,3 +468,41 @@ class TestMixedFitness:
 
         # Should handle gracefully
         assert "pareto_front_size" in metrics
+
+
+class TestFrontMetrics:
+    """front_metrics(): the one implementation behind collect() and the engine."""
+
+    def test_hypervolume_needs_a_reference(self):
+        points = np.array([[3.0, 1.0], [2.0, 2.0], [1.0, 3.0]])
+        collector = MultiObjectiveMetricCollector()
+
+        with_ref = collector.front_metrics(points, np.array([0.0, 0.0]))
+        without_ref = collector.front_metrics(points, None)
+
+        assert with_ref["hypervolume"] == pytest.approx(6.0)
+        assert "hypervolume" not in without_ref
+        assert "spread" in without_ref
+        assert "crowding_diversity" in without_ref
+
+    def test_empty_front_has_zero_hypervolume(self):
+        metrics = MultiObjectiveMetricCollector().front_metrics(
+            np.empty((0, 2)), np.array([0.0, 0.0])
+        )
+
+        assert metrics == {"hypervolume": 0.0}
+
+    def test_collect_matches_front_metrics(self):
+        front = [
+            make_mo_individual([3.0, 1.0]),
+            make_mo_individual([2.0, 2.0]),
+            make_mo_individual([1.0, 3.0]),
+        ]
+        collector = MultiObjectiveMetricCollector(reference_point=[0.0, 0.0])
+
+        collected = collector.collect(make_context(pareto_front=front))
+        direct = collector.front_metrics(
+            np.array([[3.0, 1.0], [2.0, 2.0], [1.0, 3.0]]), np.array([0.0, 0.0])
+        )
+
+        assert collected == {"pareto_front_size": 3, **direct}

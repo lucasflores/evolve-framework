@@ -30,7 +30,7 @@ class MetricCategory(Enum):
         DIVERSITY: diversity_score, population_entropy
         TIMING: generation_time_ms, phase breakdowns
         SPECIATION: species_count, dynamics (auto when speciation enabled)
-        MULTIOBJECTIVE: hypervolume, front_size (auto when MO enabled)
+        MULTIOBJECTIVE: hypervolume, spread, crowding diversity (always on in MO mode)
         ERP: mating_success_rate (auto when ERP enabled)
         METADATA: Fitness.metadata extraction
         DERIVED: selection_pressure, velocity, entropy
@@ -77,7 +77,7 @@ class TrackingConfig:
         metadata_prefix: Prefix for extracted metadata fields
         timing_breakdown: Enable fine-grained phase timing
         diversity_sample_size: Max samples for diversity computation
-        hypervolume_reference: Reference point for hypervolume computation
+        hypervolume_reference: Hypervolume reference point (raw objective units)
         velocity_window: Generations for computing improvement velocity
 
     Example:
@@ -159,7 +159,11 @@ class TrackingConfig:
     # -------------------------------------------------------------------------
 
     hypervolume_reference: tuple[float, ...] | None = None
-    """Reference point for hypervolume computation."""
+    """Hypervolume reference point in raw objective units.
+
+    Used in multi-objective mode when ``MultiObjectiveConfig.reference_point``
+    is not set; declaring both with different values is an error.
+    """
 
     # -------------------------------------------------------------------------
     # Derived analytics options (FR-022)

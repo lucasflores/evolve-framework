@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable
+from dataclasses import replace
 from random import Random
 from typing import TYPE_CHECKING, Any
 
@@ -482,6 +483,9 @@ def _evolution_config(config: UnifiedConfig) -> EvolutionConfig:
         if config.is_tracking_enabled and config.tracking is not None
         else frozenset({"core"})
     )
+    if config.is_multiobjective:
+        # Front quality metrics are always on in multi-objective mode
+        metric_cats = metric_cats | {"multiobjective"}
     merge = config.merge
     return EvolutionConfig(
         population_size=config.population_size,
@@ -639,6 +643,19 @@ def _create_multiobjective_engine(
     mo_settings = config.multiobjective
     if mo_settings is None:
         raise ValueError("Multi-objective settings required")
+
+    # One hypervolume reference, in raw objective units: MultiObjectiveConfig's,
+    # or TrackingConfig.hypervolume_reference when that is the only one declared
+    tracking_ref = config.tracking.hypervolume_reference if config.tracking else None
+    if tracking_ref is not None:
+        if mo_settings.reference_point is None:
+            mo_settings = replace(mo_settings, reference_point=tuple(tracking_ref))
+        elif tuple(mo_settings.reference_point) != tuple(tracking_ref):
+            raise ValueError(
+                f"TrackingConfig.hypervolume_reference={tuple(tracking_ref)} contradicts "
+                f"MultiObjectiveConfig.reference_point={tuple(mo_settings.reference_point)}; "
+                "declare the hypervolume reference once."
+            )
 
     # Override selection with NSGA-II crowded tournament (T054)
     if config.selection != "crowded_tournament":

@@ -22,7 +22,6 @@ from evolve.experiment.collectors.base import CollectionContext
 
 if TYPE_CHECKING:
     from evolve.core.types import Individual
-    from evolve.multiobjective.fitness import MultiObjectiveFitness
 
 
 _logger = logging.getLogger(__name__)
@@ -107,12 +106,45 @@ class MultiObjectiveMetricCollector:
         if objectives is None or len(objectives) == 0:
             return metrics
 
+        metrics.update(
+            self.front_metrics(objectives, self._get_reference_point(objectives, context))
+        )
+        return metrics
+
+    def front_metrics(
+        self,
+        objectives: np.ndarray,
+        reference: np.ndarray | None,
+    ) -> dict[str, Any]:
+        """
+        Quality metrics of a front given directly as objective values.
+
+        Used by ``collect()`` and by the engine in multi-objective mode, so
+        both report the same numbers.
+
+        Args:
+            objectives: Front points in MAXIMIZATION space, shape (n, m).
+            reference: Hypervolume reference point in the same space, or
+                None to skip hypervolume.
+
+        Returns:
+            ``hypervolume`` (when ``reference`` is given; 0.0 for an empty
+            front), ``spread`` (2 objectives, when enabled) and
+            ``crowding_diversity`` (3+ points, when enabled).
+        """
+        metrics: dict[str, Any] = {}
+        if len(objectives) == 0:
+            if reference is not None:
+                metrics["hypervolume"] = 0.0
+            return metrics
+
         n_objectives = objectives.shape[1]
 
         # Compute hypervolume (exact for 2D, approximate for 3D+)
-        hv = self._compute_hypervolume(objectives, context)
-        if hv is not None:
-            metrics["hypervolume"] = hv
+        if reference is not None:
+            hv = self._compute_hypervolume(objectives, reference)
+            if hv is not None:
+                metrics["hypervolume"] = hv
 
         # Compute spread (only for 2D fronts)
         if self.enable_spread and n_objectives == 2:
@@ -122,7 +154,7 @@ class MultiObjectiveMetricCollector:
 
         # Compute crowding diversity
         if self.enable_crowding:
-            crowding = self._compute_crowding_diversity(front)
+            crowding = self._compute_crowding_diversity(objectives)
             if crowding is not None:
                 metrics["crowding_diversity"] = crowding
 
@@ -204,24 +236,19 @@ class MultiObjectiveMetricCollector:
     def _compute_hypervolume(
         self,
         objectives: np.ndarray,
-        context: CollectionContext,
+        ref: np.ndarray,
     ) -> float | None:
         """
         Compute hypervolume indicator.
 
         Args:
             objectives: Objective values, shape (n, m).
-            context: Collection context for reference point.
+            ref: Reference point.
 
         Returns:
             Hypervolume value, or None if not computable.
         """
         n_objectives = objectives.shape[1]
-
-        # Get reference point
-        ref = self._get_reference_point(objectives, context)
-        if ref is None:
-            return None
 
         if n_objectives == 2:
             from evolve.multiobjective.metrics import hypervolume_2d
@@ -393,13 +420,13 @@ class MultiObjectiveMetricCollector:
 
     def _compute_crowding_diversity(
         self,
-        front: list[Individual[Any]],
+        objectives: np.ndarray,
     ) -> float | None:
         """
         Compute mean crowding distance as diversity metric.
 
         Args:
-            front: Pareto front individuals.
+            objectives: Front objective values, shape (n, m).
 
         Returns:
             Mean finite crowding distance, or None.
@@ -407,11 +434,7 @@ class MultiObjectiveMetricCollector:
         from evolve.multiobjective.crowding import crowding_distance
         from evolve.multiobjective.fitness import MultiObjectiveFitness
 
-        # Extract MO fitnesses
-        fitnesses: list[MultiObjectiveFitness] = []
-        for ind in front:
-            if ind.fitness is not None and isinstance(ind.fitness, MultiObjectiveFitness):
-                fitnesses.append(ind.fitness)
+        fitnesses = [MultiObjectiveFitness(objectives=row) for row in objectives]
 
         if len(fitnesses) < 3:
             # Not enough points for meaningful crowding

@@ -215,6 +215,15 @@ class EvolutionEngine(Generic[G]):
 
             self._merge_collector = MergeMetricCollector()
 
+        # Multi-objective front metrics (the factory enables 'multiobjective' in MO mode)
+        self._mo_collector: Any = None
+        if multiobjective is not None and "multiobjective" in config.metric_categories:
+            from evolve.experiment.collectors.multiobjective import (
+                MultiObjectiveMetricCollector,
+            )
+
+            self._mo_collector = MultiObjectiveMetricCollector()
+
         # Ensemble metric collector (enabled when 'ensemble' in metric_categories)
         self._ensemble_collector: EnsembleMetricCollector | None = None
         self._prev_ensemble_elites: list[Any] | None = None
@@ -706,11 +715,12 @@ class EvolutionEngine(Generic[G]):
         - ``<objective>_best``: best raw value of that objective in its declared
           direction, among feasible individuals (all, if none is feasible)
         - ``<objective>_mean``: population mean of the raw value
-        - ``hypervolume``: of the feasible first front against the configured
-          ``reference_point`` (two objectives only)
-        """
-        from evolve.multiobjective.metrics import hypervolume_2d
 
+        With the ``multiobjective`` metric category, MultiObjectiveMetricCollector
+        adds ``hypervolume`` (only when a ``reference_point`` is configured),
+        ``spread`` and ``crowding_diversity`` of the feasible first front, from
+        the population's cached ranking (no extra sort).
+        """
         mo = self._multiobjective_config
         assert mo is not None
         fitnesses = [ind.fitness for ind in population.individuals]
@@ -731,12 +741,14 @@ class EvolutionEngine(Generic[G]):
             metrics[f"{spec.name}_best"] = float(raw[best, j])
             metrics[f"{spec.name}_mean"] = float(np.mean(raw[:, j]))
 
-        # Limitation: hypervolume is computed exactly for two objectives only; for
-        # 3+ objectives MultiObjectiveMetricCollector offers Monte Carlo estimates.
-        if mo.reference_point is not None and len(mo.objectives) == 2:
+        if self._mo_collector is not None:
             front = [i for i in first_front if feasible[i]]
-            reference = nsga2.to_maximization(np.asarray(mo.reference_point, dtype=float))
-            metrics["hypervolume"] = hypervolume_2d(maximized[front], reference)
+            reference = (
+                None
+                if mo.reference_point is None
+                else nsga2.to_maximization(np.asarray(mo.reference_point, dtype=float))
+            )
+            metrics.update(self._mo_collector.front_metrics(maximized[front], reference))
 
     def _compute_diversity_metrics(
         self, population: Population[G], metrics: dict[str, Any]

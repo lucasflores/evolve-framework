@@ -15,9 +15,16 @@ from typing import Any
 import numpy as np
 import pytest
 
-from evolve.config import ConstraintSpec, MultiObjectiveConfig, ObjectiveSpec, UnifiedConfig
+from evolve.config import (
+    ConstraintSpec,
+    MultiObjectiveConfig,
+    ObjectiveSpec,
+    TrackingConfig,
+    UnifiedConfig,
+)
 from evolve.core.types import Fitness, Individual
 from evolve.evaluation.evaluator import EvaluatorCapabilities
+from evolve.experiment.collectors.multiobjective import MultiObjectiveMetricCollector
 from evolve.factory import create_engine, create_initial_population
 from evolve.multiobjective import MultiObjectiveFitness, NSGA2Selector, hypervolume_2d, pareto_front
 from evolve.registry.evaluators import get_evaluator_registry, reset_evaluator_registry
@@ -226,6 +233,12 @@ class TestMultiObjectiveEngine:
             result.population.individuals
         )
         assert last["pareto_front_size"] == sum(1 for r in ranks.values() if r == 0)
+        # Front quality comes from MultiObjectiveMetricCollector, in the
+        # maximization space (a, -b) with the reference point mapped the same way
+        front = [i for i, r in ranks.items() if r == 0 and result.population[i].fitness.is_feasible]
+        points = np.column_stack([values[front, 0], -values[front, 1]])
+        expected = MultiObjectiveMetricCollector().front_metrics(points, np.array([-1.0, -2.0]))
+        assert {k: last[k] for k in expected} == expected
         assert last["hypervolume"] > 0.0
 
     def test_default_directions_keep_the_negate_to_minimize_recipe(self) -> None:
@@ -248,6 +261,42 @@ class TestMultiObjectiveEngine:
         initial_g0 = np.mean([ind.genome.genes[0] for ind in evaluator.evaluated[:20]])
         final_g0 = np.mean([ind.genome.genes[0] for ind in result.population])
         assert final_g0 < initial_g0 - 0.2
+
+    def test_tracking_hypervolume_reference_is_used(self) -> None:
+        """TrackingConfig.hypervolume_reference (raw units) fills a missing reference_point."""
+        cfg = _config(
+            ("maximize", "minimize"),
+            max_generations=2,
+            tracking=TrackingConfig(backend="null", hypervolume_reference=(-1.0, 2.0)),
+        )
+        declared = _config(("maximize", "minimize"), reference_point=(-1.0, 2.0), max_generations=2)
+
+        from_tracking = create_engine(cfg, evaluator=SumAndFirstGene()).run(
+            create_initial_population(cfg)
+        )
+        from_mo = create_engine(declared, evaluator=SumAndFirstGene()).run(
+            create_initial_population(declared)
+        )
+
+        assert from_tracking.history[-1]["hypervolume"] == from_mo.history[-1]["hypervolume"]
+
+    def test_conflicting_reference_points_refused(self) -> None:
+        cfg = _config(
+            reference_point=(-1.0, 2.0),
+            tracking=TrackingConfig(backend="null", hypervolume_reference=(0.0, 0.0)),
+        )
+
+        with pytest.raises(ValueError, match="hypervolume_reference"):
+            create_engine(cfg, evaluator=SumAndFirstGene())
+
+    def test_no_reference_no_hypervolume(self) -> None:
+        """Without a declared reference there is no comparable hypervolume."""
+        cfg = _config(max_generations=2)
+
+        result = create_engine(cfg, evaluator=SumAndFirstGene()).run(create_initial_population(cfg))
+
+        assert "hypervolume" not in result.history[-1]
+        assert "spread" in result.history[-1]
 
 
 @pytest.mark.integration

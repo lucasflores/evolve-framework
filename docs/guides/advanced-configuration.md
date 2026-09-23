@@ -172,7 +172,12 @@ result = engine.run(population)
 The `with_multiobjective()` method:
 - Configures NSGA-II with Pareto ranking and crowding distance
 - Automatically enables `crowded_tournament` selection
-- Sets up hypervolume tracking if a reference point is provided
+- Ranks each objective in its declared `direction`; the evaluator returns raw values
+- Sets up hypervolume tracking if a reference point is provided (raw objective units)
+
+Each generation's history then carries `pareto_front_size`, `<objective>_best`,
+`<objective>_mean`, `spread`, `crowding_diversity` and, with a reference point,
+`hypervolume` instead of the single-objective `best_fitness`/`mean_fitness`.
 
 ---
 
@@ -249,7 +254,7 @@ config = UnifiedConfig(
 | `DIVERSITY` | genotypic diversity, species count |
 | `OPERATORS` | operator success rates, parameter values |
 | `ERP` | protocol distributions, mating success, recovery events |
-| `MULTIOBJECTIVE` | hypervolume, Pareto front size, spread |
+| `MULTIOBJECTIVE` | hypervolume (with a reference point), spread, crowding diversity; always on in multi-objective mode |
 
 ---
 
