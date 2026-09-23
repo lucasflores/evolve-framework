@@ -61,21 +61,7 @@ class NSGA2Selector(Generic[G]):
         if n_select >= len(population):
             return list(population)
 
-        # Extract multi-objective fitnesses
-        fitnesses: list[MultiObjectiveFitness] = []
-        for ind in population:
-            if isinstance(ind.fitness, MultiObjectiveFitness):
-                fitnesses.append(ind.fitness)
-            else:
-                # Wrap single-objective fitness
-                from evolve.core.types import Fitness
-
-                if isinstance(ind.fitness, Fitness):
-                    fitnesses.append(MultiObjectiveFitness(objectives=ind.fitness.values))
-                else:
-                    raise TypeError(
-                        f"Expected MultiObjectiveFitness or Fitness, got {type(ind.fitness)}"
-                    )
+        fitnesses = self.ranking_fitnesses(population)
 
         # Non-dominated sorting
         fronts = fast_non_dominated_sort(fitnesses)
@@ -101,6 +87,40 @@ class NSGA2Selector(Generic[G]):
 
         return selected
 
+    def ranking_fitnesses(
+        self,
+        population: Sequence[Individual[G]],
+    ) -> list[MultiObjectiveFitness]:
+        """
+        Fitnesses as NSGA-II ranks them, one per individual (same order).
+
+        A core ``Fitness`` is wrapped with its ``constraints`` carried over as
+        ``constraint_violations`` (both use > 0 = violated), so constrained
+        domination applies: feasible individuals always rank ahead of
+        infeasible ones.
+
+        Raises:
+            TypeError: If an individual is unevaluated or has another fitness type.
+        """
+        from evolve.core.types import Fitness
+
+        fitnesses: list[MultiObjectiveFitness] = []
+        for ind in population:
+            if isinstance(ind.fitness, MultiObjectiveFitness):
+                fitnesses.append(ind.fitness)
+            elif isinstance(ind.fitness, Fitness):
+                fitnesses.append(
+                    MultiObjectiveFitness(
+                        objectives=ind.fitness.values,
+                        constraint_violations=ind.fitness.constraints,
+                    )
+                )
+            else:
+                raise TypeError(
+                    f"Expected MultiObjectiveFitness or Fitness, got {type(ind.fitness)}"
+                )
+        return fitnesses
+
     def get_ranking_info(
         self,
         population: Sequence[Individual[G]],
@@ -116,15 +136,7 @@ class NSGA2Selector(Generic[G]):
         Returns:
             Tuple of (ranks dict, crowding distances dict)
         """
-        fitnesses: list[MultiObjectiveFitness] = []
-        for ind in population:
-            if isinstance(ind.fitness, MultiObjectiveFitness):
-                fitnesses.append(ind.fitness)
-            else:
-                from evolve.core.types import Fitness
-
-                if isinstance(ind.fitness, Fitness):
-                    fitnesses.append(MultiObjectiveFitness(objectives=ind.fitness.values))
+        fitnesses = self.ranking_fitnesses(population)
 
         fronts = fast_non_dominated_sort(fitnesses)
 
