@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 
 from evolve.core.population import Population
-from evolve.core.types import Individual, fitness_sort_key
+from evolve.core.types import Individual
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -488,26 +488,26 @@ class HallOfFameCallback:
         population: Population[Any],
         metrics: dict[str, Any],  # noqa: ARG002
     ) -> None:
-        """Update archive with current population's best individuals."""
-        minimize = population._minimize
-        # Add all evaluated individuals to candidate pool
-        candidates = list(self.archive)
-        for ind in population.individuals:
-            if ind.fitness is not None:
-                candidates.append(ind)
+        """Update archive with current population's best individuals.
 
-        # Sort: best first (feasibility first)
-        candidates.sort(key=lambda ind: fitness_sort_key(ind.fitness, minimize))
-
-        # Deduplicate by id, keep best rank
+        Archive and population are ranked together the way the population
+        ranks itself: values[0] feasibility-first in single-objective mode,
+        Pareto front then crowding distance with the engine's NSGA-II ranker
+        in multi-objective mode.
+        """
+        # Evaluated candidates, deduplicated by id (archive copies first)
         seen: set[Any] = set()
         unique: list[Individual[Any]] = []
-        for ind in candidates:
-            if ind.id not in seen:
+        for ind in [*self.archive, *population.individuals]:
+            if ind.fitness is not None and ind.id not in seen:
                 seen.add(ind.id)
                 unique.append(ind)
+        if not unique:
+            return
 
-        self.archive = unique[: self.max_size]
+        minimize = population._minimize
+        pool = Population(unique, minimize=minimize, ranker=population.ranker)
+        self.archive = list(pool.best(min(self.max_size, len(unique)), minimize=minimize))
 
     def on_run_start(self, config: Any) -> None:  # noqa: ARG002
         """Clear archive at run start."""
