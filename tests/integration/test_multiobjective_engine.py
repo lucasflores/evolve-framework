@@ -62,6 +62,14 @@ class RestAndFirstGene(SumAndFirstGene):
         return np.array([g[1:].sum(), g[0]])
 
 
+class NegatedFirstGene(SumAndFirstGene):
+    """Old recipe: ``(sum(genes[1:]), -genes[0])`` so that ``genes[0]`` is minimized."""
+
+    @staticmethod
+    def objectives(g: np.ndarray) -> np.ndarray:
+        return np.array([g[1:].sum(), -g[0]])
+
+
 def _config(
     directions: tuple[str, str] = ("maximize", "maximize"),
     reference_point: tuple[float, float] | None = None,
@@ -164,6 +172,27 @@ class TestMultiObjectiveEngine:
         )
         assert last["pareto_front_size"] == sum(1 for r in ranks.values() if r == 0)
         assert last["hypervolume"] > 0.0
+
+    def test_default_directions_keep_the_negate_to_minimize_recipe(self) -> None:
+        """Specs without a direction maximize, so negating a value still minimizes it."""
+        cfg = UnifiedConfig(
+            name="mo",
+            population_size=20,
+            max_generations=15,
+            selection="tournament",
+            crossover="blend",
+            mutation="gaussian",
+            genome_type="vector",
+            genome_params={"dimensions": 3, "bounds": (0.0, 1.0)},
+            seed=1,
+        ).with_multiobjective(objectives=(ObjectiveSpec(name="rest"), ObjectiveSpec(name="neg_g0")))
+        evaluator = NegatedFirstGene()
+
+        result = create_engine(cfg, evaluator=evaluator).run(create_initial_population(cfg))
+
+        initial_g0 = np.mean([ind.genome.genes[0] for ind in evaluator.evaluated[:20]])
+        final_g0 = np.mean([ind.genome.genes[0] for ind in result.population])
+        assert final_g0 < initial_g0 - 0.2
 
 
 @pytest.mark.integration

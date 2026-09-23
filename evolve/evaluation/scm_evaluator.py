@@ -53,7 +53,9 @@ class SCMFitnessConfig:
     # Objectives to compute
     objectives: tuple[str, ...] = ("data_fit", "sparsity", "simplicity")
     """
-    Objectives to compute. Available:
+    Objectives to compute. Every objective is higher-is-better (negated
+    counts and errors, ``-inf`` when evaluation fails), so declare them
+    ``ObjectiveSpec(direction="maximize")`` or leave the default. Available:
     - "data_fit": Negative MSE on observed endogenous variables
     - "sparsity": Negative edge count
     - "simplicity": Negative total AST complexity
@@ -144,6 +146,10 @@ class SCMEvaluator:
 
     Evaluates decoded SCMs against observed data using
     configurable objectives, constraints, and penalties.
+
+    All objectives are higher-is-better: declare them with
+    ``direction="maximize"`` (the ``ObjectiveSpec`` default), never
+    ``"minimize"``, or failed SCMs (``-inf``) would rank best.
 
     Thread Safety:
         Safe for concurrent use. All state is read-only

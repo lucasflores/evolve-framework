@@ -20,11 +20,12 @@ class MultiObjectiveFitness:
     """
     Fitness for multi-objective optimization.
 
-    All objectives follow MAXIMIZATION convention.
-    To minimize an objective, negate its value before creating fitness.
-    (Engines built from a ``MultiObjectiveConfig`` instead apply each
-    ``ObjectiveSpec.direction`` via ``NSGA2Selector.directions`` to the raw
-    values, so evaluators there return raw, un-negated values.)
+    Convention (the only one): ``objectives`` hold raw values, and each
+    objective is ranked in its declared direction (``ObjectiveSpec.direction``,
+    applied by ``NSGA2Selector.directions``). The default direction is
+    ``"maximize"``, so with default specs (or ``NSGA2Selector()``) the old
+    recipe still works: negate a value you want minimized. Never do both,
+    i.e. never negate a value AND declare it ``"minimize"``; that maximizes it.
 
     Attributes:
         objectives: Array of objective values, shape (n_objectives,)
@@ -34,10 +35,11 @@ class MultiObjectiveFitness:
         metadata: Optional additional metadata
 
     Example:
-        >>> # Two objectives: maximize f1, minimize f2 (negate)
-        >>> fitness = MultiObjectiveFitness(
-        ...     objectives=np.array([f1_value, -f2_value])
-        ... )
+        >>> # Raw values; declare ObjectiveSpec("f1", "maximize"), ObjectiveSpec("f2", "minimize")
+        >>> fitness = MultiObjectiveFitness(objectives=np.array([f1_value, f2_value]))
+        >>>
+        >>> # Or keep default (maximize) specs and negate what should be minimized
+        >>> fitness = MultiObjectiveFitness(objectives=np.array([f1_value, -f2_value]))
         >>>
         >>> # With constraints: g1(x) <= 0, g2(x) <= 0
         >>> constrained = MultiObjectiveFitness(
