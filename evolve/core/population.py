@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Generic, TypeVar
 
 import numpy as np
 
-from evolve.core.types import Fitness, Individual
+from evolve.core.types import Fitness, Individual, fitness_sort_key
 
 if TYPE_CHECKING:
     from random import Random
@@ -142,7 +142,14 @@ class Population(Generic[G]):
         # For single-objective, compute simple statistics
         if fitness_values and fitness_values[0].n_objectives == 1:
             values = np.array([f.values[0] for f in fitness_values])
-            if self._minimize:
+            if not all(f.is_feasible for f in fitness_values):
+                # Feasibility first (Deb's rules), then the value
+                keys = [fitness_sort_key(f, self._minimize) for f in fitness_values]
+                by_key = range(len(keys))
+                best_of, worst_of = (min, max) if self._minimize else (max, min)
+                best_idx = best_of(by_key, key=keys.__getitem__)
+                worst_idx = worst_of(by_key, key=keys.__getitem__)
+            elif self._minimize:
                 best_idx = int(np.argmin(values))
                 worst_idx = int(np.argmax(values))
             else:
@@ -198,6 +205,9 @@ class Population(Generic[G]):
         """
         Return n best individuals by fitness.
 
+        Feasible individuals rank ahead of infeasible ones; between infeasible
+        ones, lower total constraint violation ranks first.
+
         Args:
             n: Number of individuals to return
             minimize: If True, lower fitness is better
@@ -219,16 +229,20 @@ class Population(Generic[G]):
         if not evaluated:
             raise ValueError("No evaluated individuals in population")
 
-        # Sort by fitness (single-objective assumed)
+        # Sort by fitness, feasibility first (Deb's rules)
         if evaluated[0].fitness is not None and evaluated[0].fitness.n_objectives == 1:
             sorted_individuals = sorted(
                 evaluated,
-                key=lambda ind: float(ind.fitness.values[0]) if ind.fitness else float("inf"),
+                key=lambda ind: fitness_sort_key(ind.fitness, minimize),
                 reverse=not minimize,
             )
         else:
-            # Multi-objective: return first n (should use Pareto ranking)
-            sorted_individuals = evaluated
+            # Multi-objective: no scalar order without objective directions (the
+            # engine ranks those with NSGA-II). Feasibility still comes first;
+            # the sort is stable, so unconstrained populations keep their order.
+            sorted_individuals = sorted(
+                evaluated, key=lambda ind: fitness_sort_key(ind.fitness)[:2]
+            )
 
         return sorted_individuals[:n]
 
