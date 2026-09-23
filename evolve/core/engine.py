@@ -178,6 +178,14 @@ class EvolutionEngine(Generic[G]):
         self.mutation = mutation
         self.merge_operator = merge
         self._multiobjective_config = multiobjective
+        # NSGA-II ranker in multi-objective mode, None in single-objective mode
+        self._nsga2: NSGA2Selector[G] | None = None
+        if multiobjective is not None:
+            from evolve.multiobjective.selection import NSGA2Selector
+
+            self._nsga2 = NSGA2Selector(
+                directions=tuple(obj.direction for obj in multiobjective.objectives)
+            )
         self.seed = seed
         self.rng = create_rng(seed)
 
@@ -308,7 +316,7 @@ class EvolutionEngine(Generic[G]):
         self._timer.start_generation()
 
         pop_size = self.config.population_size
-        nsga2 = self._nsga2()
+        nsga2 = self._nsga2
         # NSGA-II is elitist through (mu + lambda) survival below, so it breeds
         # a full brood and config.elitism does not apply.
         n_elites = self.config.elitism if nsga2 is None else 0
@@ -594,7 +602,7 @@ class EvolutionEngine(Generic[G]):
             "evaluated_count": stats.evaluated_count,
         }
 
-        nsga2 = self._nsga2()
+        nsga2 = self._nsga2
         if nsga2 is not None:
             self._compute_multiobjective_metrics(population, nsga2, metrics)
         else:
@@ -783,18 +791,9 @@ class EvolutionEngine(Generic[G]):
             )
             self._prev_best_genome = current_best_genome
 
-    def _nsga2(self) -> NSGA2Selector[G] | None:
-        """NSGA-II ranker in multi-objective mode, None in single-objective mode."""
-        if self._multiobjective_config is None:
-            return None
-        from evolve.multiobjective.selection import NSGA2Selector
-
-        objectives = self._multiobjective_config.objectives
-        return NSGA2Selector(directions=tuple(obj.direction for obj in objectives))
-
     def _get_best(self, population: Population[G]) -> Individual[G]:
         """Get best individual (multi-objective: a member of the first front)."""
-        nsga2 = self._nsga2()
+        nsga2 = self._nsga2
         if nsga2 is not None:
             ranks, _ = nsga2.get_ranking_info(population.individuals)
             return population[min(i for i, rank in ranks.items() if rank == 0)]

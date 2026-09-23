@@ -8,6 +8,7 @@ Every test here goes through the declarative path only:
 
 from __future__ import annotations
 
+from dataclasses import replace
 from random import Random
 from typing import Any
 
@@ -109,6 +110,15 @@ class TestMultiObjectiveEngine:
 
         assert result.generations == 3
         assert len(result.population) == cfg.population_size
+
+    def test_ranker_built_once_from_config(self) -> None:
+        """One NSGA2Selector per engine, built from the declared directions."""
+        engine = create_engine(_config(("maximize", "minimize")), evaluator=SumAndFirstGene())
+        single = create_engine(replace(_config(), multiobjective=None), evaluator=lambda _g: 0.0)
+
+        assert isinstance(engine._nsga2, NSGA2Selector)
+        assert engine._nsga2.directions == ("maximize", "minimize")
+        assert single._nsga2 is None
 
     def test_survivors_are_nsga2_selection_of_parents_plus_offspring(self) -> None:
         """Each generation keeps NSGA2Selector's pick from parents + a full brood."""
