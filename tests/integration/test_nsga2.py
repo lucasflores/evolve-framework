@@ -376,6 +376,14 @@ class TestNSGA2Penalty:
         assert penalised[0].objectives.tolist() == [-11.5, 8.5]
         assert penalised[0].constraint_violations is None
 
+    def test_missing_constraint_values_raise(self):
+        """Declared penalty weights with a fitness that reports no constraints is an error."""
+        genome = VectorGenome(genes=np.zeros(1), bounds=(np.zeros(1), np.ones(1)))
+        population = [Individual(genome=genome, fitness=Fitness(values=np.array([1.0, 1.0])))]
+
+        with pytest.raises(ValueError, match="reports no constraint values"):
+            NSGA2Selector(penalty_weights=(1.0,)).get_ranking_info(population)
+
     def test_weight_count_must_match_constraints(self):
         with pytest.raises(ValueError, match="2 constraint values but 1 penalty weights"):
             NSGA2Selector(penalty_weights=(1.0,)).get_ranking_info(self._population())

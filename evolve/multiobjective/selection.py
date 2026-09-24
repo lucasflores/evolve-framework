@@ -154,7 +154,8 @@ class NSGA2Selector(Generic[G]):
 
         Raises:
             TypeError: If an individual is unevaluated or has another fitness type.
-            ValueError: If constraint values and ``penalty_weights`` differ in count.
+            ValueError: If constraint values and ``penalty_weights`` differ in count,
+                or a fitness reports no constraint values in penalty mode.
         """
         from evolve.core.types import Fitness
 
@@ -177,10 +178,13 @@ class NSGA2Selector(Generic[G]):
         return fitnesses
 
     def _penalty(self, constraints: np.ndarray | None) -> float:
-        """Weighted total violation, sum(w_k * max(0, c_k)); 0 without constraints."""
+        """Weighted total violation, sum(w_k * max(0, c_k))."""
         assert self.penalty_weights is not None
         if constraints is None:
-            return 0.0
+            raise ValueError(
+                f"{len(self.penalty_weights)} penalty weights are declared but the "
+                "fitness reports no constraint values"
+            )
         if len(constraints) != len(self.penalty_weights):
             raise ValueError(
                 f"Fitness has {len(constraints)} constraint values but "
