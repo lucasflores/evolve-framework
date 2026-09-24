@@ -184,10 +184,10 @@ def create_engine(
 
     selection_params = dict(config.selection_params)
     # One direction for the whole run: selection ranks like elitism does
-    if (
-        op_registry.accepts_param("selection", config.selection, "minimize")
-        and selection_params.setdefault("minimize", config.minimize) != config.minimize
-    ):
+    accepts_minimize = op_registry.accepts_param("selection", config.selection, "minimize")
+    if accepts_minimize:
+        selection_params.setdefault("minimize", config.minimize)
+    if accepts_minimize and selection_params["minimize"] != config.minimize:
         raise ValueError(
             f"selection_params minimize={selection_params['minimize']} contradicts "
             f"config.minimize={config.minimize}; set the direction once, on "
