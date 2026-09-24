@@ -253,11 +253,8 @@ class MultiObjectiveMetricCollector:
         if n_objectives == 2:
             from evolve.multiobjective.metrics import hypervolume_2d
 
-            try:
-                return hypervolume_2d(objectives, ref)
-            except Exception as e:
-                _logger.debug(f"Hypervolume computation failed: {e}")
-                return None
+            # Errors (e.g. a reference of the wrong length) propagate
+            return hypervolume_2d(objectives, ref)
 
         elif n_objectives == 3:
             # Use approximate hypervolume for 3D
