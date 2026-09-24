@@ -654,3 +654,26 @@ class TestEliteRanking:
         elites = EnsembleMetricCollector(elite_size=1).elites(MockPopulation([low, high]), False)
 
         assert elites == [high]
+
+
+class TestTopKUsesTheEliteSet:
+    """top_k_concentration and turnover share one definition of "top"."""
+
+    def test_minimizing_top_is_the_best_not_the_largest(self) -> None:
+        individuals = [_ind(f) for f in (0.1, 0.2, 9.0, 10.0)]
+        context = CollectionContext(
+            generation=0,
+            population=MockPopulation(individuals),  # type: ignore[arg-type]
+            minimize=True,
+        )
+
+        result = EnsembleMetricCollector(top_k_percent=25.0).collect(context)
+
+        assert result["ensemble/top_k_concentration"] == pytest.approx(0.1 / 19.3)
+
+    def test_elite_size_sets_the_top_k_count_too(self) -> None:
+        context = make_context([1.0, 2.0, 3.0, 4.0])
+
+        result = EnsembleMetricCollector(elite_size=2).collect(context)
+
+        assert result["ensemble/top_k_concentration"] == pytest.approx(7.0 / 10.0)
