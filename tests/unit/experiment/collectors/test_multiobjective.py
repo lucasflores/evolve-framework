@@ -513,3 +513,22 @@ class TestFrontMetrics:
 
         with pytest.raises(ValueError, match="reference"):
             MultiObjectiveMetricCollector().front_metrics(points, np.array([0.0, 0.0, 0.0]))
+
+    def test_three_objectives_use_the_vectorised_estimate(self, monkeypatch):
+        """3-D goes through the vectorised Monte Carlo estimate (issue #9)."""
+        collector = MultiObjectiveMetricCollector()
+        calls = []
+        original = collector._approximate_hypervolume_nd
+
+        def recording(objectives, reference):
+            calls.append(objectives.shape)
+            return original(objectives, reference)
+
+        monkeypatch.setattr(collector, "_approximate_hypervolume_nd", recording)
+        points = np.array([[3.0, 1.0, 2.0], [2.0, 2.0, 2.0], [1.0, 3.0, 2.0]])
+
+        metrics = collector.front_metrics(points, np.zeros(3))
+
+        assert calls == [(3, 3)]
+        # Exact union of the three boxes is 12 (inclusion-exclusion)
+        assert metrics["hypervolume"] == pytest.approx(12.0, abs=0.3)
