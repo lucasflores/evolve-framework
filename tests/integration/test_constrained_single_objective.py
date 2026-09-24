@@ -130,6 +130,9 @@ class TestUnconstrainedRegression:
             ("rank", True, 0.0945249796631048, 0.34445046101527094),
             ("tournament", False, 16.0, 15.622126372980961),
             ("roulette", True, 0.1677831782963016, 0.8133967483581461),
+            # Captured after maximizing roulette started shifting its weights
+            # (f - min f); that fix alone changed this run
+            ("roulette", False, 15.905300234971868, 14.019381676396634),
         ],
     )
     def test_sphere_run_is_unchanged(
