@@ -287,7 +287,7 @@ class Population(Generic[G]):
         generation: int | None = None,
     ) -> Population[G]:
         """
-        Return new population with updated individuals.
+        Return new population with updated individuals (same ``minimize``).
 
         Args:
             individuals: New individual sequence
@@ -297,7 +297,12 @@ class Population(Generic[G]):
             New Population instance
         """
         new_gen = generation if generation is not None else self._generation + 1
-        return Population(individuals=individuals, generation=new_gen, ranker=self._ranker)
+        return Population(
+            individuals=individuals,
+            generation=new_gen,
+            minimize=self._minimize,
+            ranker=self._ranker,
+        )
 
     def increment_ages(self) -> Population[G]:
         """Return new population with all individual ages incremented."""
@@ -309,7 +314,12 @@ class Population(Generic[G]):
         evaluated = [ind for ind in self._individuals if ind.fitness is not None]
         if not evaluated:
             raise ValueError("No evaluated individuals to filter")
-        return Population(individuals=evaluated, generation=self._generation, ranker=self._ranker)
+        return Population(
+            individuals=evaluated,
+            generation=self._generation,
+            minimize=self._minimize,
+            ranker=self._ranker,
+        )
 
     def sample(
         self,

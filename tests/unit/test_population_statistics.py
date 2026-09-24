@@ -129,3 +129,30 @@ class TestStatisticsMinimizeField:
         inds = _make_individuals([1.0, 2.0])
         pop = Population(individuals=inds)
         assert pop.statistics.minimize is True
+
+
+class TestDerivedPopulationsKeepDirection:
+    """Populations derived from a maximizing population stay maximizing."""
+
+    @staticmethod
+    def _population() -> Population:
+        individuals = [
+            Individual(genome=VectorGenome(genes=np.array([float(v)])), fitness=Fitness.scalar(v))
+            for v in (1.0, 3.0, 2.0)
+        ]
+        return Population(individuals=individuals, minimize=False)
+
+    def test_with_individuals(self):
+        derived = self._population().with_individuals(list(self._population()))
+
+        assert float(derived.statistics.best_fitness.values[0]) == 3.0
+
+    def test_filter_evaluated(self):
+        derived = self._population().filter_evaluated()
+
+        assert float(derived.statistics.best_fitness.values[0]) == 3.0
+
+    def test_increment_ages(self):
+        derived = self._population().increment_ages()
+
+        assert float(derived.statistics.best_fitness.values[0]) == 3.0
