@@ -184,7 +184,10 @@ def create_engine(
 
     selection_params = dict(config.selection_params)
     # One direction for the whole run: selection ranks like elitism does
-    accepts_minimize = op_registry.accepts_param("selection", config.selection, "minimize")
+    # (MO mode ranks with each ObjectiveSpec.direction; config.minimize is unused there)
+    accepts_minimize = not config.is_multiobjective and op_registry.accepts_param(
+        "selection", config.selection, "minimize"
+    )
     if accepts_minimize:
         selection_params.setdefault("minimize", config.minimize)
     if accepts_minimize and selection_params["minimize"] != config.minimize:
@@ -306,7 +309,8 @@ def _validate_operator_compatibility(config: UnifiedConfig) -> None:
 
     Raises:
         OperatorCompatibilityError: If any operator is incompatible.
-        ValueError: If crowded_tournament is used without multi-objective settings.
+        ValueError: If crowded_tournament is used without multi-objective settings,
+            or multi-objective mode would discard another selection's params.
 
     Note:
         This is a skeleton implementation. Full validation requires
@@ -321,6 +325,19 @@ def _validate_operator_compatibility(config: UnifiedConfig) -> None:
             "multi-objective settings: declare objectives with "
             "UnifiedConfig(...).with_multiobjective(...), or choose a single-objective "
             "selection such as 'tournament'."
+        )
+
+    # MO mode replaces any other selection with a crowded tournament, so its
+    # parameters would be discarded without a word
+    if (
+        config.is_multiobjective
+        and config.selection != "crowded_tournament"
+        and config.selection_params
+    ):
+        raise ValueError(
+            f"Multi-objective mode replaces selection={config.selection!r} with a crowded "
+            f"tournament, so selection_params={config.selection_params} would be ignored. "
+            'Use selection="crowded_tournament" to configure it (e.g. tournament_size).'
         )
 
     # Check selection
@@ -654,7 +671,9 @@ def _create_multiobjective_engine(
                 "declare the hypervolume reference once."
             )
 
-    # Override selection with NSGA-II crowded tournament (T054)
+    # Override selection with NSGA-II crowded tournament (T054). A declared
+    # selection="crowded_tournament" keeps its selection_params (e.g.
+    # tournament_size); params of another operator were refused above.
     if config.selection != "crowded_tournament":
         selection = CrowdedTournamentSelection(tournament_size=2)
 

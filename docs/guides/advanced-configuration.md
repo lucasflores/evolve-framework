@@ -171,7 +171,10 @@ result = engine.run(population)
 
 The `with_multiobjective()` method:
 - Configures NSGA-II with Pareto ranking and crowding distance
-- Automatically enables `crowded_tournament` selection
+- Automatically enables `crowded_tournament` selection (binary tournament). To
+  configure it, declare `selection="crowded_tournament"` with `selection_params`
+  such as `tournament_size`; `selection_params` for any other operator are
+  refused, because multi-objective mode replaces that operator
 - Ranks each objective in its declared `direction`; the evaluator returns raw values
 - Sets up hypervolume tracking if a reference point is provided (raw objective units)
 
