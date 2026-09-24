@@ -483,9 +483,6 @@ def _evolution_config(config: UnifiedConfig) -> EvolutionConfig:
         if config.is_tracking_enabled and config.tracking is not None
         else frozenset({"core"})
     )
-    if config.is_multiobjective:
-        # Front quality metrics are always on in multi-objective mode
-        metric_cats = metric_cats | {"multiobjective"}
     merge = config.merge
     return EvolutionConfig(
         population_size=config.population_size,
