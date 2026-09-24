@@ -349,11 +349,11 @@ class EvolutionEngine(Generic[G]):
         n_elites = self.config.elitism if nsga2 is None else 0
         n_offspring = pop_size - n_elites
 
+        # Time selection phase (elitism included: choosing elites is selection work)
+        self._timer.start("selection")
+
         # Get elites (best individuals preserved unchanged)
         elites = list(population.best(n_elites, minimize=self.config.minimize))
-
-        # Time selection phase
-        self._timer.start("selection")
         # Each pair yields two children, so an (even) n_offspring parents suffice
         n_parents = n_offspring + n_offspring % 2
         if nsga2 is not None:
