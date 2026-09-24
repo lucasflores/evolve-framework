@@ -164,3 +164,23 @@ def test_ensemble_disabled_with_warning_in_multiobjective_mode() -> None:
     result = engine.run(initial_population(config))
 
     assert not any(key.startswith("ensemble/") for key in result.history[-1])
+
+
+@pytest.mark.integration
+def test_elite_set_is_ranked_once_per_generation() -> None:
+    """The engine's elite history and the collector's metrics share one ranking."""
+    engine, pop = _make_engine_and_population(frozenset({"core", "ensemble"}))
+    collector = engine._ensemble_collector
+    assert collector is not None
+    calls: list[int] = []
+    original = collector.elites
+
+    def counting_elites(population, minimize):  # type: ignore[no-untyped-def]
+        calls.append(len(population))
+        return original(population, minimize)
+
+    collector.elites = counting_elites  # type: ignore[method-assign]
+
+    result = engine.run(pop)
+
+    assert len(calls) == result.generations
