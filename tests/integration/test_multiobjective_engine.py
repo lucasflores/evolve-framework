@@ -305,6 +305,15 @@ class TestMultiObjectiveEngine:
 
         assert from_tracking.history[-1]["hypervolume"] == from_mo.history[-1]["hypervolume"]
 
+    def test_tracking_reference_of_wrong_length_refused_before_build(self) -> None:
+        """A tracking-only reference is validated like MultiObjectiveConfig's own."""
+        cfg = _config(
+            tracking=TrackingConfig(backend="null", hypervolume_reference=(0.0, 0.0, 0.0))
+        )
+
+        with pytest.raises(ValueError, match="reference_point length must match objectives"):
+            create_engine(cfg, evaluator=SumAndFirstGene())
+
     def test_conflicting_reference_points_refused(self) -> None:
         cfg = _config(
             reference_point=(-1.0, 2.0),
