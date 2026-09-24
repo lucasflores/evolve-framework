@@ -155,8 +155,9 @@ class RouletteSelection(Generic[G]):
     """
     Fitness-proportionate selection.
 
-    Probability of selection proportional to fitness.
-    Only valid for positive fitness values.
+    Probability of selection proportional to fitness, shifted so the worst
+    individual gets (almost) zero weight: ``f - min(f)`` when maximizing,
+    ``max(f) - f`` when minimizing. Any sign of fitness is valid.
 
     Constraints are ignored: probabilities come from raw ``values[0]`` only.
     Feasibility-first ranking has no proportional analogue, and giving
@@ -180,7 +181,7 @@ class RouletteSelection(Generic[G]):
         """
         Select n individuals via roulette wheel.
 
-        Probability proportional to fitness (or inverse if minimizing).
+        Probability proportional to the shifted fitness (see class docstring).
         """
         import numpy as np
 
@@ -193,11 +194,12 @@ class RouletteSelection(Generic[G]):
             [float(ind.fitness.values[0]) if ind.fitness else 0.0 for ind in evaluated]
         )
 
-        # Handle minimization by inverting
+        # Shift weights positive in both directions (worst gets ~0), so zero,
+        # negative and mixed-sign fitness make a valid wheel
         if self.minimize:
-            # Shift to positive and invert
-            max_fit = np.max(fitness_vals)
-            fitness_vals = max_fit - fitness_vals + 1e-10
+            fitness_vals = np.max(fitness_vals) - fitness_vals + 1e-10
+        else:
+            fitness_vals = fitness_vals - np.min(fitness_vals) + 1e-10
 
         # Normalize to probabilities
         total = np.sum(fitness_vals)

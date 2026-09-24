@@ -213,3 +213,31 @@ def test_threshold_stopping_needs_a_feasible_best(minimize: bool) -> None:
 
     assert not stopping.should_stop(0, infeasible_only, [])
     assert stopping.should_stop(0, with_feasible, [])
+
+
+class TestRouletteMaximizing:
+    """Maximizing roulette shifts weights positive, as minimizing already did."""
+
+    @staticmethod
+    def _counts(values: list[float]) -> dict[float, int]:
+        population = Population([_ind(v) for v in values], minimize=False)
+        picked = RouletteSelection(minimize=False).select(population, 10_000, Random(0))
+        counts = dict.fromkeys(values, 0)
+        for ind in picked:
+            counts[float(ind.fitness.values[0])] += 1
+        return counts
+
+    def test_all_non_positive_fitness(self) -> None:
+        """Maximizing -loss: the least negative is picked most, the worst never."""
+        counts = self._counts([-0.1, -1.0, -5.0, -10.0])
+
+        assert counts[-0.1] > counts[-1.0] > counts[-5.0] > counts[-10.0]
+        assert counts[-10.0] == 0
+
+    def test_mixed_signs(self) -> None:
+        """Negative weights no longer let the largest value take every draw."""
+        counts = self._counts([3.0, -1.0, -1.5, 0.5])
+
+        assert counts[3.0] > counts[0.5] > counts[-1.0] > counts[-1.5]
+        assert counts[0.5] > 1000
+        assert counts[-1.5] == 0
