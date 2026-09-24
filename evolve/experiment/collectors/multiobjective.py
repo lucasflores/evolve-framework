@@ -3,7 +3,7 @@ Multi-Objective Metric Collector.
 
 Collects Pareto front quality metrics for multi-objective optimization:
 - pareto_front_size: Number of individuals on the Pareto front
-- hypervolume: Volume dominated by the front (2-3 objectives)
+- hypervolume: Volume dominated by the front (exact for 2 objectives, Monte Carlo for 3+)
 - crowding_diversity: Mean crowding distance on the front
 - spread: Distribution uniformity along the front
 
@@ -33,9 +33,8 @@ class MultiObjectiveMetricCollector:
     Collector for multi-objective optimization metrics.
 
     Computes Pareto front quality indicators including hypervolume,
-    spread, and crowding diversity. Supports 2-3 objectives with
-    exact computation and falls back to approximate indicators for
-    higher-dimensional problems.
+    spread, and crowding diversity. Hypervolume is exact for 2 objectives
+    and a vectorised Monte Carlo estimate (50,000 samples) for 3 or more.
 
     Attributes:
         reference_point: Reference point for hypervolume computation.
@@ -256,12 +255,8 @@ class MultiObjectiveMetricCollector:
             # Errors (e.g. a reference of the wrong length) propagate
             return hypervolume_2d(objectives, ref)
 
-        elif n_objectives == 3:
-            # Use approximate hypervolume for 3D
-            return self._approximate_hypervolume_3d(objectives, ref)
-
         else:
-            # For >3 objectives, use approximate indicator
+            # 3+ objectives: vectorised Monte Carlo estimate
             if not self._warned_high_dim:
                 _logger.info(f"Using approximate hypervolume for {n_objectives} objectives")
                 self._warned_high_dim = True
@@ -300,53 +295,6 @@ class MultiObjectiveMetricCollector:
 
         result: np.ndarray = nadir - margin
         return result
-
-    def _approximate_hypervolume_3d(
-        self,
-        objectives: np.ndarray,
-        reference: np.ndarray,
-    ) -> float:
-        """
-        Approximate hypervolume for 3D problems.
-
-        Uses a simple Monte Carlo approach.
-
-        Args:
-            objectives: Objective values, shape (n, 3).
-            reference: Reference point.
-
-        Returns:
-            Approximate hypervolume.
-        """
-        # Simple Monte Carlo approximation
-        n_samples = 10000
-        n_points = len(objectives)
-
-        if n_points == 0:
-            return 0.0
-
-        # Find bounding box (reference to ideal)
-        ideal = np.max(objectives, axis=0)
-
-        # Check if ideal > reference on all dimensions
-        if not np.all(ideal > reference):
-            return 0.0
-
-        # Sample random points in bounding box
-        rng = np.random.default_rng(42)  # Fixed seed for reproducibility
-        samples = rng.uniform(reference, ideal, size=(n_samples, 3))
-
-        # Count dominated samples
-        dominated = 0
-        for sample in samples:
-            for point in objectives:
-                if np.all(point >= sample):
-                    dominated += 1
-                    break
-
-        # Estimate volume
-        box_volume = np.prod(ideal - reference)
-        return float(box_volume * dominated / n_samples)
 
     def _approximate_hypervolume_nd(
         self,
