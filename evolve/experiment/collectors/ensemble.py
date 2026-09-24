@@ -98,6 +98,23 @@ class EnsembleMetricCollector:
     # Private helpers
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _raw_values(individuals: Iterable[Any]) -> npt.NDArray[np.float64]:
+        """Scalar fitness of each evaluated individual (``values[0]`` or ``value``)."""
+        raw: list[float] = []
+        for ind in individuals:
+            if ind.fitness is None:
+                _logger.debug("Skipping individual with None fitness")
+                continue
+            try:
+                if hasattr(ind.fitness, "values"):
+                    raw.append(float(ind.fitness.values[0]))
+                else:
+                    raw.append(float(ind.fitness.value))
+            except (TypeError, IndexError, AttributeError) as exc:
+                _logger.debug("Could not extract fitness scalar: %s", exc)
+        return np.array(raw, dtype=float)
+
     def _extract_fitnesses(self, context: CollectionContext) -> npt.NDArray[np.float64] | None:
         """
         Extract scalar fitness values from the population.
@@ -113,23 +130,9 @@ class EnsembleMetricCollector:
             1-D numpy array of non-negative floats, or None when the array
             would be empty (all individuals have None fitness or population is empty).
         """
-        raw: list[float] = []
-        for ind in context.population:
-            if ind.fitness is None:
-                _logger.debug("Skipping individual with None fitness")
-                continue
-            try:
-                if hasattr(ind.fitness, "values"):
-                    raw.append(float(ind.fitness.values[0]))
-                else:
-                    raw.append(float(ind.fitness.value))  # type: ignore[attr-defined]
-            except (TypeError, IndexError, AttributeError) as exc:
-                _logger.debug("Could not extract fitness scalar: %s", exc)
-
-        if not raw:
+        fitnesses = self._raw_values(context.population)
+        if len(fitnesses) == 0:
             return None
-
-        fitnesses = np.array(raw, dtype=float)
 
         min_val = float(np.min(fitnesses))
         if min_val < 0.0:
@@ -188,19 +191,22 @@ class EnsembleMetricCollector:
         else:
             metrics["ensemble/participation_ratio"] = float(np.sum(fitnesses) ** 2 / sum_sq)
 
+        # The experts ("top"), ranked in the run's direction: one set for
+        # top-k concentration and turnover
+        current_elite = self.elites(context.population, context.minimize)
+
         # ---- Top-k Concentration -------------------------------------
-        k_count = max(1, math.ceil(self.top_k_percent / 100.0 * N))
         if total == 0.0:
             metrics["ensemble/top_k_concentration"] = 0.0
         else:
-            # np.partition is O(N) — avoids full sort
-            top_k_vals = np.partition(fitnesses, -k_count)[-k_count:]
-            metrics["ensemble/top_k_concentration"] = float(np.sum(top_k_vals) / total)
+            # Same non-negative shift as the fitness mass above
+            shift = min(0.0, float(np.min(self._raw_values(context.population))))
+            elite_raw = self._raw_values(current_elite)
+            elite_mass = float(np.sum(elite_raw - shift)) if len(elite_raw) else 0.0
+            metrics["ensemble/top_k_concentration"] = elite_mass / total
 
         # ---- Expert Turnover (conditional) ---------------------------
         if context.previous_elites is not None:
-            current_elite = self.elites(context.population, context.minimize)
-
             # Use UUID (.id) when available (Individual carries the same UUID
             # through with_fitness() calls), falling back to Python object
             # identity for non-framework objects (e.g., mocks in tests).
