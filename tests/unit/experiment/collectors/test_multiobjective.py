@@ -197,8 +197,8 @@ class TestHypervolume:
         assert "hypervolume" in metrics
         assert metrics["hypervolume"] > 0
 
-    def test_hypervolume_auto_reference_estimation(self):
-        """Test hypervolume estimates reference when not provided."""
+    def test_no_reference_means_no_hypervolume(self):
+        """Without a reference there is no hypervolume (no moving estimate)."""
         front = [
             make_mo_individual([3.0, 1.0]),
             make_mo_individual([2.0, 2.0]),
@@ -209,8 +209,8 @@ class TestHypervolume:
         collector = MultiObjectiveMetricCollector()  # No reference set
         metrics = collector.collect(context)
 
-        assert "hypervolume" in metrics
-        assert metrics["hypervolume"] > 0
+        assert "hypervolume" not in metrics
+        assert metrics["pareto_front_size"] == 3
 
 
 class TestSpread:
