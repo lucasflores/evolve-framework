@@ -192,8 +192,12 @@ class EnsembleMetricCollector:
             metrics["ensemble/participation_ratio"] = float(np.sum(fitnesses) ** 2 / sum_sq)
 
         # The experts ("top"), ranked in the run's direction: one set for
-        # top-k concentration and turnover
-        current_elite = self.elites(context.population, context.minimize)
+        # top-k concentration and turnover (reused if the caller ranked them)
+        current_elite = (
+            context.current_elites
+            if context.current_elites is not None
+            else self.elites(context.population, context.minimize)
+        )
 
         # ---- Top-k Concentration -------------------------------------
         if total == 0.0:

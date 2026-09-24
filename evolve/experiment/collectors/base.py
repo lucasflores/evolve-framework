@@ -69,6 +69,8 @@ class CollectionContext:
         population: Current population of individuals.
         minimize: True if the problem is a minimization problem (affects elite sort).
         previous_elites: Elite individuals from previous generation (for turnover).
+        current_elites: This generation's elite set when already ranked (collectors
+            that need it compute it when None).
         species_info: Species assignments when speciation enabled.
         mating_stats: ERP mating statistics when ERP enabled.
         pareto_front: Current Pareto front when multi-objective enabled.
@@ -84,6 +86,7 @@ class CollectionContext:
 
     # Optional context for specialized collectors
     previous_elites: list[Individual[Any]] | None = None
+    current_elites: list[Individual[Any]] | None = None
     species_info: dict[int, list[int]] | None = None  # species_id -> individual indices
     mating_stats: MatingStats | None = None
     pareto_front: list[Individual[Any]] | None = None

@@ -689,18 +689,19 @@ class EvolutionEngine(Generic[G]):
         if "ensemble" in categories and self._ensemble_collector is not None:
             from evolve.experiment.collectors.base import CollectionContext
 
+            # Rank the experts once: the collector's metrics use them now, and
+            # they are the next generation's elite history for turnover
+            elites = self._ensemble_collector.elites(population, self.config.minimize)
             ensemble_context = CollectionContext(
                 population=population,
                 generation=self._generation,
                 minimize=self.config.minimize,
                 previous_elites=self._prev_ensemble_elites,
+                current_elites=elites,
             )
             ensemble_metrics = self._ensemble_collector.collect(ensemble_context)
             metrics.update(ensemble_metrics)
-            # Elite history for next generation's turnover, ranked by the collector
-            self._prev_ensemble_elites = self._ensemble_collector.elites(
-                population, self.config.minimize
-            )
+            self._prev_ensemble_elites = elites
 
         # Add timing metrics (selection, variation, evaluation, total)
         timing_metrics = self._timer.get_metrics(breakdown=True)
