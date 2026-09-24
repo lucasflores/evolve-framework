@@ -800,3 +800,34 @@ class TestCrowdedTournamentNeedsMultiobjective:
         engine = create_engine(config, simple_fitness)
 
         assert engine.selection.tournament_size == 3
+
+    @staticmethod
+    def _mo_config(**overrides: Any) -> UnifiedConfig:
+        params: dict[str, Any] = {
+            "population_size": 10,
+            "selection": "tournament",
+            "crossover": "sbx",
+            "mutation": "gaussian",
+            "genome_type": "vector",
+            "genome_params": {"dimensions": 3, "bounds": (-1.0, 1.0)},
+        }
+        params.update(overrides)
+        return UnifiedConfig(**params).with_multiobjective(
+            objectives=(ObjectiveSpec(name="a"), ObjectiveSpec(name="b")),
+        )
+
+    def test_mo_mode_builds_crowded_tournament_for_any_direction(self) -> None:
+        """config.minimize does not rank anything in MO mode."""
+        from evolve.multiobjective import CrowdedTournamentSelection
+
+        engine = create_engine(self._mo_config(minimize=False), simple_fitness)
+
+        assert isinstance(engine.selection, CrowdedTournamentSelection)
+
+    def test_replaced_selection_params_are_refused(self) -> None:
+        """Params of a selection that MO mode replaces would be silently discarded
+        (and the direction check, skipped in MO mode, must not fire first)."""
+        config = self._mo_config(selection_params={"minimize": False, "tournament_size": 5})
+
+        with pytest.raises(ValueError, match='selection="crowded_tournament"'):
+            create_engine(config, simple_fitness)
