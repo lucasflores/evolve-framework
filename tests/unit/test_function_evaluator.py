@@ -31,3 +31,17 @@ def test_float_and_array_returns_unchanged() -> None:
     assert scalar.values.tolist() == [3.0]
     assert scalar.constraints is None
     assert vector.values.tolist() == [2.0, 4.0]
+
+
+def test_multiobjective_fitness_return_becomes_fitness_with_constraints() -> None:
+    from evolve.multiobjective.fitness import MultiObjectiveFitness
+
+    returned = MultiObjectiveFitness(
+        objectives=np.array([1.0, 2.0]), constraint_violations=np.array([0.5])
+    )
+
+    (fitness,) = FunctionEvaluator(lambda _genes: returned).evaluate(_individuals())
+
+    assert isinstance(fitness, Fitness)
+    assert fitness.values.tolist() == [1.0, 2.0]
+    assert fitness.constraints.tolist() == [0.5]

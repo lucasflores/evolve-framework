@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, runtime_checkable
 
 from evolve.core.types import Fitness, Individual
+from evolve.multiobjective.fitness import MultiObjectiveFitness
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -154,7 +155,7 @@ class FunctionEvaluator(Generic[G]):
 
     def __init__(
         self,
-        fitness_fn: Callable[[Any], float | np.ndarray | Fitness],
+        fitness_fn: Callable[[Any], float | np.ndarray | Fitness | MultiObjectiveFitness],
         decoder: Decoder[G, Any] | None = None,  # type: ignore[type-var]
         n_objectives: int = 1,
         n_constraints: int = 0,
@@ -165,8 +166,9 @@ class FunctionEvaluator(Generic[G]):
 
         Args:
             fitness_fn: Function mapping phenotype → fitness value(s): a float,
-                an array of objective values, or a ``Fitness`` (returned as-is,
-                e.g. to report constraint values)
+                an array of objective values, a ``Fitness`` (returned as-is,
+                e.g. to report constraint values) or a ``MultiObjectiveFitness``
+                (converted to a ``Fitness`` with its constraint violations)
             decoder: Optional genome→phenotype decoder
             n_objectives: Number of objectives (inferred from fn output if 1)
             n_constraints: Number of constraints
@@ -219,6 +221,11 @@ class FunctionEvaluator(Generic[G]):
                 # carries constraint values, is used as-is)
                 if isinstance(raw_fitness, Fitness):
                     fitness = raw_fitness
+                elif isinstance(raw_fitness, MultiObjectiveFitness):
+                    fitness = Fitness(
+                        values=raw_fitness.objectives,
+                        constraints=raw_fitness.constraint_violations,
+                    )
                 elif isinstance(raw_fitness, int | float):
                     fitness = Fitness.scalar(float(raw_fitness))
                 elif isinstance(raw_fitness, np.ndarray):
