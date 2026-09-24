@@ -322,6 +322,33 @@ class TestPenaltyConstraintHandling:
             expected = selector.select(parents + offspring, cfg.population_size, Random(0))
             assert [ind.id for ind in survivors] == [ind.id for ind in expected]
 
+    def test_front_metrics_use_feasible_non_dominated_set(self) -> None:
+        """A lightly penalised infeasible point can hold rank 0; the reported
+        front is still the feasible non-dominated set."""
+        from evolve.core.population import Population
+
+        cfg = _config(reference_point=(0.0, 0.0)).with_multiobjective(
+            objectives=(ObjectiveSpec(name="a"), ObjectiveSpec(name="b")),
+            reference_point=(0.0, 0.0),
+            constraints=(ConstraintSpec(name="c", penalty_weight=1.0),),
+            constraint_handling="penalty",
+        )
+        engine = create_engine(cfg, evaluator=SumAndFirstGene(limit=0.5))
+        genome = create_initial_population(cfg)[0].genome
+        feasible = Individual(
+            genome=genome, fitness=Fitness(values=np.array([1.0, 1.0]), constraints=np.array([0.0]))
+        )
+        infeasible = Individual(
+            genome=genome, fitness=Fitness(values=np.array([2.0, 2.0]), constraints=np.array([0.5]))
+        )
+        metrics: dict[str, Any] = {}
+
+        engine._compute_multiobjective_metrics(
+            Population([feasible, infeasible], ranker=engine._nsga2), engine._nsga2, metrics
+        )
+
+        assert metrics["hypervolume"] == pytest.approx(1.0)
+
     def test_penalty_requires_constraint_specs(self) -> None:
         """Weights come from ConstraintSpec.penalty_weight, so specs are required."""
         with pytest.raises(ValueError, match="penalty"):
