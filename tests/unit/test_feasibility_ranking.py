@@ -8,6 +8,7 @@ sum(max(0, c)) wins; between feasible, the objective value decides.
 from __future__ import annotations
 
 from random import Random
+from typing import Any
 
 import numpy as np
 import pytest
@@ -241,3 +242,52 @@ class TestRouletteMaximizing:
         assert counts[3.0] > counts[0.5] > counts[-1.0] > counts[-1.5]
         assert counts[0.5] > 1000
         assert counts[-1.5] == 0
+
+
+class TestEngineDirectionCheck:
+    """Selection and elitism rank in one direction, however the engine is built."""
+
+    @staticmethod
+    def _engine_kwargs(selection: Any) -> dict[str, Any]:
+        from evolve.core.operators import BlendCrossover, GaussianMutation
+        from evolve.evaluation.evaluator import FunctionEvaluator
+
+        return {
+            "evaluator": FunctionEvaluator(lambda g: float(np.sum(g))),
+            "selection": selection,
+            "crossover": BlendCrossover(),
+            "mutation": GaussianMutation(),
+        }
+
+    def test_evolution_engine_refuses_mismatch(self) -> None:
+        from evolve.core.engine import EvolutionConfig, EvolutionEngine
+
+        with pytest.raises(ValueError, match="minimize=True.*minimize=False"):
+            EvolutionEngine(
+                config=EvolutionConfig(minimize=False),
+                **self._engine_kwargs(TournamentSelection()),
+            )
+
+    def test_erp_engine_refuses_mismatch(self) -> None:
+        from evolve.reproduction.engine import ERPConfig, ERPEngine
+
+        with pytest.raises(ValueError, match="minimize"):
+            ERPEngine(config=ERPConfig(minimize=False), **self._engine_kwargs(RankSelection()))
+
+    def test_island_engine_refuses_mismatch(self) -> None:
+        from evolve.diversity.islands.engine import IslandConfig, IslandEvolutionEngine
+
+        with pytest.raises(ValueError, match="minimize"):
+            IslandEvolutionEngine(
+                config=IslandConfig(minimize=False),
+                **self._engine_kwargs(TournamentSelection()),
+            )
+
+    def test_matching_and_direction_free_selections_are_accepted(self) -> None:
+        from evolve.core.engine import EvolutionConfig, EvolutionEngine
+
+        EvolutionEngine(
+            config=EvolutionConfig(minimize=False),
+            **self._engine_kwargs(TournamentSelection(minimize=False)),
+        )
+        EvolutionEngine(config=EvolutionConfig(), **self._engine_kwargs(object()))

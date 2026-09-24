@@ -19,6 +19,7 @@ from uuid import uuid4
 import numpy as np
 
 from evolve.core.callbacks import Callback
+from evolve.core.operators.selection import check_selection_direction
 from evolve.core.population import Population
 from evolve.core.types import Individual, fitness_sort_key
 from evolve.diversity.islands.island import Island
@@ -145,6 +146,7 @@ class IslandEvolutionEngine(Generic[G]):
             migration_controller: Migration controller (default: BestMigration)
             seed: Master random seed
         """
+        check_selection_direction(selection, config.minimize)
         self.config = config
         self.evaluator = evaluator
         self.selection = selection

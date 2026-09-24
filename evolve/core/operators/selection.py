@@ -20,12 +20,32 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from random import Random
-from typing import Generic, Protocol, TypeVar, runtime_checkable
+from typing import Any, Generic, Protocol, TypeVar, runtime_checkable
 
 from evolve.core.population import Population
 from evolve.core.types import Individual, fitness_sort_key
 
 G = TypeVar("G")
+
+
+def check_selection_direction(selection: Any, minimize: bool) -> None:
+    """
+    Refuse a selection operator that ranks in the other direction from its engine.
+
+    Operators with a boolean ``minimize`` (tournament, rank, roulette) must
+    agree with the engine's ``minimize``, or selection would favour the
+    individuals elitism discards. Operators without one are accepted.
+    Every engine calls this on construction (single-objective mode).
+
+    Raises:
+        ValueError: If ``selection.minimize`` differs from ``minimize``.
+    """
+    selection_minimize = getattr(selection, "minimize", None)
+    if isinstance(selection_minimize, bool) and selection_minimize != minimize:
+        raise ValueError(
+            f"{type(selection).__name__} has minimize={selection_minimize} but the engine "
+            f"has minimize={minimize}; selection and elitism must rank in one direction."
+        )
 
 
 @runtime_checkable
