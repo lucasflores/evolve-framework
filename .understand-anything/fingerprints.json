@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "gitCommitHash": "646e58f538297b44f662d1ae36c8536765695e50",
-  "generatedAt": "2026-09-24T03:07:10.417Z",
+  "gitCommitHash": "2d921c531e8d2a5b87a9a99318a1f5fdfbc92da4",
+  "generatedAt": "2026-09-24T16:23:52.121Z",
   "files": {
     ".dev-stack/hooks-manifest.json": {
       "filePath": ".dev-stack/hooks-manifest.json",
@@ -5167,7 +5167,7 @@
     },
     "evolve/core/engine.py": {
       "filePath": "evolve/core/engine.py",
-      "contentHash": "3afbf2554366d810f1d3710117a1a75e6e7a547195b776652b1ff6a381b810d9",
+      "contentHash": "0bed343ea47679ac57758ae59012acc06bbe83615f6582222692f137f2f51c29",
       "functions": [
         {
           "name": "_genome_complexity",
