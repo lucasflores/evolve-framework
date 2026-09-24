@@ -34,9 +34,9 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
-def _as_fitness(fitness: Any) -> Fitness | None:
-    """Core Fitness as-is; a scalar custom fitness exposing ``.value`` wrapped."""
-    if fitness is None or isinstance(fitness, Fitness):
+def _as_fitness(fitness: Any) -> Any:
+    """Anything exposing ``values`` as-is; a scalar custom fitness (``.value``) wrapped."""
+    if fitness is None or hasattr(fitness, "values"):
         return fitness
     return Fitness.scalar(float(fitness.value))
 
