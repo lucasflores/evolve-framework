@@ -262,6 +262,31 @@ class TestMultiObjectiveEngine:
         final_g0 = np.mean([ind.genome.genes[0] for ind in result.population])
         assert final_g0 < initial_g0 - 0.2
 
+    def test_directly_built_engine_reports_hypervolume(self) -> None:
+        """Front metrics are on whenever multiobjective is set, not only via the factory."""
+        from evolve.config.multiobjective import MultiObjectiveConfig
+        from evolve.core.engine import EvolutionConfig, EvolutionEngine
+        from evolve.core.operators import BlendCrossover, GaussianMutation
+        from evolve.multiobjective import CrowdedTournamentSelection
+
+        engine = EvolutionEngine(
+            config=EvolutionConfig(population_size=10, max_generations=2),
+            evaluator=SumAndFirstGene(),
+            selection=CrowdedTournamentSelection(),
+            crossover=BlendCrossover(),
+            mutation=GaussianMutation(),
+            multiobjective=MultiObjectiveConfig(
+                objectives=(ObjectiveSpec(name="a"), ObjectiveSpec(name="b", direction="minimize")),
+                reference_point=(-1.0, 2.0),
+            ),
+        )
+        cfg = _config()
+
+        result = engine.run(create_initial_population(replace(cfg, population_size=10)))
+
+        assert engine.config.metric_categories == frozenset({"core"})
+        assert result.history[-1]["hypervolume"] > 0.0
+
     def test_tracking_hypervolume_reference_is_used(self) -> None:
         """TrackingConfig.hypervolume_reference (raw units) fills a missing reference_point."""
         cfg = _config(

@@ -20,7 +20,7 @@ or the denominator is zero.
 | `FitnessMetadataCollector` | `MetricCategory.METADATA` | Dynamic: `meta_<field>_mean`, `meta_<field>_std`, etc. |
 | `IslandsMetricCollector` | Auto-enabled when island model active | `inter_island_variance`, `intra_island_variance`, `migration_events` |
 | `MergeMetricCollector` | `MetricCategory.SYMBIOGENESIS` engine guard (manual instantiation) | `merge/count`, `merge/mean_genome_complexity`, `merge/complexity_delta` |
-| `MultiObjectiveMetricCollector` | Run by the engine in multi-objective mode (`MetricCategory.MULTIOBJECTIVE` is always on there) | `hypervolume` (needs a reference point), `spread`, `crowding_diversity`; the engine adds `pareto_front_size`, `<objective>_best`, `<objective>_mean` |
+| `MultiObjectiveMetricCollector` | Run by the engine whenever multi-objective settings are present | `hypervolume` (needs a reference point), `spread`, `crowding_diversity`; the engine adds `pareto_front_size`, `<objective>_best`, `<objective>_mean` |
 | `NEATMetricCollector` | Manual instantiation (no `MetricCategory` gate) | `average_node_count`, `average_connection_count`, `topology_innovations` |
 | `SpeciationMetricCollector` | `MetricCategory.SPECIATION` | `species_count`, `average_species_size`, `species_births`, `species_extinctions`, `stagnation_count` |
 | `EnsembleMetricCollector` | `MetricCategory.ENSEMBLE` (explicit only, not auto-enabled) | `ensemble/gini_coefficient`, `ensemble/participation_ratio`, `ensemble/top_k_concentration`, `ensemble/expert_turnover`\*, `ensemble/specialization_index`\* |
@@ -111,10 +111,11 @@ it is not a pure-context collector.
 
 ## MultiObjectiveMetricCollector
 
-**Enabling mechanism**: Automatic. An engine built by `create_engine()` from a
-config with `with_multiobjective(...)` always has the `multiobjective` metric
-category and runs this collector every generation on the feasible members of
-the first non-dominated front. Its metrics are the only multi-objective quality
+**Enabling mechanism**: Automatic. Any engine with multi-objective settings
+(built by `create_engine()` from a config with `with_multiobjective(...)`, or
+constructed directly with `multiobjective=`) runs this collector every
+generation on the feasible members of the first non-dominated front, whatever
+its `metric_categories`. Its metrics are the only multi-objective quality
 metrics in the history; single-objective keys (`best_fitness`, `mean_fitness`,
 ...) are not emitted in multi-objective mode.
 

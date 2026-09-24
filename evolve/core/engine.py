@@ -214,9 +214,9 @@ class EvolutionEngine(Generic[G]):
 
             self._merge_collector = MergeMetricCollector()
 
-        # Multi-objective front metrics (the factory enables 'multiobjective' in MO mode)
+        # Multi-objective front metrics, always on in MO mode
         self._mo_collector: Any = None
-        if multiobjective is not None and "multiobjective" in config.metric_categories:
+        if multiobjective is not None:
             from evolve.experiment.collectors.multiobjective import (
                 MultiObjectiveMetricCollector,
             )
@@ -722,8 +722,7 @@ class EvolutionEngine(Generic[G]):
           direction, among feasible individuals (all, if none is feasible)
         - ``<objective>_mean``: population mean of the raw value
 
-        With the ``multiobjective`` metric category, MultiObjectiveMetricCollector
-        adds ``hypervolume`` (only when a ``reference_point`` is configured),
+        MultiObjectiveMetricCollector (always on in this mode) adds ``hypervolume`` (only when a ``reference_point`` is configured),
         ``spread`` and ``crowding_diversity`` of the feasible first front, from
         the population's cached ranking (no extra sort).
         """
