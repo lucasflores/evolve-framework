@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable
-from dataclasses import replace
+from dataclasses import fields, replace
 from random import Random
 from typing import TYPE_CHECKING, Any
 
@@ -283,7 +283,6 @@ def create_engine(
             seed=effective_seed,
             stopping=stopping,
             callbacks=all_callbacks,
-            merge=merge_operator,
         )
 
     # Standard evolution engine
@@ -567,10 +566,12 @@ def _create_erp_engine(
     seed: int,
     stopping: Any,
     callbacks: list[Callback],
-    merge: Any | None = None,  # noqa: ARG001
 ) -> ERPEngine:
     """
     Create an ERPEngine for evolvable reproduction protocols (FR-029).
+
+    ERPEngine has no symbiogenetic merge step; merge settings make
+    ``ERPEngine`` raise instead of being ignored.
 
     Args:
         config: Unified configuration (must have erp settings).
@@ -591,14 +592,10 @@ def _create_erp_engine(
     if erp_settings is None:
         raise ValueError("ERP settings required for ERP engine")
 
-    # Convert to ERPConfig
+    # Same EvolutionConfig fields as the other engines, plus the ERP settings
+    base = _evolution_config(config)
     erp_config = ERPConfig(
-        population_size=config.population_size,
-        max_generations=config.max_generations,
-        elitism=config.elitism,
-        crossover_rate=config.crossover_rate,
-        mutation_rate=config.mutation_rate,
-        minimize=config.minimize,
+        **{f.name: getattr(base, f.name) for f in fields(base)},
         step_limit=erp_settings.step_limit,
         recovery_threshold=erp_settings.recovery_threshold,
         enable_intent=erp_settings.enable_intent,

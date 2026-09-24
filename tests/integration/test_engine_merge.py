@@ -769,3 +769,67 @@ class TestEngineMergeEdgeCases:
         assert multi["symbiont_fate"] == "survives"
         assert multi["max_complexity"] == 40
         assert multi == single
+
+
+class TestErpUsesTheSharedEvolutionConfig:
+    """ERP engines get the same EvolutionConfig fields; merge is refused, not dropped."""
+
+    def test_erp_keeps_metric_categories(self) -> None:
+        from evolve.config.erp import ERPSettings
+        from evolve.config.tracking import MetricCategory, TrackingConfig
+        from evolve.factory.engine import create_engine
+
+        config = UnifiedConfig(
+            population_size=10,
+            max_generations=3,
+            selection="tournament",
+            crossover="uniform",
+            mutation="gaussian",
+            genome_type="vector",
+            evaluator="benchmark",
+            evaluator_params={"function_name": "sphere"},
+            erp=ERPSettings(),
+            tracking=TrackingConfig(
+                backend="null",
+                categories=frozenset({MetricCategory.DIVERSITY, MetricCategory.ENSEMBLE}),
+            ),
+        )
+
+        engine = create_engine(config, seed=42)
+
+        assert {"diversity", "ensemble"} <= engine.config.metric_categories
+        assert engine.config.step_limit == config.erp.step_limit
+
+    def test_erp_with_merge_is_refused(self) -> None:
+        from evolve.config.erp import ERPSettings
+        from evolve.factory.engine import create_engine
+
+        config = UnifiedConfig(
+            population_size=10,
+            max_generations=3,
+            selection="tournament",
+            crossover="neat",
+            mutation="neat",
+            genome_type="graph",
+            evaluator="benchmark",
+            evaluator_params={"function_name": "sphere"},
+            erp=ERPSettings(),
+            merge=MergeConfig(operator="graph_symbiogenetic", merge_rate=0.2),
+        )
+
+        with pytest.raises(ValueError, match="ERP engine does not support symbiogenetic merge"):
+            create_engine(config, seed=42)
+
+    def test_direct_erp_engine_with_merge_rate_is_refused(self) -> None:
+        from evolve.core.operators import GaussianMutation, TournamentSelection, UniformCrossover
+        from evolve.evaluation.evaluator import FunctionEvaluator
+        from evolve.reproduction.engine import ERPConfig, ERPEngine
+
+        with pytest.raises(ValueError, match="does not support symbiogenetic merge"):
+            ERPEngine(
+                config=ERPConfig(merge_rate=0.2),
+                evaluator=FunctionEvaluator(lambda _g: 0.0),
+                selection=TournamentSelection(),
+                crossover=UniformCrossover(),
+                mutation=GaussianMutation(),
+            )

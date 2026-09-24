@@ -143,6 +143,12 @@ class ERPEngine(EvolutionEngine[G]):
             protocol_mutator: Optional protocol mutator
             default_protocol_factory: Factory for default protocols
         """
+        if config.merge_rate > 0.0:
+            raise ValueError(
+                "The ERP engine does not support symbiogenetic merge "
+                f"(merge_rate={config.merge_rate}); remove the merge settings or use the "
+                "standard engine."
+            )
         super().__init__(config, evaluator, selection, crossover, mutation, seed, stopping)
 
         self.erp_config = config
