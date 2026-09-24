@@ -749,6 +749,19 @@ class EvolutionEngine(Generic[G]):
 
         if self._mo_collector is not None:
             front = [i for i in first_front if feasible[i]]
+            if nsga2.penalty_weights is not None:
+                # Penalized ranks can push feasible non-dominated points off rank 0
+                from evolve.multiobjective.dominance import pareto_front
+                from evolve.multiobjective.fitness import MultiObjectiveFitness
+
+                feasible_idx = np.flatnonzero(feasible)
+                front = list(
+                    feasible_idx[
+                        pareto_front(
+                            [MultiObjectiveFitness(objectives=m) for m in maximized[feasible_idx]]
+                        )
+                    ]
+                )
             reference = (
                 None
                 if mo.reference_point is None
