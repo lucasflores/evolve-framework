@@ -38,7 +38,8 @@ class MultiObjectiveMetricCollector:
 
     Attributes:
         reference_point: Reference point for hypervolume computation.
-            If None, uses nadir point estimate from population.
+            If None (and ``context.extra`` has no ``hypervolume_reference``),
+            no hypervolume is reported.
         enable_spread: Whether to compute spread metric (<2 objectives only).
         enable_crowding: Whether to compute crowding diversity.
         warn_on_empty_front: Log warning when Pareto front is empty.
@@ -105,9 +106,7 @@ class MultiObjectiveMetricCollector:
         if objectives is None or len(objectives) == 0:
             return metrics
 
-        metrics.update(
-            self.front_metrics(objectives, self._get_reference_point(objectives, context))
-        )
+        metrics.update(self.front_metrics(objectives, self._get_reference_point(context)))
         return metrics
 
     def front_metrics(
@@ -262,20 +261,17 @@ class MultiObjectiveMetricCollector:
                 self._warned_high_dim = True
             return self._approximate_hypervolume_nd(objectives, ref)
 
-    def _get_reference_point(
-        self,
-        objectives: np.ndarray,
-        context: CollectionContext,
-    ) -> np.ndarray | None:
+    def _get_reference_point(self, context: CollectionContext) -> np.ndarray | None:
         """
         Get reference point for hypervolume computation.
 
         Args:
-            objectives: Objective values.
             context: Collection context (may have config reference).
 
         Returns:
-            Reference point array, or None.
+            The collector's ``reference_point``, else
+            ``context.extra["hypervolume_reference"]``, else None (no
+            hypervolume is reported).
         """
         # Use configured reference point if available
         if self.reference_point is not None:
@@ -287,14 +283,9 @@ class MultiObjectiveMetricCollector:
             ref = np.atleast_1d(np.array(context.extra["hypervolume_reference"]))
             return ref
 
-        # Estimate nadir point from current front
-        # Use worst value per objective minus a small margin
-        nadir: np.ndarray = np.min(objectives, axis=0)  # Assuming maximization
-        margin = 0.1 * np.abs(nadir - np.max(objectives, axis=0))
-        margin = np.where(margin == 0, 0.1, margin)  # Avoid zero margin
-
-        result: np.ndarray = nadir - margin
-        return result
+        # No reference: no hypervolume. An estimate that moves with the front
+        # would not be comparable across generations.
+        return None
 
     def _approximate_hypervolume_nd(
         self,

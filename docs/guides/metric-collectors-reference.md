@@ -136,7 +136,9 @@ mean of the raw value), where `<objective>` is `ObjectiveSpec.name`.
 Used standalone, `collect(context)` reads `context.pareto_front` (or computes it
 from `MultiObjectiveFitness` individuals) and expects objectives in the
 maximization convention; the engine calls `front_metrics()` with points already
-mapped to that space.
+mapped to that space. Standalone, the reference comes from the collector's
+`reference_point` or `context.extra["hypervolume_reference"]` (maximization
+space); without either, no `hypervolume` is reported, as in engine runs.
 
 | Metric Key | Formula | Intuition | Evolutionary Interpretation | Degenerate-Case Behavior |
 |-----------|---------|-----------|----------------------------|--------------------------|
