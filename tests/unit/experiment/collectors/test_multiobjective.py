@@ -506,3 +506,10 @@ class TestFrontMetrics:
         )
 
         assert collected == {"pareto_front_size": 3, **direct}
+
+    def test_hypervolume_errors_propagate(self):
+        """A shape mismatch is a bug to surface, not a gap in the series."""
+        points = np.array([[3.0, 1.0], [1.0, 3.0]])
+
+        with pytest.raises(ValueError, match="reference"):
+            MultiObjectiveMetricCollector().front_metrics(points, np.array([0.0, 0.0, 0.0]))
