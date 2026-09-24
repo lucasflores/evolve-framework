@@ -245,6 +245,8 @@ def fitness_sort_key(fitness: Fitness | None, minimize: bool = True) -> tuple[in
     the given direction. Use it with plain ``sorted()`` / ``min()`` in both
     directions. When every fitness is feasible the order (and tie-breaking)
     is the same as ranking on ``values[0]``. ``None`` ranks last.
+    Duck-typed fitness objects that expose ``values`` but no constraint
+    attributes (supported by the collectors) rank as feasible.
 
     Args:
         fitness: Fitness to rank (``values[0]`` is the objective).
@@ -257,8 +259,8 @@ def fitness_sort_key(fitness: Fitness | None, minimize: bool = True) -> tuple[in
         return (2, 0.0, 0.0)
     value = float(fitness.values[0])
     return (
-        int(not fitness.is_feasible),
-        fitness.total_constraint_violation,
+        int(not getattr(fitness, "is_feasible", True)),
+        float(getattr(fitness, "total_constraint_violation", 0.0)),
         value if minimize else -value,
     )
 

@@ -677,3 +677,29 @@ class TestTopKUsesTheEliteSet:
         result = EnsembleMetricCollector(elite_size=2).collect(context)
 
         assert result["ensemble/top_k_concentration"] == pytest.approx(7.0 / 10.0)
+
+
+class TestDuckTypedFitness:
+    """Fitness objects exposing only ``.values`` keep working (as in other collectors)."""
+
+    def test_values_only_fitness_is_ranked(self) -> None:
+        from types import SimpleNamespace
+
+        individuals = [MockIndividual(fitness=SimpleNamespace(values=[v])) for v in (1.0, 5.0)]
+        context = CollectionContext(
+            generation=1,
+            population=MockPopulation(individuals),  # type: ignore[arg-type]
+            previous_elites=[individuals[0]],
+        )
+
+        result = EnsembleMetricCollector(elite_size=1).collect(context)
+
+        assert EnsembleMetricCollector(elite_size=1).elites(individuals, False) == [individuals[1]]
+        assert result["ensemble/expert_turnover"] == 1.0
+
+    def test_sort_key_treats_missing_constraint_attributes_as_feasible(self) -> None:
+        from types import SimpleNamespace
+
+        from evolve.core.types import fitness_sort_key
+
+        assert fitness_sort_key(SimpleNamespace(values=[2.0]), minimize=False) == (0, 0.0, -2.0)
