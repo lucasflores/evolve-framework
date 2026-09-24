@@ -24,6 +24,7 @@ from uuid import uuid4
 import numpy as np
 
 from evolve.core.callbacks import Callback
+from evolve.core.operators.selection import check_selection_direction
 from evolve.core.population import Population
 from evolve.core.stopping import (
     GenerationLimitStopping,
@@ -170,6 +171,9 @@ class EvolutionEngine(Generic[G]):
                 ``(population, n, ranks, crowding, rng)``, e.g.
                 ``CrowdedTournamentSelection``.
         """
+        if multiobjective is None:
+            # MO mode ranks with each ObjectiveSpec.direction instead
+            check_selection_direction(selection, config.minimize)
         self.config = config
         self.evaluator = evaluator
         self.selection = selection
