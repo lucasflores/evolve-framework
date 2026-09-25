@@ -35,6 +35,14 @@ TRAINING = ParameterSpec(path="training_pool", param_type="subset", choices=("a"
 SERVING = ParameterSpec(
     path="serving_pool", param_type="subset", choices=("a", "b", "c"), parent="training_pool"
 )
+FORECASTER = ParameterSpec(path="forecaster", param_type="categorical", choices=("f1", "f2", "f3"))
+POOL_BY_FORECASTER = ParameterSpec(
+    path="pool",
+    param_type="subset",
+    choices=("a", "b", "c", "d"),
+    parent="forecaster",
+    choices_by_parent={"f1": ("a", "c"), "f2": ("d", "b")},
+)
 
 
 class TestSubsetSpec:
@@ -64,8 +72,8 @@ class TestDependentSpecValidation:
         with pytest.raises(ValueError, match="parent of 't' is unused"):
             ParameterSpec(path="t", bounds=(0.0, 1.0), parent="p")
 
-    def test_choices_by_parent_only_for_categorical(self) -> None:
-        with pytest.raises(ValueError, match="only for categorical"):
+    def test_choices_by_parent_not_for_continuous(self) -> None:
+        with pytest.raises(ValueError, match="only for categorical and subset"):
             ParameterSpec(path="t", bounds=(0.0, 1.0), parent="p", choices_by_parent={"x": (1,)})
 
     def test_choices_and_choices_by_parent_exclusive(self) -> None:
@@ -78,7 +86,19 @@ class TestDependentSpecValidation:
                 choices_by_parent={"x": (1,)},
             )
 
-    @pytest.mark.parametrize("spec", [THRESHOLD, READING_LENGTH, SERVING, TRAINING, POLICY])
+    def test_subset_allowed_choices_must_be_in_choices(self) -> None:
+        with pytest.raises(ValueError, match="not in choices: \\['e'\\]"):
+            ParameterSpec(
+                path="pool",
+                param_type="subset",
+                choices=("a", "b"),
+                parent="forecaster",
+                choices_by_parent={"f1": ("a", "e")},
+            )
+
+    @pytest.mark.parametrize(
+        "spec", [THRESHOLD, READING_LENGTH, SERVING, TRAINING, POLICY, POOL_BY_FORECASTER]
+    )
     def test_dict_round_trip_through_json(self, spec: ParameterSpec) -> None:
         assert ParameterSpec.from_dict(json.loads(json.dumps(spec.to_dict()))) == spec
 
@@ -157,6 +177,35 @@ class TestRelativeSubsetRule:
         a = decode_parameters([1.0, 0.0, 1.0, 1.0, 0.0, 0.0], [TRAINING, SERVING])
         b = decode_parameters([1.0, 0.0, 1.0, 1.0, 1.0, 0.0], [TRAINING, SERVING])
         assert a == b == {"training_pool": ["a", "c"], "serving_pool": ["a"]}
+
+
+class TestSubsetByParentRule:
+    """A subset limited to the choices allowed for its categorical parent's value."""
+
+    def test_intersects_allowed_keeping_choices_order(self) -> None:
+        decoded = decode_parameters([0.5, 1.0, 1.0, 1.0, 1.0], [FORECASTER, POOL_BY_FORECASTER])
+        assert decoded == {"forecaster": "f2", "pool": ["b", "d"]}
+
+    def test_parent_value_without_entry_is_inactive(self) -> None:
+        decoded = decode_parameters([0.9, 1.0, 1.0, 1.0, 1.0], [FORECASTER, POOL_BY_FORECASTER])
+        assert decoded == {"forecaster": "f3"}
+
+    def test_positions_of_disallowed_choices_have_no_effect(self) -> None:
+        specs = [FORECASTER, POOL_BY_FORECASTER]
+        a = decode_parameters([0.0, 1.0, 0.0, 0.0, 0.0], specs)
+        b = decode_parameters([0.0, 1.0, 1.0, 0.0, 1.0], specs)
+        assert a == b == {"forecaster": "f1", "pool": ["a"]}
+
+    def test_keys_must_be_values_the_parent_can_take(self) -> None:
+        typo = ParameterSpec(
+            path="pool",
+            param_type="subset",
+            choices=("a",),
+            parent="forecaster",
+            choices_by_parent={"f4": ("a",)},
+        )
+        with pytest.raises(ValueError, match="cannot take: \\['f4'\\]"):
+            ParameterDecoder((FORECASTER, typo))
 
 
 class TestLayoutAndOrder:

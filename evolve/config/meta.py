@@ -24,8 +24,10 @@ class ParameterSpec:
     (``decode_parameters()`` only; ConfigCodec refuses it):
 
     - ``active_values``: active only while the parent's value is one of them.
-    - ``choices_by_parent``: a categorical whose options depend on the
-      parent's value; inactive when the value has no entry.
+    - ``choices_by_parent``: options that depend on a categorical parent's
+      value; inactive when the value has no entry. For a categorical the
+      entry replaces ``choices``; for a subset ``choices`` still lays out the
+      positions and the entry is the allowed part of it.
     - A subset with a subset parent and neither of the above keeps only the
       choices the parent's value also holds.
 
@@ -37,7 +39,8 @@ class ParameterSpec:
         log_scale: Whether to use logarithmic scaling.
         parent: Path of the spec this one depends on.
         active_values: Parent values for which this spec is active.
-        choices_by_parent: Categorical options for each parent value.
+        choices_by_parent: Categorical options, or allowed subset choices,
+            for each parent value.
 
     Example:
         >>> # Continuous parameter
@@ -76,7 +79,7 @@ class ParameterSpec:
     """Parent values for which this spec is active (inactive otherwise)."""
 
     choices_by_parent: dict[Any, tuple[Any, ...]] | None = None
-    """Categorical options for each parent value (inactive for a value not listed)."""
+    """Categorical options, or allowed subset choices, per parent value (inactive if not listed)."""
 
     def __post_init__(self) -> None:
         """Validate parameter specification."""
@@ -103,14 +106,18 @@ class ParameterSpec:
         elif self.param_type == "subset":
             if self.choices is None or len(self.choices) == 0:
                 raise ValueError("choices required for subset parameter")
+            for allowed in (self.choices_by_parent or {}).values():
+                outside = [c for c in allowed if c not in self.choices]
+                if outside:
+                    raise ValueError(f"choices_by_parent lists choices not in choices: {outside}")
         else:
             raise ValueError(
                 f"param_type must be 'continuous', 'integer', 'categorical', or 'subset', "
                 f"got {self.param_type}"
             )
 
-        if self.choices_by_parent is not None and self.param_type != "categorical":
-            raise ValueError("choices_by_parent is only for categorical parameters")
+        if self.choices_by_parent is not None and self.param_type not in ("categorical", "subset"):
+            raise ValueError("choices_by_parent is only for categorical and subset parameters")
         if self.parent is None:
             if self.active_values is not None or self.choices_by_parent is not None:
                 raise ValueError("active_values and choices_by_parent require a parent")
