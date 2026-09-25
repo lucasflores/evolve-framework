@@ -103,6 +103,10 @@ class ParameterSpec:
                 raise ValueError(
                     f"choices_by_parent lists parent values more than once: {repeated}"
                 )
+            if not pairs:
+                raise ValueError("choices_by_parent is empty, so the parameter is never active")
+        if self.active_values is not None and len(self.active_values) == 0:
+            raise ValueError("active_values is empty, so the parameter is never active")
 
         if self.param_type in ("continuous", "integer"):
             if self.bounds is None:
