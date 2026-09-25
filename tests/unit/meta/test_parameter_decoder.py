@@ -326,6 +326,16 @@ class TestSpecSetRefusals:
         with pytest.raises(ValueError, match="is categorical; it must be subset"):
             ParameterDecoder((training, SERVING))
 
+    def test_relative_subset_choices_outside_parent_choices(self) -> None:
+        serving = ParameterSpec(
+            path="serving_pool",
+            param_type="subset",
+            choices=("a", "z", "b"),
+            parent="training_pool",
+        )
+        with pytest.raises(ValueError, match="choices its parent 'training_pool' lacks: \\['z'\\]"):
+            ParameterDecoder((TRAINING, serving))
+
     def test_values_parent_cannot_take(self) -> None:
         typo = ParameterSpec(
             path="holding.switch_threshold",
