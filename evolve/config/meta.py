@@ -121,15 +121,21 @@ class ParameterSpec:
         if self.parent is None:
             if self.active_values is not None or self.choices_by_parent is not None:
                 raise ValueError("active_values and choices_by_parent require a parent")
-        elif (
-            self.active_values is None
-            and self.choices_by_parent is None
-            and self.param_type != "subset"
-        ):
+        elif self.active_values is None and self.choices_by_parent is None and not self.is_relative:
             raise ValueError(
                 f"parent of '{self.path}' is unused: give active_values or "
                 "choices_by_parent (only a subset can be relative to its parent)"
             )
+
+    @property
+    def is_relative(self) -> bool:
+        """Whether this is a subset limited to its subset parent's value."""
+        return (
+            self.param_type == "subset"
+            and self.parent is not None
+            and self.active_values is None
+            and self.choices_by_parent is None
+        )
 
     @property
     def num_dimensions(self) -> int:

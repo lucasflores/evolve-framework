@@ -72,6 +72,12 @@ class TestDependentSpecValidation:
         with pytest.raises(ValueError, match="parent of 't' is unused"):
             ParameterSpec(path="t", bounds=(0.0, 1.0), parent="p")
 
+    def test_is_relative_only_for_subset_without_condition_or_map(self) -> None:
+        assert SERVING.is_relative
+        assert not TRAINING.is_relative
+        assert not POOL_BY_FORECASTER.is_relative
+        assert not THRESHOLD.is_relative
+
     def test_choices_by_parent_not_for_continuous(self) -> None:
         with pytest.raises(ValueError, match="only for categorical and subset"):
             ParameterSpec(path="t", bounds=(0.0, 1.0), parent="p", choices_by_parent={"x": (1,)})
