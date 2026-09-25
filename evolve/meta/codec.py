@@ -8,6 +8,7 @@ vector genome representations for meta-evolution.
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -144,38 +145,49 @@ class ConfigCodec:
         updates: dict[str, Any] = {}
 
         for idx, spec in enumerate(self.param_specs):
-            value = vector[idx]
-
-            if spec.param_type == "continuous":
-                assert spec.bounds is not None
-                lo, hi = spec.bounds
-
-                if spec.log_scale:
-                    # Log-scale decoding
-                    log_lo = math.log(lo)
-                    log_hi = math.log(hi)
-                    decoded = math.exp(log_lo + value * (log_hi - log_lo))
-                else:
-                    decoded = lo + value * (hi - lo)
-
-                updates[spec.path] = decoded
-
-            elif spec.param_type == "integer":
-                assert spec.bounds is not None
-                lo, hi = int(spec.bounds[0]), int(spec.bounds[1])
-                decoded = int(round(lo + value * (hi - lo)))
-                decoded = max(lo, min(hi, decoded))
-                updates[spec.path] = decoded
-
-            elif spec.param_type == "categorical":
-                assert spec.choices is not None
-                # Map [0, 1) to index
-                idx_choice = int(value * len(spec.choices))
-                idx_choice = min(idx_choice, len(spec.choices) - 1)
-                updates[spec.path] = spec.choices[idx_choice]
+            updates[spec.path] = decode_value(spec, vector[idx : idx + 1])
 
         # Apply updates to base config
         return _apply_updates(self.base_config, updates)
+
+
+def decode_value(spec: ParameterSpec, positions: Sequence[float]) -> Any:
+    """
+    Map a parameter's genome positions on [0, 1] to its value.
+
+    The one place the per-type math lives.
+
+    Args:
+        spec: Parameter specification.
+        positions: The spec's ``num_dimensions`` genome positions.
+
+    Returns:
+        Decoded value.
+    """
+    value = positions[0]
+
+    if spec.param_type == "continuous":
+        assert spec.bounds is not None
+        lo, hi = spec.bounds
+
+        if spec.log_scale:
+            # Log-scale decoding
+            log_lo = math.log(lo)
+            log_hi = math.log(hi)
+            return math.exp(log_lo + value * (log_hi - log_lo))
+        return lo + value * (hi - lo)
+
+    if spec.param_type == "integer":
+        assert spec.bounds is not None
+        lo, hi = int(spec.bounds[0]), int(spec.bounds[1])
+        decoded = int(round(lo + value * (hi - lo)))
+        return max(lo, min(hi, decoded))
+
+    # Categorical: map [0, 1) to index
+    assert spec.choices is not None
+    idx_choice = int(value * len(spec.choices))
+    idx_choice = min(idx_choice, len(spec.choices) - 1)
+    return spec.choices[idx_choice]
 
 
 def _get_param(config: UnifiedConfig, path: str) -> Any:
