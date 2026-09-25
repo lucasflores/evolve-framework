@@ -383,3 +383,23 @@ class TestPathHelpers:
         data: dict = {}
         _set_param_update(data, "x.y.z", "value")
         assert data["x"]["y"]["z"] == "value"
+
+
+class TestConfigCodecRefusesDependentSpecs:
+    """Subset and dependent specs are for decode_parameters(), not ConfigCodec."""
+
+    @pytest.mark.parametrize(
+        "spec",
+        [
+            ParameterSpec(path="pool", param_type="subset", choices=("a", "b")),
+            ParameterSpec(
+                path="mutation_rate",
+                bounds=(0.0, 1.0),
+                parent="selection",
+                active_values=("tournament",),
+            ),
+        ],
+    )
+    def test_refused(self, base_config: UnifiedConfig, spec: ParameterSpec) -> None:
+        with pytest.raises(ValueError, match="does not support subset or dependent"):
+            ConfigCodec(base_config=base_config, param_specs=(spec,))

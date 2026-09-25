@@ -21,7 +21,7 @@ class DecoderRegistry:
     """
     Registry mapping decoder type names to factory callables.
 
-    Built-in types: identity, graph_to_network, graph_to_mlp
+    Built-in types: identity, graph_to_network, graph_to_mlp, cppn_to_network, parameters
 
     Uses lazy initialization - built-in decoders registered on first access.
 
@@ -168,6 +168,18 @@ def _register_builtin_decoders(registry: DecoderRegistry) -> None:
         return CPPNToNetworkDecoder(**kwargs)
 
     registry.register("cppn_to_network", create_cppn_to_network_decoder)
+
+    # -----------------------------------------
+    # parameters: VectorGenome on [0, 1] → nested dict of parameter values
+    # -----------------------------------------
+    def create_parameters_decoder(params: list[dict[str, Any]]) -> Any:
+        """Create a ParameterDecoder from ParameterSpec dicts."""
+        from evolve.config.meta import ParameterSpec
+        from evolve.meta.codec import ParameterDecoder
+
+        return ParameterDecoder(tuple(ParameterSpec.from_dict(p) for p in params))
+
+    registry.register("parameters", create_parameters_decoder)
 
 
 # -----------------------------------------------------------------------------
