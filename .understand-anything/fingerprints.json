@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "gitCommitHash": "95e8430ceebc65a1a2c23aa24cbcf19510415540",
-  "generatedAt": "2026-09-24T16:23:52.121Z",
+  "gitCommitHash": "b2bb1840bd5ab650f0bd1f1c8c86a2977a3d0f3d",
+  "generatedAt": "2026-09-25T20:25:29.735Z",
   "files": {
     ".dev-stack/hooks-manifest.json": {
       "filePath": ".dev-stack/hooks-manifest.json",
@@ -4454,13 +4454,14 @@
     },
     "evolve/config/meta.py": {
       "filePath": "evolve/config/meta.py",
-      "contentHash": "12aba775b54b9b3563b217bd4e480768f96bb98b796ea45f4e65548f99a8b515",
+      "contentHash": "ab31228fbe35eb57e6290ca0448af69bd38c4515f56b6acadd2c32a452f1fc29",
       "functions": [],
       "classes": [
         {
           "name": "ParameterSpec",
           "methods": [
             "__post_init__",
+            "is_relative",
             "num_dimensions",
             "to_dict",
             "from_dict"
@@ -4470,10 +4471,13 @@
             "param_type",
             "bounds",
             "choices",
-            "log_scale"
+            "log_scale",
+            "parent",
+            "active_values",
+            "choices_by_parent"
           ],
           "exported": true,
-          "lineCount": 99
+          "lineCount": 193
         },
         {
           "name": "MetaEvolutionConfig",
@@ -4492,10 +4496,16 @@
             "inner_generations"
           ],
           "exported": true,
-          "lineCount": 90
+          "lineCount": 96
         }
       ],
       "imports": [
+        {
+          "source": "collections.abc",
+          "specifiers": [
+            "Mapping"
+          ]
+        },
         {
           "source": "dataclasses",
           "specifiers": [
@@ -4514,7 +4524,7 @@
         "ParameterSpec",
         "MetaEvolutionConfig"
       ],
-      "totalLines": 207,
+      "totalLines": 308,
       "hasStructuralAnalysis": true
     },
     "evolve/config/multiobjective.py": {
@@ -10342,14 +10352,16 @@
     },
     "evolve/meta/__init__.py": {
       "filePath": "evolve/meta/__init__.py",
-      "contentHash": "febeeae47d2e428e37198d766dc4274080f622678b907681a21be021a1febb8c",
+      "contentHash": "6712bd369ff61eda44a7c59bf0bc20488f391917ef6a90cf0c6d901d2300b9ab",
       "functions": [],
       "classes": [],
       "imports": [
         {
           "source": "evolve.meta.codec",
           "specifiers": [
-            "ConfigCodec"
+            "ConfigCodec",
+            "ParameterDecoder",
+            "decode_parameters"
           ]
         },
         {
@@ -10367,13 +10379,55 @@
         }
       ],
       "exports": [],
-      "totalLines": 24,
+      "totalLines": 28,
       "hasStructuralAnalysis": true
     },
     "evolve/meta/codec.py": {
       "filePath": "evolve/meta/codec.py",
-      "contentHash": "d01835fbc2e52537f3817665e622d7527a84a545e1e624d855d0e6be3bf19480",
+      "contentHash": "507288d25badb376d0f9f51f74a91fa719688ee5509966e33ecb61b98c30bfb5",
       "functions": [
+        {
+          "name": "decode_value",
+          "params": [
+            "spec",
+            "positions",
+            "choices"
+          ],
+          "returnType": "Any",
+          "exported": true,
+          "lineCount": 60
+        },
+        {
+          "name": "decode_parameters",
+          "params": [
+            "vector",
+            "specs"
+          ],
+          "returnType": "dict[str, Any]",
+          "exported": true,
+          "lineCount": 30
+        },
+        {
+          "name": "_decode",
+          "params": [
+            "vector",
+            "specs",
+            "order",
+            "dimensions"
+          ],
+          "returnType": "dict[str, Any]",
+          "exported": true,
+          "lineCount": 39
+        },
+        {
+          "name": "_dependency_order",
+          "params": [
+            "specs"
+          ],
+          "returnType": "tuple[ParameterSpec, ...]",
+          "exported": true,
+          "lineCount": 57
+        },
         {
           "name": "_get_param",
           "params": [
@@ -10422,7 +10476,20 @@
             "param_specs"
           ],
           "exported": true,
-          "lineCount": 159
+          "lineCount": 137
+        },
+        {
+          "name": "ParameterDecoder",
+          "methods": [
+            "__post_init__",
+            "dimensions",
+            "decode"
+          ],
+          "properties": [
+            "specs"
+          ],
+          "exported": true,
+          "lineCount": 34
         }
       ],
       "imports": [
@@ -10433,9 +10500,22 @@
           ]
         },
         {
+          "source": "collections.abc",
+          "specifiers": [
+            "Sequence"
+          ]
+        },
+        {
           "source": "dataclasses",
           "specifiers": [
             "dataclass"
+          ]
+        },
+        {
+          "source": "graphlib",
+          "specifiers": [
+            "CycleError",
+            "TopologicalSorter"
           ]
         },
         {
@@ -10448,11 +10528,16 @@
       ],
       "exports": [
         "ConfigCodec",
+        "ParameterDecoder",
+        "decode_value",
+        "decode_parameters",
+        "_decode",
+        "_dependency_order",
         "_get_param",
         "_set_param_update",
         "_apply_updates"
       ],
-      "totalLines": 255,
+      "totalLines": 468,
       "hasStructuralAnalysis": true
     },
     "evolve/meta/evaluator.py": {
@@ -11631,7 +11716,7 @@
     },
     "evolve/registry/decoders.py": {
       "filePath": "evolve/registry/decoders.py",
-      "contentHash": "445e857523361c1af70fcd8b24f8c6037fc6b56319f8e027443828a79816bf9c",
+      "contentHash": "a4a52b5347c6d8361b3a3d87861fad1d0f6526e22f709f8ba7217184af16038e",
       "functions": [
         {
           "name": "_register_builtin_decoders",
@@ -11640,7 +11725,7 @@
           ],
           "returnType": "None",
           "exported": true,
-          "lineCount": 49
+          "lineCount": 61
         },
         {
           "name": "get_decoder_registry",
@@ -11693,7 +11778,7 @@
         "get_decoder_registry",
         "reset_decoder_registry"
       ],
-      "totalLines": 203,
+      "totalLines": 215,
       "hasStructuralAnalysis": true
     },
     "evolve/registry/evaluators.py": {
@@ -28324,7 +28409,7 @@
     },
     "tests/unit/meta/test_codec.py": {
       "filePath": "tests/unit/meta/test_codec.py",
-      "contentHash": "8d92f3ee8b49b16cde0347448f03b83809d08999e235037c2a05074883416d22",
+      "contentHash": "0f1c943ae140dfe393bbcdeee4841216753a40676c0b2cca82feadeb089af225",
       "functions": [
         {
           "name": "base_config",
@@ -28406,6 +28491,26 @@
           "properties": [],
           "exported": true,
           "lineCount": 29
+        },
+        {
+          "name": "TestConfigCodecRefusesDependentSpecs",
+          "methods": [
+            "test_refused",
+            "test_refused_by_meta_evolution_config"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "TestDecodeValueClampsPositions",
+          "methods": [
+            "test_out_of_range_position",
+            "test_config_codec_negative_categorical_is_first_choice"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 27
         }
       ],
       "imports": [
@@ -28418,6 +28523,7 @@
         {
           "source": "evolve.config.meta",
           "specifiers": [
+            "MetaEvolutionConfig",
             "ParameterSpec"
           ]
         },
@@ -28432,7 +28538,8 @@
           "specifiers": [
             "ConfigCodec",
             "_get_param",
-            "_set_param_update"
+            "_set_param_update",
+            "decode_value"
           ]
         }
       ],
@@ -28443,9 +28550,11 @@
         "TestConfigCodecEncode",
         "TestConfigCodecDecode",
         "TestCodecRoundTrip",
-        "TestPathHelpers"
+        "TestPathHelpers",
+        "TestConfigCodecRefusesDependentSpecs",
+        "TestDecodeValueClampsPositions"
       ],
-      "totalLines": 386,
+      "totalLines": 445,
       "hasStructuralAnalysis": true
     },
     "tests/unit/meta/test_evaluator.py": {
@@ -28604,6 +28713,231 @@
         "TestTrialsCounter"
       ],
       "totalLines": 490,
+      "hasStructuralAnalysis": true
+    },
+    "tests/unit/meta/test_parameter_decoder.py": {
+      "filePath": "tests/unit/meta/test_parameter_decoder.py",
+      "contentHash": "b146a20f054518019d85fc2e3a004bd5d9eb7711bda33393180851c67e4cd8fc",
+      "functions": [],
+      "classes": [
+        {
+          "name": "TestSubsetSpec",
+          "methods": [
+            "test_one_position_per_choice",
+            "test_requires_choices",
+            "test_includes_choices_at_or_above_half_in_choices_order"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 14
+        },
+        {
+          "name": "TestDependentSpecValidation",
+          "methods": [
+            "test_active_values_require_parent",
+            "test_parent_must_be_used",
+            "test_is_relative_only_for_subset_without_condition_or_map",
+            "test_empty_active_values_refused",
+            "test_empty_choices_by_parent_refused",
+            "test_subset_allowed_list_may_be_empty",
+            "test_choices_by_parent_not_for_continuous",
+            "test_choices_and_choices_by_parent_exclusive",
+            "test_subset_allowed_choices_must_be_in_choices",
+            "test_dict_round_trip_through_json"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 65
+        },
+        {
+          "name": "TestChoicesByParentStorage",
+          "methods": [
+            "test_dict_and_pairs_give_the_same_spec",
+            "test_spec_is_hashable",
+            "test_to_dict_emits_pairs",
+            "test_integer_parent_values_survive_json",
+            "test_from_dict_accepts_a_hand_written_mapping",
+            "test_duplicate_parent_values_refused"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 45
+        },
+        {
+          "name": "TestConditionRule",
+          "methods": [
+            "test_active_when_parent_value_listed",
+            "test_inactive_spec_is_omitted",
+            "test_inactive_positions_have_no_effect",
+            "test_child_of_inactive_parent_is_inactive"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 36
+        },
+        {
+          "name": "TestDependentCategoricalRule",
+          "methods": [
+            "test_same_index_math_as_plain_categorical",
+            "test_options_follow_parent_value",
+            "test_parent_value_without_entry_is_inactive"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "TestRelativeSubsetRule",
+          "methods": [
+            "test_intersects_parent_keeping_choices_order",
+            "test_positions_outside_parent_have_no_effect"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 17
+        },
+        {
+          "name": "TestSubsetByParentRule",
+          "methods": [
+            "test_intersects_allowed_keeping_choices_order",
+            "test_parent_value_without_entry_is_inactive",
+            "test_positions_of_disallowed_choices_have_no_effect",
+            "test_keys_must_be_values_the_parent_can_take"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 27
+        },
+        {
+          "name": "TestLayoutAndOrder",
+          "methods": [
+            "test_child_listed_before_parent",
+            "test_dimensions_sum_positions",
+            "test_wrong_vector_length_refused"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 16
+        },
+        {
+          "name": "TestSpecSetRefusals",
+          "methods": [
+            "test_cycle",
+            "test_unknown_parent",
+            "test_condition_needs_categorical_parent",
+            "test_relative_subset_needs_subset_parent",
+            "test_relative_subset_choices_outside_parent_choices",
+            "test_values_parent_cannot_take",
+            "test_duplicate_path",
+            "test_path_nested_under_another"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 55
+        },
+        {
+          "name": "TestParameterDecoderValidatesOnce",
+          "methods": [
+            "test_decode_matches_decode_parameters",
+            "test_decode_does_not_revalidate"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 31
+        },
+        {
+          "name": "TestRegisteredDecoder",
+          "methods": [
+            "_reset_registry",
+            "test_built_from_spec_dicts",
+            "test_genome_length_mismatch_refused",
+            "test_create_engine_evaluates_decoded_dicts"
+          ],
+          "properties": [],
+          "exported": true,
+          "lineCount": 61
+        }
+      ],
+      "imports": [
+        {
+          "source": "json",
+          "specifiers": [
+            "json"
+          ]
+        },
+        {
+          "source": "typing",
+          "specifiers": [
+            "Any"
+          ]
+        },
+        {
+          "source": "numpy",
+          "specifiers": [
+            "np"
+          ]
+        },
+        {
+          "source": "pytest",
+          "specifiers": [
+            "pytest"
+          ]
+        },
+        {
+          "source": "evolve.config.meta",
+          "specifiers": [
+            "ParameterSpec"
+          ]
+        },
+        {
+          "source": "evolve.config.unified",
+          "specifiers": [
+            "UnifiedConfig"
+          ]
+        },
+        {
+          "source": "evolve.factory.engine",
+          "specifiers": [
+            "create_engine",
+            "create_initial_population"
+          ]
+        },
+        {
+          "source": "evolve.meta.codec",
+          "specifiers": [
+            "ParameterDecoder",
+            "decode_parameters",
+            "decode_value"
+          ]
+        },
+        {
+          "source": "evolve.registry.decoders",
+          "specifiers": [
+            "get_decoder_registry",
+            "reset_decoder_registry"
+          ]
+        },
+        {
+          "source": "evolve.representation.vector",
+          "specifiers": [
+            "VectorGenome"
+          ]
+        }
+      ],
+      "exports": [
+        "TestSubsetSpec",
+        "TestDependentSpecValidation",
+        "TestChoicesByParentStorage",
+        "TestConditionRule",
+        "TestDependentCategoricalRule",
+        "TestRelativeSubsetRule",
+        "TestSubsetByParentRule",
+        "TestLayoutAndOrder",
+        "TestSpecSetRefusals",
+        "TestParameterDecoderValidatesOnce",
+        "TestRegisteredDecoder"
+      ],
+      "totalLines": 453,
       "hasStructuralAnalysis": true
     },
     "tests/unit/registry/__init__.py": {
@@ -30811,7 +31145,7 @@
     },
     "tests/unit/test_decoder_registry.py": {
       "filePath": "tests/unit/test_decoder_registry.py",
-      "contentHash": "ac88fa90e23574f3931614f09b9fa860b69e360529ecc8ddf4a5f9bf5763bd10",
+      "contentHash": "a39a17c2b8377d4c6e597dbc8af722f63217736d9d708c9137b9b5ce164f6499",
       "functions": [
         {
           "name": "_reset_registry",
@@ -30839,14 +31173,14 @@
             "test_identity_is_identity_decoder",
             "test_graph_to_network_resolves",
             "test_graph_to_mlp_resolves",
-            "test_list_has_four_builtins",
+            "test_list_has_five_builtins",
             "test_list_is_sorted",
             "test_is_registered_true_for_builtins",
             "test_is_registered_false_for_unknown"
           ],
           "properties": [],
           "exported": true,
-          "lineCount": 47
+          "lineCount": 53
         },
         {
           "name": "TestKeyErrorMessage",
@@ -30937,7 +31271,7 @@
         "TestFactoryErrorPropagation",
         "TestCustomDecoderWorkflow"
       ],
-      "totalLines": 192,
+      "totalLines": 198,
       "hasStructuralAnalysis": true
     },
     "tests/unit/test_embedding_genome.py": {

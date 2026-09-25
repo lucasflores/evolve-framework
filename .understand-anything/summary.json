@@ -23,37 +23,37 @@
       "Weights & Biases"
     ],
     "description": "A research-grade evolutionary algorithms experimentation framework",
-    "analyzedAt": "2026-09-24T03:06:26.000Z",
-    "gitCommitHash": "95e8430ceebc65a1a2c23aa24cbcf19510415540"
+    "analyzedAt": "2026-09-25T20:25:10.534488+00:00",
+    "gitCommitHash": "b2bb1840bd5ab650f0bd1f1c8c86a2977a3d0f3d"
   },
-  "analyzedFiles": 609,
-  "totalFiles": 609,
+  "analyzedFiles": 610,
+  "totalFiles": 610,
   "fileCategoryBreakdown": {
     "config": 13,
     "docs": 312,
     "infra": 8,
     "script": 5,
-    "code": 271
+    "code": 272
   },
-  "totalNodes": 1795,
+  "totalNodes": 1818,
   "nodeTypeBreakdown": {
-    "file": 276,
-    "class": 825,
-    "function": 360,
+    "file": 277,
+    "class": 842,
+    "function": 365,
     "config": 14,
     "service": 3,
     "pipeline": 5,
     "document": 312
   },
-  "totalEdges": 4784,
+  "totalEdges": 4878,
   "edgeTypeBreakdown": {
-    "imports": 646,
-    "contains": 1186,
-    "exports": 633,
-    "tested_by": 298,
+    "imports": 661,
+    "contains": 1208,
+    "exports": 625,
+    "tested_by": 304,
     "depends_on": 146,
     "inherits": 6,
-    "calls": 497,
+    "calls": 556,
     "implements": 101,
     "related": 413,
     "configures": 9,

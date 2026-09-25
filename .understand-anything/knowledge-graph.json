@@ -24,8 +24,8 @@
       "Weights & Biases"
     ],
     "description": "A research-grade evolutionary algorithms experimentation framework",
-    "analyzedAt": "2026-09-24T03:06:26.000Z",
-    "gitCommitHash": "95e8430ceebc65a1a2c23aa24cbcf19510415540"
+    "analyzedAt": "2026-09-25T20:25:10.534488+00:00",
+    "gitCommitHash": "b2bb1840bd5ab650f0bd1f1c8c86a2977a3d0f3d"
   },
   "nodes": [
     {
@@ -145,15 +145,17 @@
       "type": "file",
       "name": "meta.py",
       "filePath": "evolve/config/meta.py",
-      "summary": "Defines meta-evolution configuration: ParameterSpec describes how one config path maps to genome dimensions (continuous/integer/categorical, bounds, log scale) and MetaEvolutionConfig sets the outer-loop population, generations, trials and aggregation.",
+      "summary": "Defines meta-evolution configuration: ParameterSpec describes how one config path maps to genome positions on [0, 1] (continuous, integer, categorical, or the new one-position-per-choice subset type), including dependent parameters via parent, active_values, choices_by_parent and relative subsets; MetaEvolutionConfig sets the outer-loop population, generations, trials and aggregation and refuses subset or dependent specs.",
       "tags": [
         "config",
         "data-model",
         "meta-evolution",
-        "hyperparameter-optimization",
+        "validation",
+        "serialization",
         "tested"
       ],
-      "complexity": "moderate"
+      "complexity": "complex",
+      "languageNotes": "Frozen dataclasses normalize choices_by_parent from a mapping to (value, options) tuple pairs in __post_init__ via object.__setattr__, keeping the spec hashable and letting non-string parent values survive a JSON round-trip."
     },
     {
       "id": "class:evolve/config/meta.py:ParameterSpec",
@@ -161,17 +163,18 @@
       "name": "ParameterSpec",
       "filePath": "evolve/config/meta.py",
       "lineRange": [
-        15,
-        113
+        16,
+        208
       ],
-      "summary": "Describes one evolvable config parameter by dotted path and type (continuous, integer, categorical) with bounds, choices and log scale, and reports its genome dimension count.",
+      "summary": "Frozen spec for one evolvable parameter: its dot path, type (continuous/integer/categorical/subset), bounds, choices, log scale, and optional dependency on a parent spec through active_values, choices_by_parent pairs, or a relative subset; validates every combination and serializes to/from dicts.",
       "tags": [
-        "config",
         "data-model",
+        "validation",
         "meta-evolution",
+        "serialization",
         "encoding"
       ],
-      "complexity": "moderate"
+      "complexity": "complex"
     },
     {
       "id": "class:evolve/config/meta.py:MetaEvolutionConfig",
@@ -179,14 +182,15 @@
       "name": "MetaEvolutionConfig",
       "filePath": "evolve/config/meta.py",
       "lineRange": [
-        117,
-        206
+        212,
+        307
       ],
-      "summary": "Outer-loop meta-evolution settings: evolvable parameter specs, outer population size and generations, trials per config, aggregation method and optional inner generation override.",
+      "summary": "Frozen outer-loop settings for meta-evolution (evolvable params, outer population and generations, trials per config, fitness aggregation, inner-generation override); refuses subset and dependent specs, pointing callers to decode_parameters().",
       "tags": [
         "config",
         "data-model",
-        "meta-evolution"
+        "meta-evolution",
+        "validation"
       ],
       "complexity": "moderate"
     },
@@ -1013,7 +1017,7 @@
       "type": "file",
       "name": "decoders.py",
       "filePath": "evolve/registry/decoders.py",
-      "summary": "DecoderRegistry mapping names to genotype-to-phenotype decoder factories, lazily registering identity, graph-to-network, graph-to-MLP and CPPN-to-network decoders behind a global singleton.",
+      "summary": "DecoderRegistry mapping names to genotype-to-phenotype decoder factories, lazily registering identity, graph-to-network, graph-to-MLP, CPPN-to-network and the new 'parameters' decoder (ParameterDecoder built from ParameterSpec dicts) behind a global singleton.",
       "tags": [
         "registry",
         "singleton",
@@ -1021,7 +1025,8 @@
         "factory",
         "tested"
       ],
-      "complexity": "moderate"
+      "complexity": "moderate",
+      "languageNotes": "Built-in factories import their decoder classes inside the factory body so importing the registry does not pull in heavy ML dependencies."
     },
     {
       "id": "function:evolve/registry/decoders.py:_register_builtin_decoders",
@@ -1030,13 +1035,14 @@
       "filePath": "evolve/registry/decoders.py",
       "lineRange": [
         122,
-        170
+        182
       ],
-      "summary": "Registers the built-in identity, graph-to-network, graph-to-MLP and CPPN decoders with lazily imported implementations.",
+      "summary": "Registers the five built-in decoder factories (identity, graph_to_network, graph_to_mlp, cppn_to_network, parameters), each deferring its decoder import until first use.",
       "tags": [
         "registry",
         "bootstrap",
-        "decoder"
+        "decoder",
+        "lazy-import"
       ],
       "complexity": "moderate"
     },
@@ -1046,10 +1052,10 @@
       "name": "get_decoder_registry",
       "filePath": "evolve/registry/decoders.py",
       "lineRange": [
-        180,
-        192
+        192,
+        204
       ],
-      "summary": "Returns the global DecoderRegistry singleton, creating it on first use.",
+      "summary": "Returns the process-wide DecoderRegistry, creating it on first call (lazy singleton).",
       "tags": [
         "registry",
         "singleton",
@@ -1063,10 +1069,10 @@
       "name": "reset_decoder_registry",
       "filePath": "evolve/registry/decoders.py",
       "lineRange": [
-        195,
-        202
+        207,
+        214
       ],
-      "summary": "Resets the global DecoderRegistry singleton so tests start from a clean registry.",
+      "summary": "Clears the global decoder registry singleton so the next access re-initializes it; used by tests.",
       "tags": [
         "registry",
         "testing-support",
@@ -1083,7 +1089,7 @@
         20,
         119
       ],
-      "summary": "Name-to-factory registry for decoders with lazy built-in initialization, registration, lookup and listing.",
+      "summary": "Registry of decoder factory callables keyed by name, with lazy built-in registration, overwrite-capable register, get that wraps factory errors with context, is_registered and sorted listing.",
       "tags": [
         "registry",
         "decoder",
@@ -3147,7 +3153,7 @@
       "type": "file",
       "name": "test_codec.py",
       "filePath": "tests/unit/meta/test_codec.py",
-      "summary": "Unit tests for the meta-evolution ConfigCodec and ParameterSpec: parameter validation, normalized dimension/bounds computation, encode/decode of continuous, integer, categorical and log-scale parameters, round-trips, and dotted-path helpers.",
+      "summary": "Unit tests for the meta-evolution ConfigCodec and ParameterSpec: parameter validation, normalized dimensions/bounds, encode/decode of continuous, integer, categorical and log-scale parameters, round-trips, dotted-path helpers, refusal of subset/dependent specs by ConfigCodec and MetaEvolutionConfig, and clamping of out-of-range positions in decode_value().",
       "tags": [
         "test",
         "unit-test",
@@ -3166,14 +3172,14 @@
         29,
         73
       ],
-      "summary": "Tests for ParameterSpec validation. Its 6 tests cover continuous param requires bounds, integer param requires bounds, categorical param requires choices, log scale requires positive bounds and 2 more.",
+      "summary": "Tests ParameterSpec validation: bounds required for continuous and integer params, choices required for categoricals, positive bounds for log scale, ordered bounds, and non-empty paths.",
       "tags": [
         "test",
         "test-suite",
         "unit-test",
         "meta-evolution"
       ],
-      "complexity": "moderate"
+      "complexity": "simple"
     },
     {
       "id": "class:tests/unit/meta/test_codec.py:TestConfigCodecDimensions",
@@ -3184,14 +3190,14 @@
         76,
         139
       ],
-      "summary": "Tests for ConfigCodec dimension computation. Its 3 tests cover dimensions single param, dimensions multiple params, bounds all normalized.",
+      "summary": "Tests ConfigCodec dimension counts for single and multiple parameters and that every dimension is bounded to [0, 1].",
       "tags": [
         "test",
         "test-suite",
         "unit-test",
         "meta-evolution"
       ],
-      "complexity": "moderate"
+      "complexity": "simple"
     },
     {
       "id": "class:tests/unit/meta/test_codec.py:TestConfigCodecEncode",
@@ -3202,14 +3208,14 @@
         142,
         222
       ],
-      "summary": "Tests for ConfigCodec.encode(). Its 4 tests cover encode continuous param, encode integer param, encode categorical param, encode log scale.",
+      "summary": "Tests ConfigCodec.encode normalization of continuous, integer, categorical and log-scale parameters.",
       "tags": [
         "test",
         "test-suite",
         "unit-test",
         "meta-evolution"
       ],
-      "complexity": "moderate"
+      "complexity": "simple"
     },
     {
       "id": "class:tests/unit/meta/test_codec.py:TestConfigCodecDecode",
@@ -3220,14 +3226,14 @@
         225,
         306
       ],
-      "summary": "Tests for ConfigCodec.decode(). Its 4 tests cover decode continuous param, decode integer param, decode categorical param, decode invalid length.",
+      "summary": "Tests ConfigCodec.decode for continuous, integer and categorical parameters and rejection of wrong-length vectors.",
       "tags": [
         "test",
         "test-suite",
         "unit-test",
         "meta-evolution"
       ],
-      "complexity": "moderate"
+      "complexity": "simple"
     },
     {
       "id": "class:tests/unit/meta/test_codec.py:TestCodecRoundTrip",
@@ -3238,14 +3244,14 @@
         309,
         354
       ],
-      "summary": "Tests for encode/decode round-trip. Its 2 tests cover roundtrip continuous, roundtrip multiple params.",
+      "summary": "Tests that encoding then decoding a config reproduces its continuous and multi-parameter values.",
       "tags": [
         "test",
         "test-suite",
         "unit-test",
         "meta-evolution"
       ],
-      "complexity": "moderate"
+      "complexity": "simple"
     },
     {
       "id": "class:tests/unit/meta/test_codec.py:TestPathHelpers",
@@ -3256,7 +3262,7 @@
         357,
         385
       ],
-      "summary": "Tests for _get_param and _set_param_update. Its 5 tests cover get param top level, get param nested, get param not found, set param top level and 1 more.",
+      "summary": "Tests _get_param and _set_param_update for top-level and nested dot paths and missing-path errors.",
       "tags": [
         "test",
         "test-suite",
@@ -3274,7 +3280,7 @@
         13,
         26
       ],
-      "summary": "Pytest fixture providing a base UnifiedConfig for codec encode/decode tests.",
+      "summary": "Pytest fixture providing a baseline UnifiedConfig (tournament selection, SBX crossover, Gaussian mutation) for codec tests.",
       "tags": [
         "test-fixture",
         "pytest-fixture",
@@ -3828,7 +3834,7 @@
       "type": "file",
       "name": "test_decoder_registry.py",
       "filePath": "tests/unit/test_decoder_registry.py",
-      "summary": "Unit tests for DecoderRegistry: singleton behavior, built-in decoders (identity, graph_to_network, graph_to_mlp), error messages listing available decoders, deferred ML imports, factory error context, and custom decoder workflows.",
+      "summary": "Unit tests for DecoderRegistry: singleton behavior, the five built-in decoders (identity, graph_to_network, graph_to_mlp, cppn_to_network, parameters), error messages listing available decoders, deferred ML imports, factory error context, and custom decoder workflows.",
       "tags": [
         "test",
         "unit-test",
@@ -3847,7 +3853,7 @@
         25,
         46
       ],
-      "summary": "Singleton behavior. Its 3 tests cover same instance returned, reset creates new instance, lazy initialization.",
+      "summary": "Tests that get_decoder_registry returns one shared instance, reset creates a new one, and built-ins initialize lazily.",
       "tags": [
         "test",
         "test-suite",
@@ -3863,16 +3869,16 @@
       "filePath": "tests/unit/test_decoder_registry.py",
       "lineRange": [
         49,
-        95
+        101
       ],
-      "summary": "Built-in decoder resolution. Its 8 tests cover identity resolves, identity is identity decoder, graph to network resolves, graph to mlp resolves and 4 more.",
+      "summary": "Tests resolution of built-in decoders, that exactly five built-ins (including cppn_to_network and parameters) are listed in sorted order, and is_registered for known and unknown names.",
       "tags": [
         "test",
         "test-suite",
         "unit-test",
         "registry"
       ],
-      "complexity": "moderate"
+      "complexity": "simple"
     },
     {
       "id": "class:tests/unit/test_decoder_registry.py:TestRegisterOverwrite",
@@ -3880,10 +3886,10 @@
       "name": "TestRegisterOverwrite",
       "filePath": "tests/unit/test_decoder_registry.py",
       "lineRange": [
-        107,
-        126
+        113,
+        132
       ],
-      "summary": "Register/overwrite semantics. Its 3 tests cover register custom, overwrite builtin, register non callable raises typeerror.",
+      "summary": "Tests registering a custom decoder, overwriting a built-in, and TypeError on non-callable factories.",
       "tags": [
         "test",
         "test-suite",
@@ -3898,10 +3904,10 @@
       "name": "TestCustomDecoderWorkflow",
       "filePath": "tests/unit/test_decoder_registry.py",
       "lineRange": [
-        156,
-        191
+        162,
+        197
       ],
-      "summary": "Register and use a custom decoder. Its 4 tests cover register user factory and resolve, custom shows in list, overwrite builtin with custom, custom decoder params passed.",
+      "summary": "Tests the end-to-end custom decoder workflow: registering a user factory, resolving it, listing it, overriding a built-in, and passing decoder params through.",
       "tags": [
         "test",
         "test-suite",
@@ -4169,7 +4175,7 @@
       "type": "file",
       "name": "__init__.py",
       "filePath": "evolve/meta/__init__.py",
-      "summary": "Package barrel for meta-evolution, exposing ConfigCodec, MetaEvaluator, MetaEvolutionResult and run_meta_evolution for evolving hyperparameters via inner evolutionary loops.",
+      "summary": "Package barrel for meta-evolution, exposing ConfigCodec, ParameterDecoder, decode_parameters, MetaEvaluator, MetaEvolutionResult and run_meta_evolution for evolving hyperparameters and decoding vector genomes into parameter dicts.",
       "tags": [
         "barrel",
         "entry-point",
@@ -4182,15 +4188,17 @@
       "type": "file",
       "name": "codec.py",
       "filePath": "evolve/meta/codec.py",
-      "summary": "Encodes UnifiedConfig hyperparameters into continuous vector genomes and decodes them back, using dotted parameter paths, precomputed bounds, and immutable config updates for the outer meta-evolution loop.",
+      "summary": "Maps vector genomes on [0, 1] to parameter values: ConfigCodec encodes/decodes UnifiedConfig hyperparameters for the meta-evolution outer loop, while decode_parameters() and ParameterDecoder decode against ParameterSpecs (including subsets and parent-dependent specs) into a nested dict, all sharing one clamping decode_value().",
       "tags": [
         "meta-evolution",
-        "serialization",
         "codec",
+        "serialization",
+        "decoder",
         "configuration",
         "tested"
       ],
-      "complexity": "moderate"
+      "complexity": "complex",
+      "languageNotes": "Uses the stdlib graphlib.TopologicalSorter to order dependent specs parents-first and converts its CycleError into a ValueError naming the cycle."
     },
     {
       "id": "file:evolve/meta/result.py",
@@ -4326,14 +4334,15 @@
       "name": "ConfigCodec",
       "filePath": "evolve/meta/codec.py",
       "lineRange": [
-        20,
-        178
+        24,
+        160
       ],
-      "summary": "Bidirectional mapping between UnifiedConfig parameters and normalized vector genomes, precomputing per-parameter bounds and handling continuous, integer and categorical specs.",
+      "summary": "Dataclass that encodes UnifiedConfig parameters into a normalized [0, 1] vector and decodes vectors back into a new UnifiedConfig; refuses subset and dependent specs and delegates per-type decoding to decode_value().",
       "tags": [
         "codec",
         "meta-evolution",
-        "serialization"
+        "serialization",
+        "validation"
       ],
       "complexity": "moderate"
     },
@@ -4343,10 +4352,10 @@
       "name": "_get_param",
       "filePath": "evolve/meta/codec.py",
       "lineRange": [
-        181,
-        209
+        394,
+        422
       ],
-      "summary": "Reads a nested configuration value from a UnifiedConfig using a dotted parameter path.",
+      "summary": "Reads a parameter from a UnifiedConfig by dot-notation path via its dict form, raising KeyError when a segment is missing or not traversable.",
       "tags": [
         "utility",
         "configuration",
@@ -4360,10 +4369,10 @@
       "name": "_set_param_update",
       "filePath": "evolve/meta/codec.py",
       "lineRange": [
-        212,
-        233
+        425,
+        446
       ],
-      "summary": "Writes a value into a nested dict at a dotted path, creating intermediate dicts as needed.",
+      "summary": "Sets a value in a nested dict at a dot-notation path in place, creating intermediate dicts as needed.",
       "tags": [
         "utility",
         "configuration",
@@ -4377,10 +4386,10 @@
       "name": "_apply_updates",
       "filePath": "evolve/meta/codec.py",
       "lineRange": [
-        236,
-        254
+        449,
+        467
       ],
-      "summary": "Produces a new UnifiedConfig by serializing the base config, applying dotted-path updates, and reconstructing it.",
+      "summary": "Returns a new UnifiedConfig with path-keyed updates applied to the base config's dict form, keeping the original config immutable.",
       "tags": [
         "utility",
         "configuration",
@@ -24867,7 +24876,7 @@
       "type": "document",
       "name": "evolve.representation.cppn_decoder.rst",
       "filePath": "docs/api/evolve.representation.cppn_decoder.rst",
-      "summary": "Sphinx autodoc stub that renders the API reference for the `evolve.representation.cppn_decoder` module (ES-HyperNEAT Decoder — CPPN-to-Network indirect encoding), including members, undocumented members, and inheritance.",
+      "summary": "Sphinx autodoc stub that renders the API reference for the `evolve.representation.cppn_decoder` module (ES-HyperNEAT Decoder \u2014 CPPN-to-Network indirect encoding), including members, undocumented members, and inheritance.",
       "tags": [
         "documentation",
         "api-reference",
@@ -24895,7 +24904,7 @@
       "type": "document",
       "name": "evolve.representation.embedding.rst",
       "filePath": "docs/api/evolve.representation.embedding.rst",
-      "summary": "Sphinx autodoc stub that renders the API reference for the `evolve.representation.embedding` module (EmbeddingGenome — 2D continuous soft-prompt embedding representation), including members, undocumented members, and inheritance.",
+      "summary": "Sphinx autodoc stub that renders the API reference for the `evolve.representation.embedding` module (EmbeddingGenome \u2014 2D continuous soft-prompt embedding representation), including members, undocumented members, and inheritance.",
       "tags": [
         "documentation",
         "api-reference",
@@ -24909,7 +24918,7 @@
       "type": "document",
       "name": "evolve.representation.embedding_config.rst",
       "filePath": "docs/api/evolve.representation.embedding_config.rst",
-      "summary": "Sphinx autodoc stub that renders the API reference for the `evolve.representation.embedding_config` module (Embedding genome configuration — dimensionality strategies and config), including members, undocumented members, and inheritance.",
+      "summary": "Sphinx autodoc stub that renders the API reference for the `evolve.representation.embedding_config` module (Embedding genome configuration \u2014 dimensionality strategies and config), including members, undocumented members, and inheritance.",
       "tags": [
         "documentation",
         "api-reference",
@@ -29151,6 +29160,413 @@
         "utility"
       ],
       "complexity": "simple"
+    },
+    {
+      "id": "class:evolve/meta/codec.py:ParameterDecoder",
+      "type": "class",
+      "name": "ParameterDecoder",
+      "filePath": "evolve/meta/codec.py",
+      "lineRange": [
+        164,
+        197
+      ],
+      "summary": "Decoder registered as the built-in 'parameters' decoder: validates and orders its ParameterSpecs once at construction, then decodes a VectorGenome's genes into a nested dict of active parameter values.",
+      "tags": [
+        "decoder",
+        "meta-evolution",
+        "serialization"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:evolve/meta/codec.py:decode_value",
+      "type": "function",
+      "name": "decode_value",
+      "filePath": "evolve/meta/codec.py",
+      "lineRange": [
+        200,
+        259
+      ],
+      "summary": "Single home of the per-type decoding math: clamps positions to [0, 1], then maps them to a continuous (linear or log), integer, categorical (optionally with parent-dependent options) or subset value.",
+      "tags": [
+        "utility",
+        "decoder",
+        "encoding",
+        "meta-evolution"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:evolve/meta/codec.py:decode_parameters",
+      "type": "function",
+      "name": "decode_parameters",
+      "filePath": "evolve/meta/codec.py",
+      "lineRange": [
+        262,
+        291
+      ],
+      "summary": "Public entry point that decodes a vector against parameter specs into a nested dict, validating and ordering the specs first and leaving inactive dependent specs out.",
+      "tags": [
+        "decoder",
+        "api",
+        "meta-evolution"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:evolve/meta/codec.py:_decode",
+      "type": "function",
+      "name": "_decode",
+      "filePath": "evolve/meta/codec.py",
+      "lineRange": [
+        294,
+        332
+      ],
+      "summary": "Core decode loop for pre-validated, parents-first specs: slices the vector per spec, skips specs whose parent is inactive or whose parent value is not allowed, resolves per-parent choices or relative subsets, and writes values into a nested dict.",
+      "tags": [
+        "decoder",
+        "dependency-resolution",
+        "meta-evolution"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:evolve/meta/codec.py:_dependency_order",
+      "type": "function",
+      "name": "_dependency_order",
+      "filePath": "evolve/meta/codec.py",
+      "lineRange": [
+        335,
+        391
+      ],
+      "summary": "Validates a spec set (duplicate or nested paths, unknown or type-incompatible parents, values the parent cannot take, stray relative-subset choices) and returns the specs in topological parents-first order, reporting cycles as ValueError.",
+      "tags": [
+        "validation",
+        "dependency-resolution",
+        "topological-sort"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:tests/unit/meta/test_codec.py:TestConfigCodecRefusesDependentSpecs",
+      "type": "class",
+      "name": "TestConfigCodecRefusesDependentSpecs",
+      "filePath": "tests/unit/meta/test_codec.py",
+      "lineRange": [
+        399,
+        410
+      ],
+      "summary": "Parametrized tests that ConfigCodec and MetaEvolutionConfig both refuse subset and parent-dependent ParameterSpecs.",
+      "tags": [
+        "test",
+        "test-suite",
+        "unit-test",
+        "validation"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tests/unit/meta/test_codec.py:TestDecodeValueClampsPositions",
+      "type": "class",
+      "name": "TestDecodeValueClampsPositions",
+      "filePath": "tests/unit/meta/test_codec.py",
+      "lineRange": [
+        418,
+        444
+      ],
+      "summary": "Tests that decode_value clamps positions outside [0, 1] to the nearest end for categorical, continuous and log-scale specs, and that ConfigCodec decodes a negative categorical position as the first choice.",
+      "tags": [
+        "test",
+        "test-suite",
+        "unit-test",
+        "meta-evolution"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:tests/unit/meta/test_parameter_decoder.py",
+      "type": "file",
+      "name": "test_parameter_decoder.py",
+      "filePath": "tests/unit/meta/test_parameter_decoder.py",
+      "summary": "Unit tests for decode_parameters() and the 'parameters' decoder: the subset type, dependent-spec validation, choices_by_parent pair storage and JSON round-trips, condition/dependent-categorical/relative-subset/subset-by-parent decoding rules, vector layout, spec-set refusals (cycles, unknown parents, clashing paths), one-time validation in ParameterDecoder, and an end-to-end create_engine run over decoded dicts.",
+      "tags": [
+        "test",
+        "unit-test",
+        "meta-evolution",
+        "decoder",
+        "integration"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:tests/unit/meta/test_parameter_decoder.py:TestSubsetSpec",
+      "type": "class",
+      "name": "TestSubsetSpec",
+      "filePath": "tests/unit/meta/test_parameter_decoder.py",
+      "lineRange": [
+        49,
+        62
+      ],
+      "summary": "Tests the subset parameter type: one genome position per choice, choices required, and inclusion of choices whose position is at least 0.5 in choices order.",
+      "tags": [
+        "test",
+        "test-suite",
+        "unit-test",
+        "meta-evolution"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tests/unit/meta/test_parameter_decoder.py:TestDependentSpecValidation",
+      "type": "class",
+      "name": "TestDependentSpecValidation",
+      "filePath": "tests/unit/meta/test_parameter_decoder.py",
+      "lineRange": [
+        65,
+        129
+      ],
+      "summary": "Tests ParameterSpec validation of dependent parameters: active_values and choices_by_parent need a parent, an unused parent is refused, is_relative only for plain subset children, empty lists refused, type and exclusivity rules, and dict round-trips through JSON.",
+      "tags": [
+        "test",
+        "test-suite",
+        "unit-test",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:tests/unit/meta/test_parameter_decoder.py:TestChoicesByParentStorage",
+      "type": "class",
+      "name": "TestChoicesByParentStorage",
+      "filePath": "tests/unit/meta/test_parameter_decoder.py",
+      "lineRange": [
+        132,
+        176
+      ],
+      "summary": "Tests that choices_by_parent is stored as hashable (value, options) pairs: mapping and pairs give equal specs, to_dict emits pairs, integer parent values survive JSON, hand-written mappings load, and duplicate parent values are refused.",
+      "tags": [
+        "test",
+        "test-suite",
+        "unit-test",
+        "serialization"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tests/unit/meta/test_parameter_decoder.py:TestConditionRule",
+      "type": "class",
+      "name": "TestConditionRule",
+      "filePath": "tests/unit/meta/test_parameter_decoder.py",
+      "lineRange": [
+        179,
+        214
+      ],
+      "summary": "Tests active_values conditions: a child is decoded only when its parent's value is listed, inactive specs are omitted and their positions have no effect, and inactivity propagates to grandchildren.",
+      "tags": [
+        "test",
+        "test-suite",
+        "unit-test",
+        "meta-evolution"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tests/unit/meta/test_parameter_decoder.py:TestDependentCategoricalRule",
+      "type": "class",
+      "name": "TestDependentCategoricalRule",
+      "filePath": "tests/unit/meta/test_parameter_decoder.py",
+      "lineRange": [
+        217,
+        233
+      ],
+      "summary": "Tests dependent categoricals: they use the same index math as a plain categorical, their options follow the parent's value, and a parent value without an entry makes them inactive.",
+      "tags": [
+        "test",
+        "test-suite",
+        "unit-test",
+        "meta-evolution"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tests/unit/meta/test_parameter_decoder.py:TestRelativeSubsetRule",
+      "type": "class",
+      "name": "TestRelativeSubsetRule",
+      "filePath": "tests/unit/meta/test_parameter_decoder.py",
+      "lineRange": [
+        236,
+        252
+      ],
+      "summary": "Tests relative subsets: the child intersects its subset parent's value in choices order and positions outside the parent have no effect.",
+      "tags": [
+        "test",
+        "test-suite",
+        "unit-test",
+        "meta-evolution"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tests/unit/meta/test_parameter_decoder.py:TestSubsetByParentRule",
+      "type": "class",
+      "name": "TestSubsetByParentRule",
+      "filePath": "tests/unit/meta/test_parameter_decoder.py",
+      "lineRange": [
+        255,
+        281
+      ],
+      "summary": "Tests subsets limited by choices_by_parent: intersection with the allowed choices in choices order, inactivity for unlisted parent values, disallowed positions having no effect, and keys restricted to values the parent can take.",
+      "tags": [
+        "test",
+        "test-suite",
+        "unit-test",
+        "meta-evolution"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tests/unit/meta/test_parameter_decoder.py:TestLayoutAndOrder",
+      "type": "class",
+      "name": "TestLayoutAndOrder",
+      "filePath": "tests/unit/meta/test_parameter_decoder.py",
+      "lineRange": [
+        284,
+        299
+      ],
+      "summary": "Tests vector layout: specs may list a child before its parent, dimensions sum per-spec positions, and wrong-length vectors are refused.",
+      "tags": [
+        "test",
+        "test-suite",
+        "unit-test",
+        "meta-evolution"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tests/unit/meta/test_parameter_decoder.py:TestSpecSetRefusals",
+      "type": "class",
+      "name": "TestSpecSetRefusals",
+      "filePath": "tests/unit/meta/test_parameter_decoder.py",
+      "lineRange": [
+        302,
+        356
+      ],
+      "summary": "Tests spec-set validation errors from ParameterDecoder: parent cycles, unknown parents, non-categorical condition parents, non-subset relative parents, stray relative choices, impossible parent values, duplicate paths and nested paths.",
+      "tags": [
+        "test",
+        "test-suite",
+        "unit-test",
+        "validation"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:tests/unit/meta/test_parameter_decoder.py:TestParameterDecoderValidatesOnce",
+      "type": "class",
+      "name": "TestParameterDecoderValidatesOnce",
+      "filePath": "tests/unit/meta/test_parameter_decoder.py",
+      "lineRange": [
+        359,
+        389
+      ],
+      "summary": "Tests that ParameterDecoder.decode matches decode_parameters on random genomes and does not re-run spec validation on each decode.",
+      "tags": [
+        "test",
+        "test-suite",
+        "unit-test",
+        "decoder"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tests/unit/meta/test_parameter_decoder.py:TestRegisteredDecoder",
+      "type": "class",
+      "name": "TestRegisteredDecoder",
+      "filePath": "tests/unit/meta/test_parameter_decoder.py",
+      "lineRange": [
+        392,
+        452
+      ],
+      "summary": "Tests the built-in 'parameters' registry decoder: construction from spec dicts, genome-length mismatch refusal, and a create_engine run whose evaluator receives decoded nested dicts respecting subset and condition rules.",
+      "tags": [
+        "test",
+        "test-suite",
+        "unit-test",
+        "registry",
+        "integration"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:tests/unit/test_decoder_registry.py:_reset_registry",
+      "type": "function",
+      "name": "_reset_registry",
+      "filePath": "tests/unit/test_decoder_registry.py",
+      "lineRange": [
+        18,
+        22
+      ],
+      "summary": "Autouse pytest fixture that resets the decoder registry singleton before and after each test.",
+      "tags": [
+        "test-fixture",
+        "pytest-fixture",
+        "registry"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tests/unit/test_decoder_registry.py:TestKeyErrorMessage",
+      "type": "class",
+      "name": "TestKeyErrorMessage",
+      "filePath": "tests/unit/test_decoder_registry.py",
+      "lineRange": [
+        104,
+        110
+      ],
+      "summary": "Tests that looking up an unknown decoder raises KeyError listing the available decoders.",
+      "tags": [
+        "test",
+        "test-suite",
+        "unit-test",
+        "registry"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tests/unit/test_decoder_registry.py:TestDeferredImports",
+      "type": "class",
+      "name": "TestDeferredImports",
+      "filePath": "tests/unit/test_decoder_registry.py",
+      "lineRange": [
+        135,
+        145
+      ],
+      "summary": "Tests that importing the decoders module and constructing a DecoderRegistry does not initialize built-ins or load ML dependencies.",
+      "tags": [
+        "test",
+        "test-suite",
+        "unit-test",
+        "lazy-import"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:tests/unit/test_decoder_registry.py:TestFactoryErrorPropagation",
+      "type": "class",
+      "name": "TestFactoryErrorPropagation",
+      "filePath": "tests/unit/test_decoder_registry.py",
+      "lineRange": [
+        148,
+        159
+      ],
+      "summary": "Tests that an exception raised by a decoder factory propagates with the decoder name and parameters in its message.",
+      "tags": [
+        "test",
+        "test-suite",
+        "unit-test",
+        "registry"
+      ],
+      "complexity": "simple"
     }
   ],
   "edges": [
@@ -32866,24 +33282,10 @@
     },
     {
       "source": "file:tests/unit/meta/test_codec.py",
-      "target": "class:tests/unit/meta/test_codec.py:TestParameterSpec",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:tests/unit/meta/test_codec.py",
       "target": "class:tests/unit/meta/test_codec.py:TestConfigCodecDimensions",
       "type": "contains",
       "direction": "forward",
       "weight": 1.0
-    },
-    {
-      "source": "file:tests/unit/meta/test_codec.py",
-      "target": "class:tests/unit/meta/test_codec.py:TestConfigCodecDimensions",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
     },
     {
       "source": "file:tests/unit/meta/test_codec.py",
@@ -32894,24 +33296,10 @@
     },
     {
       "source": "file:tests/unit/meta/test_codec.py",
-      "target": "class:tests/unit/meta/test_codec.py:TestConfigCodecEncode",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:tests/unit/meta/test_codec.py",
       "target": "class:tests/unit/meta/test_codec.py:TestConfigCodecDecode",
       "type": "contains",
       "direction": "forward",
       "weight": 1.0
-    },
-    {
-      "source": "file:tests/unit/meta/test_codec.py",
-      "target": "class:tests/unit/meta/test_codec.py:TestConfigCodecDecode",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
     },
     {
       "source": "file:tests/unit/meta/test_codec.py",
@@ -32922,13 +33310,6 @@
     },
     {
       "source": "file:tests/unit/meta/test_codec.py",
-      "target": "class:tests/unit/meta/test_codec.py:TestCodecRoundTrip",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:tests/unit/meta/test_codec.py",
       "target": "class:tests/unit/meta/test_codec.py:TestPathHelpers",
       "type": "contains",
       "direction": "forward",
@@ -32936,24 +33317,10 @@
     },
     {
       "source": "file:tests/unit/meta/test_codec.py",
-      "target": "class:tests/unit/meta/test_codec.py:TestPathHelpers",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:tests/unit/meta/test_codec.py",
       "target": "function:tests/unit/meta/test_codec.py:base_config",
       "type": "contains",
       "direction": "forward",
       "weight": 1.0
-    },
-    {
-      "source": "file:tests/unit/meta/test_codec.py",
-      "target": "function:tests/unit/meta/test_codec.py:base_config",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
     },
     {
       "source": "file:tests/unit/meta/test_evaluator.py",
@@ -33433,24 +33800,10 @@
     },
     {
       "source": "file:tests/unit/test_decoder_registry.py",
-      "target": "class:tests/unit/test_decoder_registry.py:TestSingleton",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:tests/unit/test_decoder_registry.py",
       "target": "class:tests/unit/test_decoder_registry.py:TestBuiltinDecoders",
       "type": "contains",
       "direction": "forward",
       "weight": 1.0
-    },
-    {
-      "source": "file:tests/unit/test_decoder_registry.py",
-      "target": "class:tests/unit/test_decoder_registry.py:TestBuiltinDecoders",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
     },
     {
       "source": "file:tests/unit/test_decoder_registry.py",
@@ -33461,24 +33814,10 @@
     },
     {
       "source": "file:tests/unit/test_decoder_registry.py",
-      "target": "class:tests/unit/test_decoder_registry.py:TestRegisterOverwrite",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
-    },
-    {
-      "source": "file:tests/unit/test_decoder_registry.py",
       "target": "class:tests/unit/test_decoder_registry.py:TestCustomDecoderWorkflow",
       "type": "contains",
       "direction": "forward",
       "weight": 1.0
-    },
-    {
-      "source": "file:tests/unit/test_decoder_registry.py",
-      "target": "class:tests/unit/test_decoder_registry.py:TestCustomDecoderWorkflow",
-      "type": "exports",
-      "direction": "forward",
-      "weight": 0.8
     },
     {
       "source": "file:tests/unit/test_evaluator_registry.py",
@@ -41417,7 +41756,7 @@
       "type": "tested_by",
       "direction": "forward",
       "weight": 0.5,
-      "description": "Direction corrected (was test → production)"
+      "description": "Direction corrected (was test \u2192 production)"
     },
     {
       "source": "file:evolve/representation/scm_decoder.py",
@@ -41425,7 +41764,7 @@
       "type": "tested_by",
       "direction": "forward",
       "weight": 0.5,
-      "description": "Direction corrected (was test → production)"
+      "description": "Direction corrected (was test \u2192 production)"
     },
     {
       "source": "file:evolve/evaluation/scm_evaluator.py",
@@ -41433,7 +41772,7 @@
       "type": "tested_by",
       "direction": "forward",
       "weight": 0.5,
-      "description": "Direction corrected (was test → production)"
+      "description": "Direction corrected (was test \u2192 production)"
     },
     {
       "source": "file:tests/unit/reproduction/test_engine.py",
@@ -47125,7 +47464,7 @@
       "type": "tested_by",
       "direction": "forward",
       "weight": 0.5,
-      "description": "Direction corrected (was test → production)"
+      "description": "Direction corrected (was test \u2192 production)"
     },
     {
       "source": "file:evolve/config/unified.py",
@@ -47133,7 +47472,7 @@
       "type": "tested_by",
       "direction": "forward",
       "weight": 0.5,
-      "description": "Direction corrected (was test → production)"
+      "description": "Direction corrected (was test \u2192 production)"
     },
     {
       "source": "file:evolve/config/espo.py",
@@ -62604,7 +62943,7 @@
       "type": "tested_by",
       "direction": "forward",
       "weight": 0.5,
-      "description": "Direction corrected (was test → production)"
+      "description": "Direction corrected (was test \u2192 production)"
     },
     {
       "source": "file:examples/speciation_demo.py",
@@ -62612,7 +62951,7 @@
       "type": "tested_by",
       "direction": "forward",
       "weight": 0.5,
-      "description": "Direction corrected (was test → production)"
+      "description": "Direction corrected (was test \u2192 production)"
     },
     {
       "source": "file:examples/protocol_evolution.py",
@@ -62620,7 +62959,7 @@
       "type": "tested_by",
       "direction": "forward",
       "weight": 0.5,
-      "description": "Direction corrected (was test → production)"
+      "description": "Direction corrected (was test \u2192 production)"
     },
     {
       "source": "file:docs/tutorials/utils/tutorial_utils.py",
@@ -62628,7 +62967,7 @@
       "type": "tested_by",
       "direction": "forward",
       "weight": 0.5,
-      "description": "Direction corrected (was test → production)"
+      "description": "Direction corrected (was test \u2192 production)"
     },
     {
       "source": "file:docs/tutorials/utils/__init__.py",
@@ -62636,7 +62975,7 @@
       "type": "tested_by",
       "direction": "forward",
       "weight": 0.5,
-      "description": "Direction corrected (was test → production)"
+      "description": "Direction corrected (was test \u2192 production)"
     },
     {
       "source": "file:evolve/__init__.py",
@@ -62644,15 +62983,749 @@
       "type": "tested_by",
       "direction": "forward",
       "weight": 0.5,
-      "description": "Direction corrected (was test → production)"
+      "description": "Direction corrected (was test \u2192 production)"
     },
     {
-      "source": "file:evolve/experiment/dry_run.py",
-      "target": "file:tests/e2e_dry_run_comparison.py",
+      "source": "class:evolve/config/meta.py:MetaEvolutionConfig",
+      "target": "class:evolve/config/meta.py:ParameterSpec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:evolve/config/meta.py",
+      "target": "file:tests/unit/meta/test_parameter_decoder.py",
       "type": "tested_by",
       "direction": "forward",
-      "weight": 0.5,
-      "description": "Live E2E script compares dry_run() estimates against measured wall-clock (restored by assemble review; tests/e2e_*.py misses the test_*.py name pattern)"
+      "weight": 0.5
+    },
+    {
+      "source": "file:evolve/config/meta.py",
+      "target": "file:tests/unit/meta/test_evaluator.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:evolve/config/meta.py",
+      "target": "file:tests/unit/config/test_edge_cases.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:evolve/meta/codec.py",
+      "target": "class:evolve/meta/codec.py:ParameterDecoder",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:evolve/meta/codec.py",
+      "target": "class:evolve/meta/codec.py:ParameterDecoder",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:evolve/meta/codec.py",
+      "target": "function:evolve/meta/codec.py:decode_value",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:evolve/meta/codec.py",
+      "target": "function:evolve/meta/codec.py:decode_value",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:evolve/meta/codec.py",
+      "target": "function:evolve/meta/codec.py:decode_parameters",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:evolve/meta/codec.py",
+      "target": "function:evolve/meta/codec.py:decode_parameters",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:evolve/meta/codec.py",
+      "target": "function:evolve/meta/codec.py:_decode",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:evolve/meta/codec.py",
+      "target": "function:evolve/meta/codec.py:_dependency_order",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:evolve/meta/codec.py",
+      "target": "file:evolve/config/meta.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:evolve/meta/codec.py",
+      "target": "file:evolve/config/unified.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:evolve/meta/codec.py",
+      "target": "file:evolve/representation/vector.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:evolve/registry/decoders.py",
+      "target": "file:evolve/representation/phenotype.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:evolve/registry/decoders.py",
+      "target": "file:evolve/representation/decoder.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:evolve/registry/decoders.py",
+      "target": "file:evolve/representation/cppn_decoder.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:evolve/registry/decoders.py",
+      "target": "file:evolve/config/meta.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:evolve/registry/decoders.py",
+      "target": "file:evolve/meta/codec.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "class:evolve/meta/codec.py:ConfigCodec",
+      "target": "function:evolve/meta/codec.py:decode_value",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:evolve/meta/codec.py:ParameterDecoder",
+      "target": "function:evolve/meta/codec.py:_dependency_order",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:evolve/meta/codec.py:ParameterDecoder",
+      "target": "function:evolve/meta/codec.py:_decode",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:evolve/meta/codec.py:decode_parameters",
+      "target": "function:evolve/meta/codec.py:_dependency_order",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:evolve/meta/codec.py:decode_parameters",
+      "target": "function:evolve/meta/codec.py:_decode",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:evolve/meta/codec.py:_decode",
+      "target": "function:evolve/meta/codec.py:decode_value",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:evolve/meta/codec.py:_decode",
+      "target": "function:evolve/meta/codec.py:_set_param_update",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:evolve/meta/codec.py:_apply_updates",
+      "target": "class:evolve/config/unified.py:UnifiedConfig",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:evolve/registry/decoders.py:DecoderRegistry",
+      "target": "function:evolve/registry/decoders.py:_register_builtin_decoders",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:evolve/registry/decoders.py:get_decoder_registry",
+      "target": "class:evolve/registry/decoders.py:DecoderRegistry",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:evolve/registry/decoders.py:_register_builtin_decoders",
+      "target": "class:evolve/representation/phenotype.py:IdentityDecoder",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:evolve/registry/decoders.py:_register_builtin_decoders",
+      "target": "class:evolve/representation/decoder.py:GraphToNetworkDecoder",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:evolve/registry/decoders.py:_register_builtin_decoders",
+      "target": "class:evolve/representation/decoder.py:GraphToMLPDecoder",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:evolve/registry/decoders.py:_register_builtin_decoders",
+      "target": "class:evolve/representation/cppn_decoder.py:CPPNToNetworkDecoder",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:evolve/registry/decoders.py:_register_builtin_decoders",
+      "target": "class:evolve/meta/codec.py:ParameterDecoder",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:evolve/registry/decoders.py:_register_builtin_decoders",
+      "target": "class:evolve/config/meta.py:ParameterSpec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:evolve/meta/codec.py",
+      "target": "file:tests/unit/meta/test_parameter_decoder.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:evolve/registry/decoders.py",
+      "target": "file:tests/unit/meta/test_parameter_decoder.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:evolve/registry/decoders.py",
+      "target": "file:tests/unit/factory/test_engine.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/unit/meta/test_codec.py",
+      "target": "class:tests/unit/meta/test_codec.py:TestConfigCodecRefusesDependentSpecs",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/unit/meta/test_codec.py",
+      "target": "class:tests/unit/meta/test_codec.py:TestDecodeValueClampsPositions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/unit/meta/test_parameter_decoder.py",
+      "target": "class:tests/unit/meta/test_parameter_decoder.py:TestSubsetSpec",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/unit/meta/test_parameter_decoder.py",
+      "target": "class:tests/unit/meta/test_parameter_decoder.py:TestDependentSpecValidation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/unit/meta/test_parameter_decoder.py",
+      "target": "class:tests/unit/meta/test_parameter_decoder.py:TestChoicesByParentStorage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/unit/meta/test_parameter_decoder.py",
+      "target": "class:tests/unit/meta/test_parameter_decoder.py:TestConditionRule",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/unit/meta/test_parameter_decoder.py",
+      "target": "class:tests/unit/meta/test_parameter_decoder.py:TestDependentCategoricalRule",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/unit/meta/test_parameter_decoder.py",
+      "target": "class:tests/unit/meta/test_parameter_decoder.py:TestRelativeSubsetRule",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/unit/meta/test_parameter_decoder.py",
+      "target": "class:tests/unit/meta/test_parameter_decoder.py:TestSubsetByParentRule",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/unit/meta/test_parameter_decoder.py",
+      "target": "class:tests/unit/meta/test_parameter_decoder.py:TestLayoutAndOrder",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/unit/meta/test_parameter_decoder.py",
+      "target": "class:tests/unit/meta/test_parameter_decoder.py:TestSpecSetRefusals",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/unit/meta/test_parameter_decoder.py",
+      "target": "class:tests/unit/meta/test_parameter_decoder.py:TestParameterDecoderValidatesOnce",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/unit/meta/test_parameter_decoder.py",
+      "target": "class:tests/unit/meta/test_parameter_decoder.py:TestRegisteredDecoder",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/unit/meta/test_parameter_decoder.py",
+      "target": "file:evolve/config/meta.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/unit/meta/test_parameter_decoder.py",
+      "target": "file:evolve/config/unified.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/unit/meta/test_parameter_decoder.py",
+      "target": "file:evolve/factory/engine.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/unit/meta/test_parameter_decoder.py",
+      "target": "file:evolve/meta/codec.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/unit/meta/test_parameter_decoder.py",
+      "target": "file:evolve/registry/decoders.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:tests/unit/meta/test_parameter_decoder.py",
+      "target": "file:evolve/representation/vector.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:tests/unit/meta/test_codec.py:base_config",
+      "target": "class:evolve/config/unified.py:UnifiedConfig",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_codec.py:TestParameterSpec",
+      "target": "class:evolve/config/meta.py:ParameterSpec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_codec.py:TestConfigCodecDimensions",
+      "target": "class:evolve/meta/codec.py:ConfigCodec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_codec.py:TestConfigCodecEncode",
+      "target": "class:evolve/meta/codec.py:ConfigCodec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_codec.py:TestConfigCodecDecode",
+      "target": "class:evolve/meta/codec.py:ConfigCodec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_codec.py:TestCodecRoundTrip",
+      "target": "class:evolve/meta/codec.py:ConfigCodec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_codec.py:TestPathHelpers",
+      "target": "function:evolve/meta/codec.py:_get_param",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_codec.py:TestPathHelpers",
+      "target": "function:evolve/meta/codec.py:_set_param_update",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_codec.py:TestConfigCodecRefusesDependentSpecs",
+      "target": "class:evolve/meta/codec.py:ConfigCodec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_codec.py:TestConfigCodecRefusesDependentSpecs",
+      "target": "class:evolve/config/meta.py:MetaEvolutionConfig",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_codec.py:TestDecodeValueClampsPositions",
+      "target": "function:evolve/meta/codec.py:decode_value",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_codec.py:TestDecodeValueClampsPositions",
+      "target": "class:evolve/meta/codec.py:ConfigCodec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestSubsetSpec",
+      "target": "class:evolve/config/meta.py:ParameterSpec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestSubsetSpec",
+      "target": "function:evolve/meta/codec.py:decode_parameters",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestDependentSpecValidation",
+      "target": "class:evolve/config/meta.py:ParameterSpec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestDependentSpecValidation",
+      "target": "function:evolve/meta/codec.py:decode_parameters",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestChoicesByParentStorage",
+      "target": "class:evolve/config/meta.py:ParameterSpec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestChoicesByParentStorage",
+      "target": "function:evolve/meta/codec.py:decode_parameters",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestConditionRule",
+      "target": "class:evolve/config/meta.py:ParameterSpec",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestConditionRule",
+      "target": "function:evolve/meta/codec.py:decode_parameters",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestDependentCategoricalRule",
+      "target": "function:evolve/meta/codec.py:decode_parameters",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestDependentCategoricalRule",
+      "target": "function:evolve/meta/codec.py:decode_value",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestRelativeSubsetRule",
+      "target": "function:evolve/meta/codec.py:decode_parameters",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestSubsetByParentRule",
+      "target": "function:evolve/meta/codec.py:decode_parameters",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestSubsetByParentRule",
+      "target": "class:evolve/meta/codec.py:ParameterDecoder",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestLayoutAndOrder",
+      "target": "function:evolve/meta/codec.py:decode_parameters",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestLayoutAndOrder",
+      "target": "class:evolve/meta/codec.py:ParameterDecoder",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestSpecSetRefusals",
+      "target": "class:evolve/meta/codec.py:ParameterDecoder",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestParameterDecoderValidatesOnce",
+      "target": "class:evolve/meta/codec.py:ParameterDecoder",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestParameterDecoderValidatesOnce",
+      "target": "function:evolve/meta/codec.py:decode_parameters",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestRegisteredDecoder",
+      "target": "function:evolve/registry/decoders.py:get_decoder_registry",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestRegisteredDecoder",
+      "target": "function:evolve/registry/decoders.py:reset_decoder_registry",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestRegisteredDecoder",
+      "target": "class:evolve/meta/codec.py:ParameterDecoder",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestRegisteredDecoder",
+      "target": "function:evolve/factory/engine.py:create_engine",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/meta/test_parameter_decoder.py:TestRegisteredDecoder",
+      "target": "function:evolve/factory/engine.py:create_initial_population",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:evolve/factory/engine.py",
+      "target": "file:tests/unit/meta/test_parameter_decoder.py",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:tests/unit/test_decoder_registry.py",
+      "target": "function:tests/unit/test_decoder_registry.py:_reset_registry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/unit/test_decoder_registry.py",
+      "target": "class:tests/unit/test_decoder_registry.py:TestKeyErrorMessage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/unit/test_decoder_registry.py",
+      "target": "class:tests/unit/test_decoder_registry.py:TestDeferredImports",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/unit/test_decoder_registry.py",
+      "target": "class:tests/unit/test_decoder_registry.py:TestFactoryErrorPropagation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:tests/unit/test_decoder_registry.py",
+      "target": "file:evolve/representation/phenotype.py",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:tests/unit/test_decoder_registry.py:_reset_registry",
+      "target": "function:evolve/registry/decoders.py:reset_decoder_registry",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/test_decoder_registry.py:TestDeferredImports",
+      "target": "class:evolve/registry/decoders.py:DecoderRegistry",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/test_decoder_registry.py:TestBuiltinDecoders",
+      "target": "function:evolve/registry/decoders.py:get_decoder_registry",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/test_decoder_registry.py:TestKeyErrorMessage",
+      "target": "function:evolve/registry/decoders.py:get_decoder_registry",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/test_decoder_registry.py:TestRegisterOverwrite",
+      "target": "function:evolve/registry/decoders.py:get_decoder_registry",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/test_decoder_registry.py:TestFactoryErrorPropagation",
+      "target": "function:evolve/registry/decoders.py:get_decoder_registry",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "class:tests/unit/test_decoder_registry.py:TestCustomDecoderWorkflow",
+      "target": "function:evolve/registry/decoders.py:get_decoder_registry",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
     }
   ],
   "layers": [
@@ -62911,7 +63984,8 @@
         "file:tests/unit/registry/__init__.py",
         "file:tests/unit/representation/__init__.py",
         "file:tests/unit/reproduction/__init__.py",
-        "file:tests/unit/utils/__init__.py"
+        "file:tests/unit/utils/__init__.py",
+        "file:tests/unit/meta/test_parameter_decoder.py"
       ]
     },
     {
