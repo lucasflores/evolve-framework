@@ -210,8 +210,9 @@ def decode_value(
     Args:
         spec: Parameter specification.
         positions: The spec's ``num_dimensions`` genome positions.
-        choices: Categorical options to use instead of ``spec.choices``
-            (a dependent categorical's options for its parent's value).
+        choices: For a categorical, options to use instead of ``spec.choices``
+            (a dependent categorical's options for its parent's value); for a
+            subset, the part of ``spec.choices`` it is limited to.
 
     Returns:
         Decoded value; a list in ``spec.choices`` order for a subset.
@@ -219,7 +220,11 @@ def decode_value(
     if spec.param_type == "subset":
         # A choice is in the subset when its position is at least 0.5
         assert spec.choices is not None
-        return [c for c, p in zip(spec.choices, positions) if p >= 0.5]
+        return [
+            c
+            for c, p in zip(spec.choices, positions)
+            if p >= 0.5 and (choices is None or c in choices)
+        ]
 
     value = positions[0]
 
@@ -259,8 +264,11 @@ def decode_parameters(
     decoded parents first. A spec is inactive, and left out of the result,
     when its parent is inactive, its parent's value is not in its
     ``active_values``, or ``choices_by_parent`` has no entry for that value;
-    an inactive spec's positions have no effect. A subset relative to a
-    subset parent keeps only the choices the parent's value also holds.
+    an inactive spec's positions have no effect. A subset keeps only the
+    choices allowed for its categorical parent's value (``choices_by_parent``)
+    or, relative to a subset parent, the choices the parent's value also
+    holds; either way in ``choices`` order, and positions of choices it
+    cannot keep have no effect.
     Dot paths become nested keys.
 
     Args:
@@ -298,10 +306,9 @@ def decode_parameters(
                 choices = spec.choices_by_parent.get(parent_value)
                 if choices is None:
                     continue
-        value = decode_value(spec, positions[spec.path], choices)
-        if _is_relative(spec):
-            value = [c for c in value if c in parent_value]
-        values[spec.path] = value
+            elif _is_relative(spec):
+                choices = parent_value
+        values[spec.path] = decode_value(spec, positions[spec.path], choices)
 
     decoded: dict[str, Any] = {}
     for spec in specs:
