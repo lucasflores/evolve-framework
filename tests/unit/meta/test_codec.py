@@ -6,7 +6,7 @@ import pytest
 
 from evolve.config.meta import ParameterSpec
 from evolve.config.unified import UnifiedConfig
-from evolve.meta.codec import ConfigCodec, _get_param, _set_param_update
+from evolve.meta.codec import ConfigCodec, _get_param, _set_param_update, decode_value
 
 
 @pytest.fixture
@@ -403,3 +403,37 @@ class TestConfigCodecRefusesDependentSpecs:
     def test_refused(self, base_config: UnifiedConfig, spec: ParameterSpec) -> None:
         with pytest.raises(ValueError, match="does not support subset or dependent"):
             ConfigCodec(base_config=base_config, param_specs=(spec,))
+
+
+CATEGORICAL = ParameterSpec(path="c", param_type="categorical", choices=("a", "b", "c"))
+CONTINUOUS = ParameterSpec(path="x", bounds=(0.0, 10.0))
+LOG_SCALE = ParameterSpec(path="lr", bounds=(0.01, 1.0), log_scale=True)
+
+
+class TestDecodeValueClampsPositions:
+    """Positions outside [0, 1] decode as the nearest end of the range."""
+
+    @pytest.mark.parametrize(
+        ("spec", "position", "expected"),
+        [
+            (CATEGORICAL, -0.5, "a"),
+            (CATEGORICAL, 1.5, "c"),
+            (CONTINUOUS, -0.5, 0.0),
+            (CONTINUOUS, 1.5, 10.0),
+            (LOG_SCALE, -0.5, pytest.approx(0.01)),
+            (LOG_SCALE, 1.5, pytest.approx(1.0)),
+        ],
+    )
+    def test_out_of_range_position(
+        self, spec: ParameterSpec, position: float, expected: object
+    ) -> None:
+        assert decode_value(spec, [position]) == expected
+
+    def test_config_codec_negative_categorical_is_first_choice(
+        self, base_config: UnifiedConfig
+    ) -> None:
+        spec = ParameterSpec(
+            path="selection", param_type="categorical", choices=("tournament", "roulette", "rank")
+        )
+        codec = ConfigCodec(base_config=base_config, param_specs=(spec,))
+        assert codec.decode([-0.5]).selection == "tournament"
