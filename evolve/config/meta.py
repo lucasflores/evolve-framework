@@ -7,6 +7,7 @@ including parameter specifications and outer loop settings.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -39,8 +40,10 @@ class ParameterSpec:
         log_scale: Whether to use logarithmic scaling.
         parent: Path of the spec this one depends on.
         active_values: Parent values for which this spec is active.
-        choices_by_parent: Categorical options, or allowed subset choices,
-            for each parent value.
+        choices_by_parent: (parent value, options) pairs: categorical options,
+            or allowed subset choices, for each parent value. A mapping is
+            accepted and stored as pairs, so the spec stays hashable and
+            non-string parent values survive JSON.
 
     Example:
         >>> # Continuous parameter
@@ -78,13 +81,28 @@ class ParameterSpec:
     active_values: tuple[Any, ...] | None = None
     """Parent values for which this spec is active (inactive otherwise)."""
 
-    choices_by_parent: dict[Any, tuple[Any, ...]] | None = None
-    """Categorical options, or allowed subset choices, per parent value (inactive if not listed)."""
+    choices_by_parent: tuple[tuple[Any, tuple[Any, ...]], ...] | None = None
+    """(parent value, options) pairs; inactive for a parent value not listed."""
 
     def __post_init__(self) -> None:
         """Validate parameter specification."""
         if not self.path:
             raise ValueError("Parameter path cannot be empty")
+
+        if self.choices_by_parent is not None:
+            items = (
+                self.choices_by_parent.items()
+                if isinstance(self.choices_by_parent, Mapping)
+                else self.choices_by_parent
+            )
+            pairs = tuple((value, tuple(options)) for value, options in items)
+            object.__setattr__(self, "choices_by_parent", pairs)
+            values = [value for value, _ in pairs]
+            repeated = [v for i, v in enumerate(values) if v in values[:i]]
+            if repeated:
+                raise ValueError(
+                    f"choices_by_parent lists parent values more than once: {repeated}"
+                )
 
         if self.param_type in ("continuous", "integer"):
             if self.bounds is None:
@@ -99,14 +117,14 @@ class ParameterSpec:
             if self.choices_by_parent is not None:
                 if self.choices is not None:
                     raise ValueError("give choices or choices_by_parent, not both")
-                if not all(self.choices_by_parent.values()):
+                if not all(options for _, options in self.choices_by_parent):
                     raise ValueError("choices_by_parent needs options for every parent value")
             elif self.choices is None or len(self.choices) == 0:
                 raise ValueError("choices required for categorical parameter")
         elif self.param_type == "subset":
             if self.choices is None or len(self.choices) == 0:
                 raise ValueError("choices required for subset parameter")
-            for allowed in (self.choices_by_parent or {}).values():
+            for _, allowed in self.choices_by_parent or ():
                 outside = [c for c in allowed if c not in self.choices]
                 if outside:
                     raise ValueError(f"choices_by_parent lists choices not in choices: {outside}")
@@ -163,7 +181,7 @@ class ParameterSpec:
         if self.active_values is not None:
             result["active_values"] = list(self.active_values)
         if self.choices_by_parent is not None:
-            result["choices_by_parent"] = {k: list(v) for k, v in self.choices_by_parent.items()}
+            result["choices_by_parent"] = [[v, list(o)] for v, o in self.choices_by_parent]
         return result
 
     @classmethod
@@ -172,7 +190,6 @@ class ParameterSpec:
         bounds = data.get("bounds")
         choices = data.get("choices")
         active_values = data.get("active_values")
-        choices_by_parent = data.get("choices_by_parent")
         return cls(
             path=data["path"],
             param_type=data.get("param_type", "continuous"),
@@ -181,11 +198,8 @@ class ParameterSpec:
             log_scale=data.get("log_scale", False),
             parent=data.get("parent"),
             active_values=tuple(active_values) if active_values is not None else None,
-            choices_by_parent=(
-                {k: tuple(v) for k, v in choices_by_parent.items()}
-                if choices_by_parent is not None
-                else None
-            ),
+            # A list of pairs, or a mapping in a hand-written config
+            choices_by_parent=data.get("choices_by_parent"),
         )
 
 
