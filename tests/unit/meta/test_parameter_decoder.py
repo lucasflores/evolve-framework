@@ -36,6 +36,7 @@ SERVING = ParameterSpec(
     path="serving_pool", param_type="subset", choices=("a", "b", "c"), parent="training_pool"
 )
 FORECASTER = ParameterSpec(path="forecaster", param_type="categorical", choices=("f1", "f2", "f3"))
+FORECASTER_X = ParameterSpec(path="f", param_type="categorical", choices=("x",))
 POOL_BY_FORECASTER = ParameterSpec(
     path="pool",
     param_type="subset",
@@ -77,6 +78,25 @@ class TestDependentSpecValidation:
         assert not TRAINING.is_relative
         assert not POOL_BY_FORECASTER.is_relative
         assert not THRESHOLD.is_relative
+
+    def test_empty_active_values_refused(self) -> None:
+        with pytest.raises(ValueError, match="active_values is empty"):
+            ParameterSpec(path="t", bounds=(0.0, 1.0), parent="p", active_values=())
+
+    @pytest.mark.parametrize("empty", [{}, ()])
+    def test_empty_choices_by_parent_refused(self, empty: Any) -> None:
+        with pytest.raises(ValueError, match="choices_by_parent is empty"):
+            ParameterSpec(path="t", param_type="categorical", parent="p", choices_by_parent=empty)
+
+    def test_subset_allowed_list_may_be_empty(self) -> None:
+        spec = ParameterSpec(
+            path="pool",
+            param_type="subset",
+            choices=("a",),
+            parent="f",
+            choices_by_parent={"x": ()},
+        )
+        assert decode_parameters([0.0, 1.0], [FORECASTER_X, spec]) == {"f": "x", "pool": []}
 
     def test_choices_by_parent_not_for_continuous(self) -> None:
         with pytest.raises(ValueError, match="only for categorical and subset"):
