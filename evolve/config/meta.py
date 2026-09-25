@@ -17,14 +17,27 @@ class ParameterSpec:
     Specification for an evolvable parameter in meta-evolution.
 
     Defines how a configuration parameter should be encoded into
-    a vector genome dimension for meta-evolution.
+    vector genome positions on [0, 1] for meta-evolution, or for
+    ``decode_parameters()``.
+
+    A spec may name a ``parent`` spec whose decoded value it depends on
+    (``decode_parameters()`` only; ConfigCodec refuses it):
+
+    - ``active_values``: active only while the parent's value is one of them.
+    - ``choices_by_parent``: a categorical whose options depend on the
+      parent's value; inactive when the value has no entry.
+    - A subset with a subset parent and neither of the above keeps only the
+      choices the parent's value also holds.
 
     Attributes:
         path: Dot-notation path to parameter (e.g., 'mutation_params.sigma').
         param_type: Type of parameter for encoding strategy.
         bounds: Min/max bounds for continuous/integer parameters.
-        choices: Valid choices for categorical parameters.
+        choices: Valid choices for categorical parameters; the universe for subsets.
         log_scale: Whether to use logarithmic scaling.
+        parent: Path of the spec this one depends on.
+        active_values: Parent values for which this spec is active.
+        choices_by_parent: Categorical options for each parent value.
 
     Example:
         >>> # Continuous parameter
@@ -44,17 +57,26 @@ class ParameterSpec:
     path: str
     """Dot-notation path to parameter (e.g., 'mutation_params.sigma')."""
 
-    param_type: Literal["continuous", "integer", "categorical"] = "continuous"
+    param_type: Literal["continuous", "integer", "categorical", "subset"] = "continuous"
     """Type of parameter for encoding strategy."""
 
     bounds: tuple[float, float] | None = None
     """Min/max bounds for continuous/integer parameters."""
 
     choices: tuple[Any, ...] | None = None
-    """Valid choices for categorical parameters."""
+    """Valid choices for categorical parameters; the universe for subset parameters."""
 
     log_scale: bool = False
     """Whether to use logarithmic scaling for continuous parameters."""
+
+    parent: str | None = None
+    """Path of the spec whose decoded value this one depends on."""
+
+    active_values: tuple[Any, ...] | None = None
+    """Parent values for which this spec is active (inactive otherwise)."""
+
+    choices_by_parent: dict[Any, tuple[Any, ...]] | None = None
+    """Categorical options for each parent value (inactive for a value not listed)."""
 
     def __post_init__(self) -> None:
         """Validate parameter specification."""
@@ -71,18 +93,44 @@ class ParameterSpec:
             if self.param_type == "continuous" and self.log_scale and self.bounds[0] <= 0:
                 raise ValueError("log_scale requires positive lower bound")
         elif self.param_type == "categorical":
-            if self.choices is None or len(self.choices) == 0:
+            if self.choices_by_parent is not None:
+                if self.choices is not None:
+                    raise ValueError("give choices or choices_by_parent, not both")
+                if not all(self.choices_by_parent.values()):
+                    raise ValueError("choices_by_parent needs options for every parent value")
+            elif self.choices is None or len(self.choices) == 0:
                 raise ValueError("choices required for categorical parameter")
+        elif self.param_type == "subset":
+            if self.choices is None or len(self.choices) == 0:
+                raise ValueError("choices required for subset parameter")
         else:
             raise ValueError(
-                f"param_type must be 'continuous', 'integer', or 'categorical', "
+                f"param_type must be 'continuous', 'integer', 'categorical', or 'subset', "
                 f"got {self.param_type}"
+            )
+
+        if self.choices_by_parent is not None and self.param_type != "categorical":
+            raise ValueError("choices_by_parent is only for categorical parameters")
+        if self.parent is None:
+            if self.active_values is not None or self.choices_by_parent is not None:
+                raise ValueError("active_values and choices_by_parent require a parent")
+        elif (
+            self.active_values is None
+            and self.choices_by_parent is None
+            and self.param_type != "subset"
+        ):
+            raise ValueError(
+                f"parent of '{self.path}' is unused: give active_values or "
+                "choices_by_parent (only a subset can be relative to its parent)"
             )
 
     @property
     def num_dimensions(self) -> int:
         """Get number of genome dimensions needed for this parameter."""
-        # All parameter types use 1 dimension
+        # A subset uses one position per choice; the other types use 1
+        if self.param_type == "subset":
+            assert self.choices is not None
+            return len(self.choices)
         return 1
 
     def to_dict(self) -> dict[str, Any]:
@@ -97,6 +145,12 @@ class ParameterSpec:
             result["choices"] = list(self.choices)
         if self.log_scale:
             result["log_scale"] = self.log_scale
+        if self.parent is not None:
+            result["parent"] = self.parent
+        if self.active_values is not None:
+            result["active_values"] = list(self.active_values)
+        if self.choices_by_parent is not None:
+            result["choices_by_parent"] = {k: list(v) for k, v in self.choices_by_parent.items()}
         return result
 
     @classmethod
@@ -104,12 +158,21 @@ class ParameterSpec:
         """Create from dictionary."""
         bounds = data.get("bounds")
         choices = data.get("choices")
+        active_values = data.get("active_values")
+        choices_by_parent = data.get("choices_by_parent")
         return cls(
             path=data["path"],
             param_type=data.get("param_type", "continuous"),
             bounds=tuple(bounds) if bounds else None,
             choices=tuple(choices) if choices else None,
             log_scale=data.get("log_scale", False),
+            parent=data.get("parent"),
+            active_values=tuple(active_values) if active_values is not None else None,
+            choices_by_parent=(
+                {k: tuple(v) for k, v in choices_by_parent.items()}
+                if choices_by_parent is not None
+                else None
+            ),
         )
 
 

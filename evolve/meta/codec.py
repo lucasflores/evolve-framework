@@ -2,7 +2,8 @@
 Configuration Codec.
 
 Provides encoding/decoding between UnifiedConfig parameters and
-vector genome representations for meta-evolution.
+vector genome representations for meta-evolution, and decoding of a
+vector genome against parameter specs into a plain nested dict.
 """
 
 from __future__ import annotations
@@ -10,11 +11,13 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass
+from graphlib import CycleError, TopologicalSorter
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from evolve.config.meta import ParameterSpec
     from evolve.config.unified import UnifiedConfig
+    from evolve.representation.vector import VectorGenome
 
 
 @dataclass
@@ -42,7 +45,13 @@ class ConfigCodec:
     """Parameter specifications for encoding."""
 
     def __post_init__(self) -> None:
-        """Precompute bounds for fast encoding/decoding."""
+        """Refuse specs the codec cannot encode; precompute bounds."""
+        for spec in self.param_specs:
+            if spec.param_type == "subset" or spec.parent is not None:
+                raise ValueError(
+                    f"ConfigCodec does not support subset or dependent parameters "
+                    f"('{spec.path}'); decode them with decode_parameters()"
+                )
         self._bounds = self._compute_bounds()
 
     @property
@@ -151,19 +160,67 @@ class ConfigCodec:
         return _apply_updates(self.base_config, updates)
 
 
-def decode_value(spec: ParameterSpec, positions: Sequence[float]) -> Any:
+@dataclass
+class ParameterDecoder:
+    """
+    Decode a VectorGenome on [0, 1] into a nested dict of parameter values.
+
+    Registry name: ``"parameters"``; ``decoder_params={"params": [...]}``
+    holds the specs as ``ParameterSpec.to_dict()`` dicts. The genome needs
+    ``dimensions`` positions (``genome_params={"dimensions": ...,
+    "bounds": (0.0, 1.0)}``).
+
+    Attributes:
+        specs: Parameter specifications, validated on construction.
+
+    Example:
+        >>> decoder = ParameterDecoder((ParameterSpec(path="a.b", bounds=(0.0, 2.0)),))
+        >>> decoder.decode(VectorGenome(genes=np.array([0.5])))
+        {'a': {'b': 1.0}}
+    """
+
+    specs: tuple[ParameterSpec, ...]
+    """Parameter specifications, validated on construction."""
+
+    def __post_init__(self) -> None:
+        """Validate the specs' parents now rather than at the first decode."""
+        _dependency_order(self.specs)
+
+    @property
+    def dimensions(self) -> int:
+        """Get total number of genome dimensions."""
+        return sum(spec.num_dimensions for spec in self.specs)
+
+    def decode(self, genome: VectorGenome) -> dict[str, Any]:
+        """Decode the genome's genes with decode_parameters()."""
+        return decode_parameters(genome.genes.tolist(), self.specs)
+
+
+def decode_value(
+    spec: ParameterSpec,
+    positions: Sequence[float],
+    choices: Sequence[Any] | None = None,
+) -> Any:
     """
     Map a parameter's genome positions on [0, 1] to its value.
 
-    The one place the per-type math lives.
+    The one place the per-type math lives, shared by ConfigCodec and
+    decode_parameters().
 
     Args:
         spec: Parameter specification.
         positions: The spec's ``num_dimensions`` genome positions.
+        choices: Categorical options to use instead of ``spec.choices``
+            (a dependent categorical's options for its parent's value).
 
     Returns:
-        Decoded value.
+        Decoded value; a list in ``spec.choices`` order for a subset.
     """
+    if spec.param_type == "subset":
+        # A choice is in the subset when its position is at least 0.5
+        assert spec.choices is not None
+        return [c for c, p in zip(spec.choices, positions) if p >= 0.5]
+
     value = positions[0]
 
     if spec.param_type == "continuous":
@@ -184,10 +241,130 @@ def decode_value(spec: ParameterSpec, positions: Sequence[float]) -> Any:
         return max(lo, min(hi, decoded))
 
     # Categorical: map [0, 1) to index
-    assert spec.choices is not None
-    idx_choice = int(value * len(spec.choices))
-    idx_choice = min(idx_choice, len(spec.choices) - 1)
-    return spec.choices[idx_choice]
+    options = spec.choices if choices is None else choices
+    assert options is not None
+    idx_choice = int(value * len(options))
+    idx_choice = min(idx_choice, len(options) - 1)
+    return options[idx_choice]
+
+
+def decode_parameters(
+    vector: Sequence[float],
+    specs: Sequence[ParameterSpec],
+) -> dict[str, Any]:
+    """
+    Decode a genome vector against parameter specs into a nested dict.
+
+    Positions are laid out in ``specs`` order, ``num_dimensions`` each, and
+    decoded parents first. A spec is inactive, and left out of the result,
+    when its parent is inactive, its parent's value is not in its
+    ``active_values``, or ``choices_by_parent`` has no entry for that value;
+    an inactive spec's positions have no effect. A subset relative to a
+    subset parent keeps only the choices the parent's value also holds.
+    Dot paths become nested keys.
+
+    Args:
+        vector: Genome positions on [0, 1].
+        specs: Parameter specifications.
+
+    Returns:
+        Nested dict of the active parameters' values.
+
+    Raises:
+        ValueError: If the specs are inconsistent or the vector length is wrong.
+    """
+    order = _dependency_order(specs)
+    dimensions = sum(spec.num_dimensions for spec in specs)
+    if len(vector) != dimensions:
+        raise ValueError(f"Expected vector of length {dimensions}, got {len(vector)}")
+
+    positions: dict[str, Sequence[float]] = {}
+    start = 0
+    for spec in specs:
+        positions[spec.path] = vector[start : start + spec.num_dimensions]
+        start += spec.num_dimensions
+
+    values: dict[str, Any] = {}
+    for spec in order:
+        choices = None
+        parent_value: Any = None
+        if spec.parent is not None:
+            if spec.parent not in values:
+                continue  # parent inactive
+            parent_value = values[spec.parent]
+            if spec.active_values is not None and parent_value not in spec.active_values:
+                continue
+            if spec.choices_by_parent is not None:
+                choices = spec.choices_by_parent.get(parent_value)
+                if choices is None:
+                    continue
+        value = decode_value(spec, positions[spec.path], choices)
+        if _is_relative(spec):
+            value = [c for c in value if c in parent_value]
+        values[spec.path] = value
+
+    decoded: dict[str, Any] = {}
+    for spec in specs:
+        if spec.path in values:
+            _set_param_update(decoded, spec.path, values[spec.path])
+    return decoded
+
+
+def _is_relative(spec: ParameterSpec) -> bool:
+    """Whether a spec is a subset relative to its (subset) parent."""
+    return spec.parent is not None and spec.active_values is None and spec.choices_by_parent is None
+
+
+def _dependency_order(specs: Sequence[ParameterSpec]) -> tuple[ParameterSpec, ...]:
+    """
+    Validate the specs' paths and parents, and order them parents first.
+
+    Raises:
+        ValueError: On a duplicate or clashing path, an unknown or
+            type-incompatible parent, a value the parent cannot take,
+            or a cycle of parents.
+    """
+    by_path: dict[str, ParameterSpec] = {}
+    for spec in specs:
+        if spec.path in by_path:
+            raise ValueError(f"Duplicate parameter path '{spec.path}'")
+        by_path[spec.path] = spec
+    for path in by_path:
+        # 'a' and 'a.b' cannot both be keys of the nested dict
+        for other in by_path:
+            if path.startswith(other + "."):
+                raise ValueError(f"Parameter path '{path}' is nested under parameter '{other}'")
+
+    for spec in specs:
+        if spec.parent is None:
+            continue
+        parent = by_path.get(spec.parent)
+        if parent is None:
+            raise ValueError(f"Unknown parent '{spec.parent}' of '{spec.path}'")
+        needed = "subset" if _is_relative(spec) else "categorical"
+        if parent.param_type != needed:
+            raise ValueError(
+                f"Parent '{spec.parent}' of '{spec.path}' is {parent.param_type}; "
+                f"it must be {needed}"
+            )
+        if needed == "categorical":
+            can_take = (
+                list(parent.choices or ())
+                if parent.choices_by_parent is None
+                else [v for options in parent.choices_by_parent.values() for v in options]
+            )
+            listed = list(spec.active_values or ()) + list(spec.choices_by_parent or ())
+            unknown = [v for v in listed if v not in can_take]
+            if unknown:
+                raise ValueError(
+                    f"'{spec.path}' lists values its parent '{spec.parent}' cannot take: {unknown}"
+                )
+
+    graph = {spec.path: [spec.parent] if spec.parent else [] for spec in specs}
+    try:
+        return tuple(by_path[path] for path in TopologicalSorter(graph).static_order())
+    except CycleError as exc:
+        raise ValueError(f"Parameter parents form a cycle: {' -> '.join(exc.args[1])}") from exc
 
 
 def _get_param(config: UnifiedConfig, path: str) -> Any:
