@@ -329,7 +329,7 @@ def _dependency_order(specs: Sequence[ParameterSpec]) -> tuple[ParameterSpec, ..
     Raises:
         ValueError: On a duplicate or clashing path, an unknown or
             type-incompatible parent, a value the parent cannot take,
-            or a cycle of parents.
+            a relative subset choice its parent lacks, or a cycle of parents.
     """
     by_path: dict[str, ParameterSpec] = {}
     for spec in specs:
@@ -365,6 +365,13 @@ def _dependency_order(specs: Sequence[ParameterSpec]) -> tuple[ParameterSpec, ..
             if unknown:
                 raise ValueError(
                     f"'{spec.path}' lists values its parent '{spec.parent}' cannot take: {unknown}"
+                )
+        else:
+            stray = [c for c in spec.choices or () if c not in (parent.choices or ())]
+            if stray:
+                raise ValueError(
+                    f"Relative subset '{spec.path}' has choices its parent "
+                    f"'{spec.parent}' lacks: {stray}"
                 )
 
     graph = {spec.path: [spec.parent] if spec.parent else [] for spec in specs}

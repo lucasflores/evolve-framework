@@ -30,7 +30,8 @@ class ParameterSpec:
       entry replaces ``choices``; for a subset ``choices`` still lays out the
       positions and the entry is the allowed part of it.
     - A subset with a subset parent and neither of the above keeps only the
-      choices the parent's value also holds.
+      choices the parent's value also holds; its ``choices`` must all be
+      among the parent's.
 
     Attributes:
         path: Dot-notation path to parameter (e.g., 'mutation_params.sigma').
