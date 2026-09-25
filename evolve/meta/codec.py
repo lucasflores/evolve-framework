@@ -207,6 +207,9 @@ def decode_value(
     The one place the per-type math lives, shared by ConfigCodec and
     decode_parameters().
 
+    Positions outside [0, 1] are clamped to it first, so an unbounded
+    genome decodes to the nearest end of each range.
+
     Args:
         spec: Parameter specification.
         positions: The spec's ``num_dimensions`` genome positions.
@@ -217,6 +220,8 @@ def decode_value(
     Returns:
         Decoded value; a list in ``spec.choices`` order for a subset.
     """
+    positions = [min(1.0, max(0.0, p)) for p in positions]
+
     if spec.param_type == "subset":
         # A choice is in the subset when its position is at least 0.5
         assert spec.choices is not None
