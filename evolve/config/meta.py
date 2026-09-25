@@ -257,6 +257,12 @@ class MetaEvolutionConfig:
         """Validate meta-evolution configuration."""
         if len(self.evolvable_params) == 0:
             raise ValueError("At least one evolvable parameter required")
+        for spec in self.evolvable_params:
+            if spec.param_type == "subset" or spec.parent is not None:
+                raise ValueError(
+                    f"MetaEvolutionConfig does not support subset or dependent parameters "
+                    f"('{spec.path}'); decode them with decode_parameters()"
+                )
         if self.outer_population_size <= 0:
             raise ValueError("outer_population_size must be positive")
         if self.outer_generations <= 0:
