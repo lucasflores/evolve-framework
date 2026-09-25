@@ -183,17 +183,18 @@ class ParameterDecoder:
     """Parameter specifications, validated on construction."""
 
     def __post_init__(self) -> None:
-        """Validate the specs' parents now rather than at the first decode."""
-        _dependency_order(self.specs)
+        """Validate and order the specs once, rather than on every decode."""
+        self._order = _dependency_order(self.specs)
+        self._dimensions = sum(spec.num_dimensions for spec in self.specs)
 
     @property
     def dimensions(self) -> int:
         """Get total number of genome dimensions."""
-        return sum(spec.num_dimensions for spec in self.specs)
+        return self._dimensions
 
     def decode(self, genome: VectorGenome) -> dict[str, Any]:
-        """Decode the genome's genes with decode_parameters()."""
-        return decode_parameters(genome.genes.tolist(), self.specs)
+        """Decode the genome's genes as decode_parameters() does."""
+        return _decode(genome.genes.tolist(), self.specs, self._order, self._dimensions)
 
 
 def decode_value(
@@ -286,8 +287,17 @@ def decode_parameters(
     Raises:
         ValueError: If the specs are inconsistent or the vector length is wrong.
     """
-    order = _dependency_order(specs)
     dimensions = sum(spec.num_dimensions for spec in specs)
+    return _decode(vector, specs, _dependency_order(specs), dimensions)
+
+
+def _decode(
+    vector: Sequence[float],
+    specs: Sequence[ParameterSpec],
+    order: Sequence[ParameterSpec],
+    dimensions: int,
+) -> dict[str, Any]:
+    """decode_parameters() for specs already validated and ordered parents first."""
     if len(vector) != dimensions:
         raise ValueError(f"Expected vector of length {dimensions}, got {len(vector)}")
 

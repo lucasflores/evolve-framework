@@ -356,6 +356,39 @@ class TestSpecSetRefusals:
             ParameterDecoder((encoder, ENCODER))
 
 
+class TestParameterDecoderValidatesOnce:
+    """ParameterDecoder validates and orders its specs once, when built."""
+
+    SPECS = (
+        THRESHOLD,
+        POLICY,
+        ENCODER,
+        READING_LENGTH,
+        TRAINING,
+        SERVING,
+        FORECASTER,
+        POOL_BY_FORECASTER,
+    )
+
+    def test_decode_matches_decode_parameters(self) -> None:
+        decoder = ParameterDecoder(self.SPECS)
+        rng = np.random.default_rng(0)
+        for _ in range(50):
+            genes = rng.uniform(0.0, 1.0, decoder.dimensions)
+            assert decoder.decode(VectorGenome(genes=genes)) == decode_parameters(
+                genes.tolist(), self.SPECS
+            )
+
+    def test_decode_does_not_revalidate(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        decoder = ParameterDecoder(self.SPECS)
+
+        def fail(_specs: Any) -> None:
+            raise AssertionError("specs validated again on decode")
+
+        monkeypatch.setattr("evolve.meta.codec._dependency_order", fail)
+        decoder.decode(VectorGenome(genes=np.full(decoder.dimensions, 0.5)))
+
+
 class TestRegisteredDecoder:
     """The "parameters" built-in decoder."""
 
