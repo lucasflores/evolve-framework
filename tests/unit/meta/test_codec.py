@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from evolve.config.meta import ParameterSpec
+from evolve.config.meta import MetaEvolutionConfig, ParameterSpec
 from evolve.config.unified import UnifiedConfig
 from evolve.meta.codec import ConfigCodec, _get_param, _set_param_update, decode_value
 
@@ -385,24 +385,29 @@ class TestPathHelpers:
         assert data["x"]["y"]["z"] == "value"
 
 
+DEPENDENT_SPECS = [
+    ParameterSpec(path="pool", param_type="subset", choices=("a", "b")),
+    ParameterSpec(
+        path="mutation_rate",
+        bounds=(0.0, 1.0),
+        parent="selection",
+        active_values=("tournament",),
+    ),
+]
+
+
 class TestConfigCodecRefusesDependentSpecs:
     """Subset and dependent specs are for decode_parameters(), not ConfigCodec."""
 
-    @pytest.mark.parametrize(
-        "spec",
-        [
-            ParameterSpec(path="pool", param_type="subset", choices=("a", "b")),
-            ParameterSpec(
-                path="mutation_rate",
-                bounds=(0.0, 1.0),
-                parent="selection",
-                active_values=("tournament",),
-            ),
-        ],
-    )
+    @pytest.mark.parametrize("spec", DEPENDENT_SPECS)
     def test_refused(self, base_config: UnifiedConfig, spec: ParameterSpec) -> None:
         with pytest.raises(ValueError, match="does not support subset or dependent"):
             ConfigCodec(base_config=base_config, param_specs=(spec,))
+
+    @pytest.mark.parametrize("spec", DEPENDENT_SPECS)
+    def test_refused_by_meta_evolution_config(self, spec: ParameterSpec) -> None:
+        with pytest.raises(ValueError, match="MetaEvolutionConfig does not support subset"):
+            MetaEvolutionConfig(evolvable_params=(spec,))
 
 
 CATEGORICAL = ParameterSpec(path="c", param_type="categorical", choices=("a", "b", "c"))
