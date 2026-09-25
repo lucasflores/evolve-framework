@@ -306,7 +306,7 @@ def decode_parameters(
                 choices = spec.choices_by_parent.get(parent_value)
                 if choices is None:
                     continue
-            elif _is_relative(spec):
+            elif spec.is_relative:
                 choices = parent_value
         values[spec.path] = decode_value(spec, positions[spec.path], choices)
 
@@ -315,11 +315,6 @@ def decode_parameters(
         if spec.path in values:
             _set_param_update(decoded, spec.path, values[spec.path])
     return decoded
-
-
-def _is_relative(spec: ParameterSpec) -> bool:
-    """Whether a spec is a subset relative to its (subset) parent."""
-    return spec.parent is not None and spec.active_values is None and spec.choices_by_parent is None
 
 
 def _dependency_order(specs: Sequence[ParameterSpec]) -> tuple[ParameterSpec, ...]:
@@ -348,7 +343,7 @@ def _dependency_order(specs: Sequence[ParameterSpec]) -> tuple[ParameterSpec, ..
         parent = by_path.get(spec.parent)
         if parent is None:
             raise ValueError(f"Unknown parent '{spec.parent}' of '{spec.path}'")
-        needed = "subset" if _is_relative(spec) else "categorical"
+        needed = "subset" if spec.is_relative else "categorical"
         if parent.param_type != needed:
             raise ValueError(
                 f"Parent '{spec.parent}' of '{spec.path}' is {parent.param_type}; "
