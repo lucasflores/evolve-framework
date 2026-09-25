@@ -303,7 +303,7 @@ def decode_parameters(
             if spec.active_values is not None and parent_value not in spec.active_values:
                 continue
             if spec.choices_by_parent is not None:
-                choices = spec.choices_by_parent.get(parent_value)
+                choices = next((o for v, o in spec.choices_by_parent if v == parent_value), None)
                 if choices is None:
                     continue
             elif spec.is_relative:
@@ -353,9 +353,9 @@ def _dependency_order(specs: Sequence[ParameterSpec]) -> tuple[ParameterSpec, ..
             can_take = (
                 list(parent.choices or ())
                 if parent.choices_by_parent is None
-                else [v for options in parent.choices_by_parent.values() for v in options]
+                else [v for _, options in parent.choices_by_parent for v in options]
             )
-            listed = list(spec.active_values or ()) + list(spec.choices_by_parent or ())
+            listed = list(spec.active_values or ()) + [v for v, _ in spec.choices_by_parent or ()]
             unknown = [v for v in listed if v not in can_take]
             if unknown:
                 raise ValueError(

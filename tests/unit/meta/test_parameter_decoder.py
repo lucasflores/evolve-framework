@@ -109,6 +109,53 @@ class TestDependentSpecValidation:
         assert ParameterSpec.from_dict(json.loads(json.dumps(spec.to_dict()))) == spec
 
 
+class TestChoicesByParentStorage:
+    """choices_by_parent is stored as (parent value, options) pairs."""
+
+    WINDOW = ParameterSpec(path="window", param_type="categorical", choices=(128, 512))
+    STRIDE = ParameterSpec(
+        path="stride",
+        param_type="categorical",
+        parent="window",
+        choices_by_parent={128: (16, 32), 512: (64,)},
+    )
+
+    def test_dict_and_pairs_give_the_same_spec(self) -> None:
+        pairs = ParameterSpec(
+            path="stride",
+            param_type="categorical",
+            parent="window",
+            choices_by_parent=[(128, [16, 32]), (512, [64])],  # type: ignore[arg-type]
+        )
+        assert pairs == self.STRIDE
+        assert self.STRIDE.choices_by_parent == ((128, (16, 32)), (512, (64,)))
+
+    def test_spec_is_hashable(self) -> None:
+        assert hash(self.STRIDE) == hash(ParameterSpec.from_dict(self.STRIDE.to_dict()))
+
+    def test_to_dict_emits_pairs(self) -> None:
+        assert self.STRIDE.to_dict()["choices_by_parent"] == [[128, [16, 32]], [512, [64]]]
+
+    def test_integer_parent_values_survive_json(self) -> None:
+        specs = [self.WINDOW, self.STRIDE]
+        loaded = [ParameterSpec.from_dict(json.loads(json.dumps(s.to_dict()))) for s in specs]
+        assert loaded == specs
+        assert decode_parameters([0.9, 0.0], loaded) == {"window": 512, "stride": 64}
+
+    def test_from_dict_accepts_a_hand_written_mapping(self) -> None:
+        data = {**self.STRIDE.to_dict(), "choices_by_parent": {128: [16, 32], 512: [64]}}
+        assert ParameterSpec.from_dict(data) == self.STRIDE
+
+    def test_duplicate_parent_values_refused(self) -> None:
+        with pytest.raises(ValueError, match="more than once: \\[128\\]"):
+            ParameterSpec(
+                path="stride",
+                param_type="categorical",
+                parent="window",
+                choices_by_parent=((128, (16,)), (128, (32,))),
+            )
+
+
 class TestConditionRule:
     """A spec active only for some of its parent's values."""
 
