@@ -418,6 +418,58 @@ class TestMultiObjectiveEngine:
 class TestCreateInitialPopulation:
     """Tests for create_initial_population()."""
 
+    @staticmethod
+    def _seeded_config() -> UnifiedConfig:
+        return UnifiedConfig(
+            population_size=6,
+            selection="tournament",
+            crossover="sbx",
+            mutation="gaussian",
+            genome_type="vector",
+            genome_params={"dimensions": 2, "bounds": (0.0, 1.0)},
+            seed=9,
+        )
+
+    def test_given_genomes_take_the_first_places(self) -> None:
+        import numpy as np
+
+        from evolve.representation.vector import VectorGenome
+
+        given = [
+            VectorGenome(genes=np.array([0.25, 0.5])),
+            VectorGenome(genes=np.array([0.1, 0.9])),
+        ]
+        population = create_initial_population(self._seeded_config(), genomes=given)
+        assert len(population) == 6
+        assert [ind.genome for ind in population.individuals[:2]] == given
+        assert [ind.metadata.origin for ind in population.individuals] == ["given"] * 2 + [
+            "init"
+        ] * 4
+        assert all(ind.fitness is None for ind in population.individuals)
+
+    def test_the_random_members_are_those_an_unseeded_run_draws(self) -> None:
+        import numpy as np
+
+        from evolve.representation.vector import VectorGenome
+
+        config = self._seeded_config()
+        plain = create_initial_population(config)
+        seeded = create_initial_population(
+            config, genomes=[VectorGenome(genes=np.array([0.5, 0.5]))]
+        )
+        assert [i.genome for i in seeded.individuals[1:]] == [
+            i.genome for i in plain.individuals[1:]
+        ]
+
+    def test_more_genomes_than_places_is_refused(self) -> None:
+        import numpy as np
+
+        from evolve.representation.vector import VectorGenome
+
+        given = [VectorGenome(genes=np.array([0.5, 0.5]))] * 7
+        with pytest.raises(ValueError, match="7 given genomes for a population of 6"):
+            create_initial_population(self._seeded_config(), genomes=given)
+
     def test_creates_correct_population_size(self) -> None:
         """Test population has correct size."""
         config = UnifiedConfig(
