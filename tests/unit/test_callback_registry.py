@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from unittest.mock import MagicMock
 
 import pytest
@@ -102,3 +103,21 @@ class TestRegisterOverwrite:
         reg = get_callback_registry()
         with pytest.raises(TypeError, match="must be callable"):
             reg.register("bad", 42)  # type: ignore[arg-type]
+
+
+class TestFactoryErrors:
+    def test_factory_error_is_reraised_as_it_was(self):
+        reg = get_callback_registry()
+        error = KeyError("missing setting")
+
+        def broken(**_kw):
+            raise error
+
+        reg.register("broken", broken)
+        with pytest.raises(KeyError) as raised:
+            reg.get("broken", level=3)
+        assert raised.value is error
+        if sys.version_info >= (3, 11):  # exception notes
+            assert raised.value.__notes__ == [
+                "Failed to create callback 'broken' with params {'level': 3}"
+            ]

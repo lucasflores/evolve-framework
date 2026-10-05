@@ -93,9 +93,12 @@ class EvaluatorRegistry:
         try:
             return factory(**params)
         except Exception as exc:
-            raise type(exc)(
-                f"Failed to create evaluator '{name}' with params {params}: {exc}"
-            ) from exc
+            # The factory's own error, as it was: its type and fields are what
+            # callers act on (a refusal's reason and detail). Where Python has
+            # exception notes (3.11+), the registry adds where it happened.
+            if hasattr(exc, "add_note"):
+                exc.add_note(f"Failed to create evaluator '{name}' with params {params}")
+            raise
 
     def accepts_param(self, name: str, param: str) -> bool:
         """
