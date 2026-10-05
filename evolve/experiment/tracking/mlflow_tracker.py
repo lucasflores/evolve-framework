@@ -65,6 +65,9 @@ class MLflowTracker:
             experiment_id = mlflow.create_experiment(self.experiment_name)
         else:
             experiment_id = experiment.experiment_id
+        # Current, not just named: a nested run started without an id goes to
+        # the current experiment, the default one otherwise
+        mlflow.set_experiment(experiment_id=experiment_id)
 
         # Start run
         run = mlflow.start_run(
@@ -239,6 +242,10 @@ class ResilientMLflowTracker:
                 experiment_id = mlflow.create_experiment(self.experiment_name)
             else:
                 experiment_id = experiment.experiment_id
+            # Current, not just named: a nested run started without an id
+            # (one per candidate, say) goes to the current experiment, the
+            # default one otherwise
+            mlflow.set_experiment(experiment_id=experiment_id)
 
             # Clear any stale active run from a previous crashed session
             if mlflow.active_run() is not None:
