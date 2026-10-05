@@ -19,6 +19,7 @@ from evolve.core.operators.merge import (
     SymbiogeneticMerge,
 )
 from evolve.core.operators.mutation import (
+    ByKindMutation,
     CreepMutation,
     GaussianMutation,
     MutationOperator,
@@ -57,6 +58,7 @@ __all__ = [
     "UniformMutation",
     "PolynomialMutation",
     "CreepMutation",
+    "ByKindMutation",
     "NEATMutation",
     # Token operators (ESPO)
     "TokenAwareMutator",
