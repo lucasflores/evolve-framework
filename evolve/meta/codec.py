@@ -245,7 +245,8 @@ class ParameterDecoder:
             if spec.path not in given:
                 raise ValueError(f"'{spec.path}' is active and has no value")
             positions[spec.path] = _encode_value(spec, given[spec.path], choices)
-            decoded[spec.path] = given[spec.path]
+            # What decoding gives, so a child sees its parent's value as decode does
+            decoded[spec.path] = decode_value(spec, positions[spec.path], choices)
         return [p for spec in self.specs for p in positions[spec.path]]
 
     def identity(self, genome: VectorGenome) -> Hashable:
@@ -278,10 +279,26 @@ def _leaves(node: Mapping[str, Any], paths: set[str], prefix: str = "") -> dict[
     return found
 
 
+def _same_option(option: Any, value: Any) -> bool:
+    """Whether ``value`` is ``option`` as decoding would give it back: equal, and
+    not merely equal across kinds (True for 1, 1.0 for 1); numpy's numbers and
+    strings count as Python's."""
+    if isinstance(option, bool) or isinstance(value, bool):
+        return bool(option == value) and isinstance(option, bool) == isinstance(value, bool)
+    if isinstance(option, numbers.Integral):
+        return isinstance(value, numbers.Integral) and option == value
+    return isinstance(value, type(option)) and bool(option == value)
+
+
 def _frozen(value: Any) -> Hashable:
-    """A decoded value as something hashable: lists and dicts, at any depth, as tuples."""
+    """A decoded value as something hashable, at any depth: lists, tuples, dicts
+    and arrays as tuples, sets as frozensets."""
     if isinstance(value, Mapping):
         return tuple(sorted((k, _frozen(v)) for k, v in value.items()))
+    if isinstance(value, set | frozenset):
+        return frozenset(_frozen(v) for v in value)
+    if not isinstance(value, str | bytes) and hasattr(value, "tolist"):
+        return _frozen(value.tolist())  # a numpy array or scalar
     if isinstance(value, list | tuple):
         return tuple(_frozen(v) for v in value)
     frozen: Hashable = value
@@ -304,9 +321,10 @@ def _encode_value(spec: ParameterSpec, value: Any, choices: Sequence[Any] | None
 
     if spec.param_type == "categorical":
         options = list(choices if choices is not None else spec.choices or ())
-        if value not in options:
+        index = next((i for i, o in enumerate(options) if _same_option(o, value)), None)
+        if index is None:
             raise ValueError(f"'{spec.path}': {value!r} isn't one of {options}")
-        return [(options.index(value) + 0.5) / len(options)]
+        return [(index + 0.5) / len(options)]
 
     assert spec.bounds is not None
     lo, hi = spec.bounds
@@ -386,16 +404,32 @@ class ParameterDistance:
         # candidate; its identity says which. Gower already puts equal values at 0.
         identity = getattr(self.decoder, "identity", None)
         own = getattr(type(self.decoder), "identity", None) is not ParameterDecoder.identity
-        self._identity = lru_cache(maxsize=10_000)(identity) if callable(identity) and own else None
+        self._identity = identity if callable(identity) and own else None
+        # One decoded representative per identity: folded copies are then one
+        # point, at the same distance from everything else
+        self._representative: dict[Hashable, dict[str, Any]] = {}
         # Decoded once per distinct genome, since a pairwise pass meets each one
         # many times; the most recent are kept, enough for a generation's pool.
         # ponytail: 10,000 genomes; raise it for pools larger than that
-        self._values = lru_cache(maxsize=10_000)(lambda genes: parameters.values(list(genes)))
+        self._values = lru_cache(maxsize=10_000)(self._decode)
+
+    def _decode(self, genes: tuple[float, ...]) -> dict[str, Any]:
+        """A genome's values: under a folding identity, its candidate's first-seen values."""
+        values = self._parameters.values(list(genes))
+        if self._identity is None:
+            return values
+        import numpy as np
+
+        from evolve.representation.vector import VectorGenome
+
+        key = self._identity(VectorGenome(genes=np.array(genes)))
+        # ponytail: emptied when large; scope it to a generation if runs need more
+        if len(self._representative) >= 10_000:
+            self._representative.clear()
+        return self._representative.setdefault(key, values)
 
     def __call__(self, a: VectorGenome, b: VectorGenome) -> float:
-        """0 for one candidate under the decoder's identity, else Gower distance."""
-        if self._identity is not None and self._identity(a) == self._identity(b):
-            return 0.0
+        """Gower distance between the two candidates' decoded values."""
         return gower(
             self._parameters.specs,
             self._values(tuple(a.genes.tolist())),

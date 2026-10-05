@@ -240,7 +240,9 @@ def pick_distinct(
     look crowded. Its first copy stands for it, and copies are expected to
     share their evaluation (a deterministic evaluator, or one caching by
     identity); a candidate any of whose copies violates a constraint counts
-    as infeasible. Only feasible candidates are ranked: front by front, and
+    as infeasible, unless the ranker uses penalty constraint handling, where
+    constraints are soft and the penalised objectives decide. Only feasible
+    candidates are ranked: front by front, and
     within a front by crowding distance with the extremes first. One whose
     identity is in ``exclude`` (a baseline, say) is ranked, so it shapes the
     fronts it sits in, but never picked.
@@ -267,7 +269,8 @@ def pick_distinct(
             continue
         k = key(ind.genome)
         distinct.setdefault(k, ind)
-        if not ind.fitness.is_feasible:
+        # In penalty mode constraints are soft: the ranker's penalised objectives decide
+        if ranker.penalty_weights is None and not ind.fitness.is_feasible:
             infeasible.add(k)
     keys = [k for k in distinct if k not in infeasible]
     pool = [distinct[k] for k in keys]

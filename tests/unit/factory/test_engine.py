@@ -486,6 +486,19 @@ class TestCreateInitialPopulation:
         with pytest.raises(ValueError, match=match):
             create_initial_population(self._seeded_config(), genomes=[given])
 
+    def test_a_vector_with_positions_that_arent_numbers_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="aren't finite numbers"):
+            create_initial_population(self._seeded_config(), genomes=[[float("nan"), 0.5]])
+
+    def test_another_genome_type_is_refused(self) -> None:
+        import numpy as np
+
+        from evolve.representation.vector import VectorGenome
+
+        config = UnifiedConfig(population_size=3, genome_type="sequence", seed=2)
+        with pytest.raises(ValueError, match="is a VectorGenome; the genome is a"):
+            create_initial_population(config, genomes=[VectorGenome(genes=np.array([0.5]))])
+
     def test_a_vector_with_other_bounds_is_refused(self) -> None:
         import numpy as np
 
