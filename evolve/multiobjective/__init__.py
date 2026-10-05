@@ -18,6 +18,7 @@ from evolve.multiobjective.ranking import RankedIndividual, fast_non_dominated_s
 from evolve.multiobjective.selection import (
     CrowdedTournamentSelection,
     NSGA2Selector,
+    pick_distinct,
 )
 
 __all__ = [
@@ -33,6 +34,7 @@ __all__ = [
     "crowding_distance",
     # Selection
     "NSGA2Selector",
+    "pick_distinct",
     "CrowdedTournamentSelection",
     # Metrics
     "hypervolume_2d",

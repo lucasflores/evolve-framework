@@ -6,7 +6,7 @@ Implements NSGA-II selection and crowded tournament selection.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Collection, Hashable, Sequence
 from dataclasses import dataclass
 from random import Random
 from typing import Generic, TypeVar
@@ -222,6 +222,56 @@ class NSGA2Selector(Generic[G]):
             all_distances.update(distances)
 
         return ranks, all_distances
+
+
+def pick_distinct(
+    individuals: Sequence[Individual[G]],
+    ranker: NSGA2Selector[G],
+    count: int,
+    identity: Callable[[G], Hashable] | None = None,
+    exclude: Collection[Hashable] = (),
+) -> list[Individual[G]]:
+    """
+    Up to ``count`` distinct feasible candidates, best first.
+
+    For naming a search's finalists from its final population. Candidates
+    with one identity count once, and are one point before the fronts are
+    ranked: copies of a candidate would otherwise share its gaps and make it
+    look crowded. Then front by front, and within a front by crowding
+    distance with the extremes first. A candidate with any constraint
+    violated is never picked, nor one whose identity is in ``exclude`` (a
+    baseline, say), though both still shape the fronts they sit in.
+
+    Args:
+        individuals: Evaluated candidates, e.g. a final population.
+        ranker: The run's NSGA-II ranker, with its objective directions.
+        count: Most candidates to return.
+        identity: What makes two genomes one candidate, e.g. the decoder's
+            ``identity``; by default the genome itself.
+        exclude: Identities never picked.
+
+    Returns:
+        The picked candidates, best first; fewer than ``count`` when fewer
+        distinct feasible candidates exist.
+    """
+    key = identity or (lambda genome: genome)
+    distinct: dict[Hashable, Individual[G]] = {}
+    for ind in individuals:
+        if ind.fitness is not None and ind.fitness.is_feasible:
+            distinct.setdefault(key(ind.genome), ind)
+    keys = list(distinct)
+    pool = [distinct[k] for k in keys]
+    fitnesses = ranker.ranking_fitnesses(pool)
+    picked: list[Individual[G]] = []
+    for front in fast_non_dominated_sort(fitnesses):
+        distances = crowding_distance(fitnesses, front)
+        for i in sorted(front, key=lambda i: -distances[i]):
+            if keys[i] in exclude:
+                continue
+            picked.append(pool[i])
+            if len(picked) == count:
+                return picked
+    return picked
 
 
 @dataclass
