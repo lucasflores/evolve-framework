@@ -109,6 +109,14 @@ class TestFactory:
         with pytest.raises(OperatorCompatibilityError):
             create_engine(config, evaluator=TwoObjectives())
 
+    def test_the_default_distance_follows_the_genome_type(self) -> None:
+        from evolve.factory.engine import _distance_name
+
+        assert _distance_name(UnifiedConfig(genome_type="graph").with_clearing()) == "neat"
+        assert _distance_name(UnifiedConfig(genome_type="vector").with_clearing()) == "genome"
+        named = UnifiedConfig(genome_type="graph").with_clearing(distance="custom")
+        assert _distance_name(named) == "custom"
+
     def test_an_unknown_distance_is_refused(self) -> None:
         config = multiobjective_config().with_clearing(copies=1, distance="nowhere")
         with pytest.raises(KeyError, match="nowhere"):

@@ -121,6 +121,33 @@ class TestSurvival:
         assert feasible in rows
         assert infeasible not in rows
 
+    def test_places_left_over_are_filled_from_the_held_back_only(self) -> None:
+        engine = _engine(COPIES, size=3)
+        pool = _evaluated(engine, [A, A, A, B])
+        survivors, _ = engine._survive(pool, 3, engine._nsga2)
+        # Two groups win two places; the third goes to another copy of A, never
+        # to a candidate already through
+        assert len({ind.id for ind in survivors}) == 3
+        assert sorted(tuple(i.genome.genes.tolist()) for i in survivors) == sorted(
+            [tuple(A), tuple(A), tuple(B)]
+        )
+
+    def test_within_a_group_the_more_isolated_candidate_wins(self) -> None:
+        # Four non-dominated points; the two near-copies X1, X2 share a rank,
+        # and X1 sits further from its neighbours on the front
+        engine = _engine(Clearing(distance=GenomeDistance(), closeness=0.05, copies=1), size=3)
+        rows = {"X1": [0.5, 0.5], "X2": [0.51, 0.5], "Y": [0.0, 0.0], "Z": [1.0, 1.0]}
+        objectives = {"X1": (5.0, 5.5), "X2": (5.2, 5.6), "Y": (0.0, 0.0), "Z": (10.0, 10.0)}
+        pool = [
+            Individual(genome=VectorGenome(genes=np.array(rows[k]))).with_fitness(
+                Fitness(values=np.array(objectives[k]))
+            )
+            for k in rows
+        ]
+        survivors, _ = engine._survive(pool, 3, engine._nsga2)
+        kept = {k for k in rows for ind in survivors if ind.genome.genes.tolist() == rows[k]}
+        assert kept == {"X1", "Y", "Z"}
+
     def test_measuring_only_changes_nothing(self) -> None:
         start = _population([[0.1 * i, 1 - 0.1 * i] for i in range(4)] + [[0.5, 0.5]] * 4)
         options = {"generations": 5, "mutation": GaussianMutation(), "crossover_rate": 0.9}
