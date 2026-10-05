@@ -90,9 +90,9 @@ class TestFactory:
             decoder_params={"params": [spec.to_dict()]},
         )
         config = config.with_clearing(copies=1, distance="parameters")
-        # TwoObjectives reads raw genes, so the factory says the evaluator
-        # doesn't get the decoder; the distance still does
-        with pytest.warns(UserWarning, match="is ignored"):
+        # TwoObjectives reads raw genes, so the evaluator doesn't get the
+        # decoder; the distance does, and the warning says which
+        with pytest.warns(UserWarning, match="reaches the clearing distance but not the evaluator"):
             engine = create_engine(config, evaluator=TwoObjectives())
         assert isinstance(engine._clearing.distance, ParameterDistance)
         assert engine._clearing.distance._parameters.specs == (spec,)

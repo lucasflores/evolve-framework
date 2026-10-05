@@ -168,9 +168,18 @@ def create_engine(
             reason = "evaluator_params or runtime_overrides already set `decoder`"
         else:
             reason = f"the factory registered as {config.evaluator!r} has no `decoder` parameter"
-        # A mutation operator that names `decoder` still receives it, below
-        if get_operator_registry().accepts_param("mutation", config.mutation, "decoder"):
-            fate = "reaches the mutation operator but not the evaluator"
+        # A mutation operator or clearing distance that names `decoder` still
+        # receives it, below
+        registry = get_operator_registry()
+        users = []
+        if registry.accepts_param("mutation", config.mutation, "decoder"):
+            users.append("mutation operator")
+        if config.clearing is not None and registry.accepts_param(
+            "distance", _distance_name(config), "decoder"
+        ):
+            users.append("clearing distance")
+        if users:
+            fate = f"reaches the {' and the '.join(users)} but not the evaluator"
         else:
             fate = "is ignored"
         warnings.warn(
