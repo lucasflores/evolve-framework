@@ -155,8 +155,31 @@ class TestFactoryErrorPropagation:
             raise RuntimeError("factory broke")
 
         reg.register("broken", bad_factory)
-        with pytest.raises(RuntimeError, match="Failed to create decoder 'broken'"):
+        with pytest.raises(RuntimeError, match="factory broke") as raised:
             reg.get("broken", some_param=42)
+        if sys.version_info >= (3, 11):  # exception notes
+            assert raised.value.__notes__ == [
+                "Failed to create decoder 'broken' with params {'some_param': 42}"
+            ]
+
+    def test_factory_error_is_reraised_as_it_was(self):
+        reg = get_decoder_registry()
+
+        class Refused(Exception):
+            def __init__(self, reason, detail):
+                super().__init__(reason)
+                self.reason, self.detail = reason, detail
+
+        error = Refused("the baseline breaks a pool constraint", "pool_size 1")
+
+        def refusing(**_kw):
+            raise error
+
+        reg.register("refusing", refusing)
+        with pytest.raises(Refused) as raised:
+            reg.get("refusing")
+        assert raised.value is error
+        assert raised.value.detail == "pool_size 1"
 
 
 class TestCustomDecoderWorkflow:
