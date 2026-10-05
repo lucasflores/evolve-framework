@@ -172,10 +172,14 @@ def create_engine(
         # receives it, below
         registry = get_operator_registry()
         users = []
-        if registry.accepts_param("mutation", config.mutation, "decoder"):
+        if "decoder" not in config.mutation_params and registry.accepts_param(
+            "mutation", config.mutation, "decoder"
+        ):
             users.append("mutation operator")
-        if config.clearing is not None and registry.accepts_param(
-            "distance", _distance_name(config), "decoder"
+        if (
+            config.clearing is not None
+            and "decoder" not in config.clearing.distance_params
+            and registry.accepts_param("distance", _distance_name(config), "decoder")
         ):
             users.append("clearing distance")
         if users:
@@ -361,30 +365,30 @@ def _validate_operator_compatibility(config: UnifiedConfig) -> None:
         )
 
     # Check selection
-    if not op_registry.is_compatible(config.selection, config.genome_type):
+    if not op_registry.is_compatible(config.selection, config.genome_type, "selection"):
         raise OperatorCompatibilityError(
             config.selection,
             "selection",
             config.genome_type,
-            op_registry.get_compatibility(config.selection),
+            op_registry.get_compatibility(config.selection, "selection"),
         )
 
     # Check crossover
-    if not op_registry.is_compatible(config.crossover, config.genome_type):
+    if not op_registry.is_compatible(config.crossover, config.genome_type, "crossover"):
         raise OperatorCompatibilityError(
             config.crossover,
             "crossover",
             config.genome_type,
-            op_registry.get_compatibility(config.crossover),
+            op_registry.get_compatibility(config.crossover, "crossover"),
         )
 
     # Check mutation
-    if not op_registry.is_compatible(config.mutation, config.genome_type):
+    if not op_registry.is_compatible(config.mutation, config.genome_type, "mutation"):
         raise OperatorCompatibilityError(
             config.mutation,
             "mutation",
             config.genome_type,
-            op_registry.get_compatibility(config.mutation),
+            op_registry.get_compatibility(config.mutation, "mutation"),
         )
 
     # Clearing runs in multi-objective survival only, with a distance for the genome
@@ -397,24 +401,24 @@ def _validate_operator_compatibility(config: UnifiedConfig) -> None:
             )
         name = _distance_name(config)
         if op_registry.is_registered("distance", name) and not op_registry.is_compatible(
-            name, config.genome_type
+            name, config.genome_type, "distance"
         ):
             raise OperatorCompatibilityError(
                 name,
                 "distance",
                 config.genome_type,
-                op_registry.get_compatibility(name),
+                op_registry.get_compatibility(name, "distance"),
             )
 
     # Check merge (if configured)
     if config.is_merge_enabled:
         assert config.merge is not None
-        if not op_registry.is_compatible(config.merge.operator, config.genome_type):
+        if not op_registry.is_compatible(config.merge.operator, config.genome_type, "merge"):
             raise OperatorCompatibilityError(
                 config.merge.operator,
                 "merge",
                 config.genome_type,
-                op_registry.get_compatibility(config.merge.operator),
+                op_registry.get_compatibility(config.merge.operator, "merge"),
             )
 
 

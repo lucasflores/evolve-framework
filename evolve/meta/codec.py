@@ -11,6 +11,7 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from functools import lru_cache
 from graphlib import CycleError, TopologicalSorter
 from typing import TYPE_CHECKING, Any
 
@@ -257,23 +258,20 @@ class ParameterDistance:
 
     def __post_init__(self) -> None:
         """Find the parameter decoder."""
-        self._parameters = parameter_decoder_of(self.decoder, "distance 'parameters'")
-        self._decoded: dict[bytes, dict[str, Any]] = {}
+        parameters = parameter_decoder_of(self.decoder, "distance 'parameters'")
+        self._parameters = parameters
+        # Decoded once per distinct genome, since a pairwise pass meets each one
+        # many times; the most recent are kept, enough for a generation's pool.
+        # ponytail: 10,000 genomes; raise it for pools larger than that
+        self._values = lru_cache(maxsize=10_000)(lambda genes: parameters.values(list(genes)))
 
     def __call__(self, a: VectorGenome, b: VectorGenome) -> float:
         """Gower distance between the two genomes' decoded values."""
-        return gower(self._parameters.specs, self._values(a), self._values(b))
-
-    def _values(self, genome: VectorGenome) -> dict[str, Any]:
-        """Decoded values, once per distinct genome: a pairwise pass meets each n times."""
-        key = genome.genes.tobytes()
-        if key not in self._decoded:
-            # ponytail: a whole-run cache, emptied when it grows large; scope it
-            # to a generation if runs breed far more distinct genomes than this
-            if len(self._decoded) >= 100_000:
-                self._decoded.clear()
-            self._decoded[key] = self._parameters.values(genome.genes.tolist())
-        return self._decoded[key]
+        return gower(
+            self._parameters.specs,
+            self._values(tuple(a.genes.tolist())),
+            self._values(tuple(b.genes.tolist())),
+        )
 
 
 def gower(specs: Sequence[ParameterSpec], a: dict[str, Any], b: dict[str, Any]) -> float:

@@ -44,7 +44,8 @@ class OperatorRegistry:
     def __init__(self) -> None:
         """Initialize empty registry."""
         self._operators: dict[tuple[str, str], type] = {}
-        self._compatibility: dict[str, set[str]] = {}
+        # Keyed by (category, name): a name may recur across categories ("neat")
+        self._compatibility: dict[tuple[str, str], set[str]] = {}
         self._initialized: bool = False
 
     def _ensure_initialized(self) -> None:
@@ -83,10 +84,10 @@ class OperatorRegistry:
 
         self._operators[(category, name)] = cls
         if compatible_genomes is not None:
-            self._compatibility[name] = compatible_genomes
+            self._compatibility[(category, name)] = compatible_genomes
         else:
             # Default: compatible with all
-            self._compatibility[name] = {"*"}
+            self._compatibility[(category, name)] = {"*"}
 
     def get(self, category: str, name: str, **params: Any) -> Any:
         """
@@ -132,40 +133,51 @@ class OperatorRegistry:
         cls = self._operators.get((category, name))
         return cls is not None and accepts_keyword(cls, param)
 
-    def is_compatible(self, operator_name: str, genome_type: str) -> bool:
+    def is_compatible(
+        self, operator_name: str, genome_type: str, category: str | None = None
+    ) -> bool:
         """
         Check if operator is compatible with genome type (FR-021).
 
         Args:
             operator_name: Registered operator name.
             genome_type: Genome type name.
+            category: The operator's category. Without it, a name registered
+                in several categories is compatible if any of them is.
 
         Returns:
             True if compatible or unspecified.
         """
-        self._ensure_initialized()
-
-        if operator_name not in self._compatibility:
+        sets = self._compatible_sets(operator_name, category)
+        if not sets:
             # Unspecified = assumed compatible
             return True
+        return any("*" in compatible or genome_type in compatible for compatible in sets)
 
-        compatible = self._compatibility[operator_name]
-        return "*" in compatible or genome_type in compatible
-
-    def get_compatibility(self, operator_name: str) -> set[str]:
+    def get_compatibility(self, operator_name: str, category: str | None = None) -> set[str]:
         """
         Get compatible genome types for operator.
 
         Args:
             operator_name: Registered operator name.
+            category: The operator's category; without it, every category's
+                registration of the name counts.
 
         Returns:
             Set of compatible genome types.
             {"*"} if compatible with all.
             Empty set if not registered.
         """
+        return set().union(*self._compatible_sets(operator_name, category))
+
+    def _compatible_sets(self, name: str, category: str | None) -> list[set[str]]:
+        """Compatibility of each registration of ``name`` (in ``category``, if given)."""
         self._ensure_initialized()
-        return self._compatibility.get(operator_name, set())
+        return [
+            compatible
+            for (cat, registered), compatible in self._compatibility.items()
+            if registered == name and (category is None or cat == category)
+        ]
 
     def list_operators(self, category: str) -> list[str]:
         """

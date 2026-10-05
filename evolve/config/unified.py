@@ -80,8 +80,10 @@ class ClearingConfig:
         copies: Survivors per group; None (the default) holds nothing back,
             so the groups are only measured and logged and the run is as
             without clearing.
-        closeness: Largest distance that counts as a copy; 0 groups exact
-            copies.
+        closeness: Largest distance that counts as a copy; 0 groups what the
+            distance puts at 0: exact copies under "genome" and "parameters",
+            while NEAT's distance reads connection genes only, so graphs
+            differing only in node genes count as copies too.
         distance: A name in the operator registry's "distance" category;
             None takes the genome type's default, "neat" for graphs and
             "genome" (the genome's own distance) otherwise.
@@ -96,7 +98,15 @@ class ClearingConfig:
     distance_params: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        """Refuse settings clearing cannot run with."""
+        """Refuse settings clearing cannot run with, as they come from JSON."""
+        if self.copies is not None and (
+            isinstance(self.copies, bool) or not isinstance(self.copies, int)
+        ):
+            raise ValueError(
+                f"clearing copies must be a whole number (or null), got {self.copies!r}"
+            )
+        if isinstance(self.closeness, bool) or not isinstance(self.closeness, int | float):
+            raise ValueError(f"clearing closeness must be a number, got {self.closeness!r}")
         if self.copies is not None and self.copies < 1:
             raise ValueError(f"clearing copies must be at least 1 (or None), got {self.copies}")
         if self.closeness < 0:

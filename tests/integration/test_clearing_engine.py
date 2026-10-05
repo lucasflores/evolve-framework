@@ -132,6 +132,14 @@ class TestSurvival:
             [tuple(A), tuple(A), tuple(B)]
         )
 
+    def test_fillers_rank_behind_every_winner_for_mating(self) -> None:
+        engine = _engine(COPIES, size=3)
+        pool = _evaluated(engine, [A, A, A, B])
+        survivors, (ranks, crowding) = engine._survive(pool, 3, engine._nsga2)
+        # Two winners first, then the held-back copy that filled the last place
+        assert set(ranks) == set(crowding) == {0, 1, 2}
+        assert ranks[2] > max(ranks[0], ranks[1])
+
     def test_within_a_group_the_more_isolated_candidate_wins(self) -> None:
         # Four non-dominated points; the two near-copies X1, X2 share a rank,
         # and X1 sits further from its neighbours on the front
