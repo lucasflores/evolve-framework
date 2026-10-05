@@ -110,9 +110,12 @@ class ByKindMutation:
     For a VectorGenome decoded by a ``ParameterDecoder`` (positions on
     [0, 1]). Under Gaussian mutation a discrete gene changes only when a
     nudge crosses a bin boundary, which from mid-bin is rare; here each
-    active gene changes with exactly its rate, wherever it sits:
+    active discrete gene changes with exactly its rate, wherever it sits,
+    and each continuous gene is nudged at its rate:
 
-    - continuous: a Gaussian nudge of ``sigma``, clipped to the genome's bounds;
+    - continuous: a Gaussian nudge of ``sigma``, clipped to the genome's bounds
+      (to [0, 1] without them), as GaussianMutation does, so at a bound a
+      nudge outward changes nothing;
     - integer: at least one step, ``round(|N(0, sigma * range)|)`` steps in a
       random direction, turning back at a bound;
     - categorical: a different option, uniformly, among those open under its
@@ -121,9 +124,9 @@ class ByKindMutation:
 
     A gene with only one possible value is left alone and draws nothing. An
     inactive gene keeps its positions. A gene whose parent just changed is
-    re-drawn uniformly if it has just become active, or if it is a
-    categorical whose options follow that parent: its old position means
-    nothing under the new value.
+    re-drawn as the initial population draws it, at uniform positions, if it
+    has just become active, or if it is a categorical whose options changed
+    with that parent: its old position means nothing under the new value.
 
     Registry name ``"by_kind"``; the factory passes the declared decoder.
 
@@ -156,10 +159,8 @@ class ByKindMutation:
                 "mutation 'by_kind' needs a decoder built on ParameterDecoder: declare "
                 "one as UnifiedConfig.decoder, such as 'parameters'"
             )
-        self._discrete_rate: float = (
-            self.mutation_rate if self.discrete_rate is None else self.discrete_rate
-        )
-        self.discrete_rate = self._discrete_rate
+        if self.discrete_rate is None:
+            self.discrete_rate = self.mutation_rate
         for name in ("mutation_rate", "discrete_rate"):
             if not 0.0 <= getattr(self, name) <= 1.0:
                 raise ValueError(f"{name} must be in [0, 1]")
@@ -192,13 +193,19 @@ class ByKindMutation:
             start = self._starts[spec.path]
             end = start + spec.num_dimensions
             was_active = spec.path in before
-            follows_parent = spec.param_type == "categorical" and spec.choices_by_parent is not None
-            if spec.parent in changed and (not was_active or follows_parent):
+            # A new parent value leaves the old position meaningless when it
+            # activates the gene, or changes a categorical's options
+            if spec.parent in changed and (
+                not was_active
+                or (spec.param_type == "categorical" and choices != resolve(spec, before)[1])
+            ):
                 for i in range(start, end):
                     genes[i] = rng.random()
             elif _can_move(spec, choices):
                 rate = (
-                    self.mutation_rate if spec.param_type == "continuous" else self._discrete_rate
+                    self.mutation_rate
+                    if spec.param_type == "continuous" or self.discrete_rate is None
+                    else self.discrete_rate
                 )
                 if rng.random() < rate:
                     self._move(spec, choices, genes, start, genome.bounds, rng)
@@ -222,9 +229,8 @@ class ByKindMutation:
         from evolve.meta.codec import decode_value
 
         if spec.param_type == "continuous":
-            genes[start] += rng.gauss(0, self.sigma)
-            if bounds is not None:
-                genes[start] = min(max(genes[start], bounds[0][start]), bounds[1][start])
+            low, high = (0.0, 1.0) if bounds is None else (bounds[0][start], bounds[1][start])
+            genes[start] = min(max(genes[start] + rng.gauss(0, self.sigma), low), high)
         elif spec.param_type == "integer":
             lo, hi = int(spec.bounds[0]), int(spec.bounds[1])
             value = decode_value(spec, [genes[start]])
