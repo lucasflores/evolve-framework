@@ -13,6 +13,8 @@ import pytest
 from evolve.config.meta import ParameterSpec
 from evolve.config.unified import UnifiedConfig
 from evolve.core.operators.mutation import ByKindMutation
+from evolve.core.types import Fitness
+from evolve.evaluation.evaluator import EvaluatorCapabilities
 from evolve.factory.engine import create_engine, create_initial_population
 from evolve.meta.codec import ParameterDecoder
 from evolve.representation.vector import VectorGenome
@@ -253,6 +255,26 @@ class TestActivity:
             subset = genes[len(start) :]
             assert sum(a != b for a, b in zip(subset, positions[len(start) :])) <= 1
 
+    def test_options_unchanged_by_a_new_parent_value_are_not_redrawn(self) -> None:
+        parent = ParameterSpec(path="p", param_type="categorical", choices=("a", "b", "c"))
+        child = ParameterSpec(
+            path="k",
+            param_type="categorical",
+            parent="p",
+            choices_by_parent={"a": (1, 2, 3), "b": (1, 2, 3), "c": (4, 5)},
+        )
+        decoder = ParameterDecoder((parent, child))
+        op = ByKindMutation(decoder=decoder, discrete_rate=1.0)
+        rng = Random(0)
+        seen = Counter()
+        for _ in range(3000):
+            after = decoder.values(op.mutate(_genome(1 / 6, 0.5), rng).genes.tolist())
+            if after["p"] == "b":
+                # Same options, same meaning: the child's own move, never its old value
+                seen[after["k"]] += 1
+        assert seen[2] == 0
+        assert set(seen) == {1, 3}
+
     def test_a_gene_still_active_under_its_parents_new_value_keeps_its_meaning(self) -> None:
         parent = ParameterSpec(path="p", param_type="categorical", choices=("x", "y", "z"))
         child = ParameterSpec(path="c", bounds=(0.0, 1.0), parent="p", active_values=("x", "y"))
@@ -285,6 +307,18 @@ class TestDeterminismAndShape:
         rng = Random(0)
         for _ in range(200):
             assert 0.0 <= op.mutate(_genome(0.5), rng).genes[0] <= 1.0
+
+    def test_without_bounds_a_nudge_stays_on_the_unit_interval(self) -> None:
+        op = _op((CONT,), mutation_rate=1.0, sigma=5.0)
+        rng = Random(0)
+        for _ in range(200):
+            assert 0.0 <= op.mutate(VectorGenome(genes=np.array([0.5])), rng).genes[0] <= 1.0
+
+    def test_a_rate_changed_after_construction_is_used(self) -> None:
+        decoder = ParameterDecoder((CAT,))
+        op = ByKindMutation(decoder=decoder, discrete_rate=0.0)
+        op.discrete_rate = 1.0
+        assert decoder.values(op.mutate(_genome(0.5), Random(0)).genes.tolist())["enc"] != "b"
 
     def test_genes_with_one_value_draw_nothing(self) -> None:
         op = _op((ONE, FIXED), mutation_rate=1.0, discrete_rate=1.0)
@@ -351,6 +385,22 @@ class TestFromConfig:
         assert engine.mutation.decoder is engine.evaluator._decoder
         engine.run(create_initial_population(config))
 
+    def test_the_warning_says_the_mutation_still_gets_the_decoder(self) -> None:
+        # An evaluator reading raw genes doesn't take the decoder; by_kind does
+        config = self._config(decoder="parameters")
+        with pytest.warns(UserWarning, match="reaches the mutation operator but not the evaluator"):
+            engine = create_engine(config, evaluator=_RawGenes())
+        assert engine.mutation._parameters is not None
+
     def test_refused_without_a_decoder(self) -> None:
         with pytest.raises(ValueError, match="needs a decoder built on ParameterDecoder"):
             create_engine(self._config(), evaluator=lambda _genome: 0.0)
+
+
+class _RawGenes:
+    """An evaluator object that reads raw genes, so takes no decoder."""
+
+    capabilities = EvaluatorCapabilities(n_objectives=1)
+
+    def evaluate(self, individuals: Any, seed: int | None = None) -> list[Fitness]:
+        return [Fitness(values=np.array([float(ind.genome.genes.sum())])) for ind in individuals]

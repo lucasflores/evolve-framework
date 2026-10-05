@@ -168,8 +168,13 @@ def create_engine(
             reason = "evaluator_params or runtime_overrides already set `decoder`"
         else:
             reason = f"the factory registered as {config.evaluator!r} has no `decoder` parameter"
+        # A mutation operator that names `decoder` still receives it, below
+        if get_operator_registry().accepts_param("mutation", config.mutation, "decoder"):
+            fate = "reaches the mutation operator but not the evaluator"
+        else:
+            fate = "is ignored"
         warnings.warn(
-            f"config.decoder={config.decoder!r} is ignored: {reason}.",
+            f"config.decoder={config.decoder!r} {fate}: {reason}.",
             UserWarning,
             stacklevel=2,
         )
