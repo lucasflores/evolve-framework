@@ -8,6 +8,7 @@ These tests are marked as 'benchmark' and may take longer to run.
 
 from __future__ import annotations
 
+import gc
 import importlib.util
 import time
 from collections.abc import Sequence
@@ -69,12 +70,20 @@ def benchmark_evaluator(
     for _ in range(warmup):
         evaluator.evaluate(population, seed=42)
 
-    # Timed runs
+    # Timed runs, with the garbage collector off, as timeit does: one full
+    # collection (about 12 ms with the whole suite collected) outlasts a batch
+    # evaluation of 1,000 individuals, so where it lands decided the result
     times = []
-    for _ in range(n_runs):
-        start = time.perf_counter()
-        evaluator.evaluate(population, seed=42)
-        times.append(time.perf_counter() - start)
+    gc_was_on = gc.isenabled()
+    gc.disable()
+    try:
+        for _ in range(n_runs):
+            start = time.perf_counter()
+            evaluator.evaluate(population, seed=42)
+            times.append(time.perf_counter() - start)
+    finally:
+        if gc_was_on:
+            gc.enable()
 
     avg_time = sum(times) / len(times)
     n_ind = len(population)
