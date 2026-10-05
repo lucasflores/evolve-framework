@@ -9,7 +9,8 @@ vector genome against parameter specs into a plain nested dict.
 from __future__ import annotations
 
 import math
-from collections.abc import Hashable, Mapping, Sequence
+import numbers
+from collections.abc import Collection, Hashable, Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import lru_cache
 from graphlib import CycleError, TopologicalSorter
@@ -218,8 +219,10 @@ class ParameterDecoder:
         Raises:
             ValueError: For values no genome decodes to: an active parameter
                 with no value, a value for an inactive parameter or for none
-                at all, a number out of its bounds or an integer that isn't a
-                whole number, an option not open under the parent's value, or
+                at all, a number out of its bounds, an integer parameter given
+                anything but an integer (numpy's included; 3.0 isn't), an
+                option not open under the parent's value, a subset not given as
+                a list of choices, or
                 a subset choice the parameter or its parent doesn't allow.
         """
         paths = {spec.path for spec in self.specs}
@@ -255,9 +258,7 @@ class ParameterDecoder:
         pick compare identities when the decoder has one.
         """
         values = self.values(genome.genes.tolist())
-        return tuple(
-            (path, tuple(v) if isinstance(v, list) else v) for path, v in sorted(values.items())
-        )
+        return tuple((path, _frozen(value)) for path, value in sorted(values.items()))
 
     def values(self, vector: Sequence[float]) -> dict[str, Any]:
         """Each active parameter's decoded value, by its dot path (not nested),
@@ -277,10 +278,22 @@ def _leaves(node: Mapping[str, Any], paths: set[str], prefix: str = "") -> dict[
     return found
 
 
+def _frozen(value: Any) -> Hashable:
+    """A decoded value as something hashable: lists and dicts, at any depth, as tuples."""
+    if isinstance(value, Mapping):
+        return tuple(sorted((k, _frozen(v)) for k, v in value.items()))
+    if isinstance(value, list | tuple):
+        return tuple(_frozen(v) for v in value)
+    frozen: Hashable = value
+    return frozen
+
+
 def _encode_value(spec: ParameterSpec, value: Any, choices: Sequence[Any] | None) -> list[float]:
     """One active parameter's positions for ``value``; decode_value()'s inverse."""
     if spec.param_type == "subset":
         assert spec.choices is not None
+        if isinstance(value, str) or not isinstance(value, Collection):
+            raise ValueError(f"'{spec.path}': {value!r} isn't a list of choices")
         stray = [c for c in value if c not in spec.choices]
         if stray:
             raise ValueError(f"'{spec.path}': {stray} aren't among its choices")
@@ -297,9 +310,14 @@ def _encode_value(spec: ParameterSpec, value: Any, choices: Sequence[Any] | None
 
     assert spec.bounds is not None
     lo, hi = spec.bounds
-    if spec.param_type == "integer" and (isinstance(value, bool) or not isinstance(value, int)):
-        raise ValueError(f"'{spec.path}': {value!r} isn't a whole number")
-    if isinstance(value, bool) or not isinstance(value, int | float) or not lo <= value <= hi:
+    if spec.param_type == "integer":
+        # As decode_value() reads an integer's bounds
+        lo, hi = int(lo), int(hi)
+        if isinstance(value, bool) or not isinstance(value, numbers.Integral):
+            raise ValueError(f"'{spec.path}': {value!r} isn't an integer")
+    elif isinstance(value, bool) or not isinstance(value, numbers.Real):
+        raise ValueError(f"'{spec.path}': {value!r} isn't a number")
+    if not lo <= value <= hi:
         raise ValueError(f"'{spec.path}': {value!r} is outside {lo:g}..{hi:g}")
     if hi == lo:
         return [0.5]
@@ -367,11 +385,8 @@ class ParameterDistance:
         # A decoder wrapping a ParameterDecoder may fold several values into one
         # candidate; its identity says which. Gower already puts equal values at 0.
         identity = getattr(self.decoder, "identity", None)
-        self._identity = (
-            lru_cache(maxsize=10_000)(identity)
-            if callable(identity) and self.decoder is not parameters
-            else None
-        )
+        own = getattr(type(self.decoder), "identity", None) is not ParameterDecoder.identity
+        self._identity = lru_cache(maxsize=10_000)(identity) if callable(identity) and own else None
         # Decoded once per distinct genome, since a pairwise pass meets each one
         # many times; the most recent are kept, enough for a generation's pool.
         # ponytail: 10,000 genomes; raise it for pools larger than that

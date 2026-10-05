@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from evolve.core.types import Fitness, Individual
 from evolve.multiobjective.selection import NSGA2Selector, pick_distinct
@@ -63,3 +64,14 @@ def test_identity_decides_what_counts_as_one_candidate() -> None:
 
 def test_nothing_feasible_picks_nothing() -> None:
     assert pick_distinct([_ind("x", (0, 0), (0.5,))], MINIMIZE_BOTH, 2) == []
+
+
+@pytest.mark.parametrize("count", [0, -2])
+def test_no_places_picks_nothing(count: int) -> None:
+    assert pick_distinct([_ind("a", (0, 1)), _ind("b", (1, 0))], MINIMIZE_BOTH, count) == []
+
+
+def test_a_candidate_with_an_infeasible_copy_is_infeasible() -> None:
+    # Noisy copies of "a": one evaluation broke a constraint, so "a" isn't picked
+    individuals = [_ind("a", (0, 2), (0.5,)), _ind("a", (0, 2)), _ind("b", (2, 0))]
+    assert _labels(pick_distinct(individuals, MINIMIZE_BOTH, 3)) == ["b"]

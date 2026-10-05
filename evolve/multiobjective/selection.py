@@ -237,10 +237,13 @@ def pick_distinct(
     For naming a search's finalists from its final population. Candidates
     with one identity count once, and are one point before the fronts are
     ranked: copies of a candidate would otherwise share its gaps and make it
-    look crowded. Then front by front, and within a front by crowding
-    distance with the extremes first. A candidate with any constraint
-    violated is never picked, nor one whose identity is in ``exclude`` (a
-    baseline, say), though both still shape the fronts they sit in.
+    look crowded. Its first copy stands for it, and copies are expected to
+    share their evaluation (a deterministic evaluator, or one caching by
+    identity); a candidate any of whose copies violates a constraint counts
+    as infeasible. Only feasible candidates are ranked: front by front, and
+    within a front by crowding distance with the extremes first. One whose
+    identity is in ``exclude`` (a baseline, say) is ranked, so it shapes the
+    fronts it sits in, but never picked.
 
     Args:
         individuals: Evaluated candidates, e.g. a final population.
@@ -254,12 +257,19 @@ def pick_distinct(
         The picked candidates, best first; fewer than ``count`` when fewer
         distinct feasible candidates exist.
     """
+    if count <= 0:
+        return []
     key = identity or (lambda genome: genome)
     distinct: dict[Hashable, Individual[G]] = {}
+    infeasible: set[Hashable] = set()
     for ind in individuals:
-        if ind.fitness is not None and ind.fitness.is_feasible:
-            distinct.setdefault(key(ind.genome), ind)
-    keys = list(distinct)
+        if ind.fitness is None:
+            continue
+        k = key(ind.genome)
+        distinct.setdefault(k, ind)
+        if not ind.fitness.is_feasible:
+            infeasible.add(k)
+    keys = [k for k in distinct if k not in infeasible]
     pool = [distinct[k] for k in keys]
     fitnesses = ranker.ranking_fitnesses(pool)
     picked: list[Individual[G]] = []
