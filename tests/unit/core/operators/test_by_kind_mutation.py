@@ -225,6 +225,34 @@ class TestActivity:
         for length in (256, 512, 1024):
             assert _within(got[length], total, 1 / 3), got
 
+    @pytest.mark.parametrize("relative", [False, True])
+    def test_a_subset_keeps_its_choices_when_its_parent_changes(self, relative: bool) -> None:
+        # Each position says whether one choice is in, under any parent value,
+        # so only the one flip the subset's own mutation makes may differ.
+        if relative:
+            parent = ParameterSpec(path="p", param_type="subset", choices=("x", "y", "z"))
+            child = ParameterSpec(
+                path="s", param_type="subset", choices=("x", "y", "z"), parent="p"
+            )
+            start = (0.75, 0.75, 0.75)
+        else:
+            parent = ParameterSpec(path="p", param_type="categorical", choices=("a", "b"))
+            child = ParameterSpec(
+                path="s",
+                param_type="subset",
+                choices=("x", "y", "z"),
+                parent="p",
+                choices_by_parent={"a": ("x", "y"), "b": ("x", "y", "z")},
+            )
+            start = (0.25,)
+        op = _op((parent, child), discrete_rate=1.0)
+        rng = Random(0)
+        positions = (*start, 0.75, 0.25, 0.75)
+        for _ in range(500):
+            genes = op.mutate(_genome(*positions), rng).genes.tolist()
+            subset = genes[len(start) :]
+            assert sum(a != b for a, b in zip(subset, positions[len(start) :])) <= 1
+
     def test_a_gene_still_active_under_its_parents_new_value_keeps_its_meaning(self) -> None:
         parent = ParameterSpec(path="p", param_type="categorical", choices=("x", "y", "z"))
         child = ParameterSpec(path="c", bounds=(0.0, 1.0), parent="p", active_values=("x", "y"))
