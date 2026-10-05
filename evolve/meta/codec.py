@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from graphlib import CycleError, TopologicalSorter
 from typing import TYPE_CHECKING, Any
 
@@ -205,6 +205,113 @@ class ParameterDecoder:
         """Each active parameter's decoded value, by its dot path (not nested),
         from genome positions as decode() reads them."""
         return _values(vector, self.specs, self._order, self._dimensions)
+
+
+def parameter_decoder_of(decoder: Any, user: str) -> ParameterDecoder:
+    """
+    The ParameterDecoder a decoder is, or exposes as ``parameter_decoder``.
+
+    For operators and distances that read the gene kinds of a declared
+    decoder, which the factory hands them.
+
+    Args:
+        decoder: The declared decoder (or None).
+        user: What needs it, for the refusal, e.g. "mutation 'by_kind'".
+
+    Raises:
+        ValueError: If neither holds a ParameterDecoder.
+    """
+    found = (
+        decoder
+        if isinstance(decoder, ParameterDecoder)
+        else getattr(decoder, "parameter_decoder", None)
+    )
+    if not isinstance(found, ParameterDecoder):
+        raise ValueError(
+            f"{user} needs a decoder built on ParameterDecoder: declare one as "
+            "UnifiedConfig.decoder, such as 'parameters'"
+        )
+    return found
+
+
+@dataclass
+class ParameterDistance:
+    """
+    Gower distance between two genomes' decoded parameter values.
+
+    Registry name ``"parameters"`` in the ``"distance"`` category; the factory
+    passes the declared decoder (a ParameterDecoder, or one exposing it as
+    ``parameter_decoder``). The distance is the mean, over every gene active
+    in either genome, of a difference on [0, 1]:
+
+    - continuous and integer: the gap as a share of the range, compared as
+      logarithms for a log-scale continuous;
+    - categorical: 0 when equal, else 1;
+    - subset: Jaccard distance, 0 when both are empty;
+    - a gene active in only one of the two: 1.
+
+    Genomes that decode to the same values are at 0, whatever their positions.
+    """
+
+    decoder: Any = field(default=None, repr=False)
+
+    def __post_init__(self) -> None:
+        """Find the parameter decoder."""
+        self._parameters = parameter_decoder_of(self.decoder, "distance 'parameters'")
+        self._decoded: dict[bytes, dict[str, Any]] = {}
+
+    def __call__(self, a: VectorGenome, b: VectorGenome) -> float:
+        """Gower distance between the two genomes' decoded values."""
+        return gower(self._parameters.specs, self._values(a), self._values(b))
+
+    def _values(self, genome: VectorGenome) -> dict[str, Any]:
+        """Decoded values, once per distinct genome: a pairwise pass meets each n times."""
+        key = genome.genes.tobytes()
+        if key not in self._decoded:
+            # ponytail: a whole-run cache, emptied when it grows large; scope it
+            # to a generation if runs breed far more distinct genomes than this
+            if len(self._decoded) >= 100_000:
+                self._decoded.clear()
+            self._decoded[key] = self._parameters.values(genome.genes.tolist())
+        return self._decoded[key]
+
+
+def gower(specs: Sequence[ParameterSpec], a: dict[str, Any], b: dict[str, Any]) -> float:
+    """
+    Gower distance between two sets of decoded values by path (see ParameterDistance).
+
+    Args:
+        specs: The parameter specifications the values were decoded with.
+        a: One candidate's active values by path, as ParameterDecoder.values() gives.
+        b: The other's.
+
+    Returns:
+        The mean per-gene difference on [0, 1]; 0 when no gene is active in either.
+    """
+    total = 0.0
+    count = 0
+    for spec in specs:
+        in_a, in_b = spec.path in a, spec.path in b
+        if not (in_a or in_b):
+            continue
+        count += 1
+        if in_a != in_b:
+            total += 1.0
+            continue
+        x, y = a[spec.path], b[spec.path]
+        if spec.param_type == "categorical":
+            total += float(x != y)
+        elif spec.param_type == "subset":
+            union = set(x) | set(y)
+            total += 1.0 - len(set(x) & set(y)) / len(union) if union else 0.0
+        else:
+            assert spec.bounds is not None
+            lo, hi = spec.bounds
+            if hi > lo:
+                if spec.param_type == "continuous" and spec.log_scale:
+                    x, y, lo, hi = (math.log(v) for v in (x, y, lo, hi))
+                total += abs(x - y) / (hi - lo)
+    return total / count if count else 0.0
 
 
 def decode_value(
