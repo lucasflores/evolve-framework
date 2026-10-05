@@ -67,6 +67,64 @@ class DatasetConfig:
 
 
 @dataclass(frozen=True)
+class ClearingConfig:
+    """
+    Clearing in multi-objective survival: how many near-copies may survive.
+
+    Candidates within ``closeness`` of a better-ranked one form a group, and
+    only ``copies`` of each group compete for places; the rest fill only the
+    places the groups can't. Each generation logs its groups. See
+    ``EvolutionEngine`` and ``clear()``.
+
+    Attributes:
+        copies: Survivors per group; None (the default) holds nothing back,
+            so the groups are only measured and logged and the run is as
+            without clearing.
+        closeness: Largest distance that counts as a copy; 0 groups exact
+            copies.
+        distance: A name in the operator registry's "distance" category;
+            None takes the genome type's default, "neat" for graphs and
+            "genome" (the genome's own distance) otherwise.
+        distance_params: Parameters for the distance. One whose constructor
+            names ``decoder`` receives the declared decoder, as "parameters"
+            (Gower distance over decoded values) does.
+    """
+
+    copies: int | None = None
+    closeness: float = 0.0
+    distance: str | None = None
+    distance_params: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        """Refuse settings clearing cannot run with."""
+        if self.copies is not None and self.copies < 1:
+            raise ValueError(f"clearing copies must be at least 1 (or None), got {self.copies}")
+        if self.closeness < 0:
+            raise ValueError(f"clearing closeness must be non-negative, got {self.closeness}")
+        if self.distance is not None and not self.distance:
+            raise ValueError("clearing distance must be a non-empty name when set")
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to JSON-serializable dict."""
+        return {
+            "copies": self.copies,
+            "closeness": self.closeness,
+            "distance": self.distance,
+            "distance_params": dict(self.distance_params),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ClearingConfig:
+        """Create from dict; a missing key takes its default."""
+        return cls(
+            copies=data.get("copies"),
+            closeness=data.get("closeness", 0.0),
+            distance=data.get("distance"),
+            distance_params=data.get("distance_params") or {},
+        )
+
+
+@dataclass(frozen=True)
 class UnifiedConfig:
     """
     Complete experiment specification.
@@ -110,6 +168,7 @@ class UnifiedConfig:
         meta: Meta-evolution settings (enables outer loop when present).
         tracking: Tracking configuration for experiment observability.
         merge: Symbiogenetic merge settings (enables merge phase when present).
+        clearing: Clearing in multi-objective survival (off when absent).
         training_data: Training dataset reference for MLflow logging.
         validation_data: Validation dataset reference for MLflow logging.
 
@@ -262,6 +321,9 @@ class UnifiedConfig:
     merge: MergeConfig | None = None
     """Symbiogenetic merge settings (enables merge phase when present)."""
 
+    clearing: ClearingConfig | None = None
+    """Clearing in multi-objective survival (off when absent)."""
+
     training_data: DatasetConfig | None = None
     """Training dataset configuration for MLflow logging."""
 
@@ -412,6 +474,9 @@ class UnifiedConfig:
         result["meta"] = self.meta.to_dict() if self.meta else None
         result["tracking"] = self.tracking.to_dict() if self.tracking else None
         result["merge"] = self.merge.to_dict() if self.merge else None
+        # Omitted when off, so a config and its tracked params read as before
+        if self.clearing is not None:
+            result["clearing"] = self.clearing.to_dict()
         result["training_data"] = self.training_data.to_dict() if self.training_data else None
         result["validation_data"] = self.validation_data.to_dict() if self.validation_data else None
 
@@ -465,6 +530,11 @@ class UnifiedConfig:
         if data.get("merge"):
             merge = MergeConfig.from_dict(data["merge"])
 
+        # An empty section is clearing at its defaults (measuring only), not off
+        clearing = None
+        if data.get("clearing") is not None:
+            clearing = ClearingConfig.from_dict(data["clearing"])
+
         training_data = None
         if data.get("training_data"):
             training_data = DatasetConfig.from_dict(data["training_data"])
@@ -517,6 +587,7 @@ class UnifiedConfig:
             meta=meta,
             tracking=tracking,
             merge=merge,
+            clearing=clearing,
             training_data=training_data,
             validation_data=validation_data,
         )
@@ -775,3 +846,30 @@ class UnifiedConfig:
             tracking = tracking.with_category(MetricCategory.SYMBIOGENESIS)
 
         return replace(self, merge=merge, tracking=tracking)
+
+    def with_clearing(
+        self,
+        copies: int | None = None,
+        closeness: float = 0.0,
+        distance: str | None = None,
+        distance_params: dict[str, Any] | None = None,
+    ) -> UnifiedConfig:
+        """
+        Create a copy with clearing in multi-objective survival.
+
+        Args:
+            copies: Survivors per group of near-copies; None only measures.
+            closeness: Largest distance that counts as a copy.
+            distance: Distance name; None takes the genome type's default.
+            distance_params: Parameters for the distance.
+
+        Returns:
+            New UnifiedConfig with clearing set.
+        """
+        clearing = ClearingConfig(
+            copies=copies,
+            closeness=closeness,
+            distance=distance,
+            distance_params=dict(distance_params or {}),
+        )
+        return replace(self, clearing=clearing)
