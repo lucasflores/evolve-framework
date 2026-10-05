@@ -192,9 +192,19 @@ class ParameterDecoder:
         """Get total number of genome dimensions."""
         return self._dimensions
 
+    @property
+    def order(self) -> tuple[ParameterSpec, ...]:
+        """The specs, parents before the specs that depend on them."""
+        return self._order
+
     def decode(self, genome: VectorGenome) -> dict[str, Any]:
         """Decode the genome's genes as decode_parameters() does."""
-        return _decode(genome.genes.tolist(), self.specs, self._order, self._dimensions)
+        return _nest(self.specs, self.values(genome.genes.tolist()))
+
+    def values(self, vector: Sequence[float]) -> dict[str, Any]:
+        """Each active parameter's decoded value, by its dot path (not nested),
+        from genome positions as decode() reads them."""
+        return _values(vector, self.specs, self._order, self._dimensions)
 
 
 def decode_value(
@@ -288,16 +298,45 @@ def decode_parameters(
         ValueError: If the specs are inconsistent or the vector length is wrong.
     """
     dimensions = sum(spec.num_dimensions for spec in specs)
-    return _decode(vector, specs, _dependency_order(specs), dimensions)
+    return _nest(specs, _values(vector, specs, _dependency_order(specs), dimensions))
 
 
-def _decode(
+def resolve(spec: ParameterSpec, values: dict[str, Any]) -> tuple[bool, Sequence[Any] | None]:
+    """
+    Whether a spec is active, and what it chooses from, given its parent's value.
+
+    Args:
+        spec: Parameter specification.
+        values: Decoded values of the active specs so far, by path; the
+            spec's parent, if any, must already have been decoded.
+
+    Returns:
+        (active, choices): ``choices`` is what ``decode_value`` takes, the
+        options for the parent's value or the part of a subset's choices it
+        may keep, or None when the spec's own choices apply.
+    """
+    if spec.parent is None:
+        return True, None
+    if spec.parent not in values:
+        return False, None  # parent inactive
+    parent_value = values[spec.parent]
+    if spec.active_values is not None and parent_value not in spec.active_values:
+        return False, None
+    if spec.choices_by_parent is not None:
+        choices = next((o for v, o in spec.choices_by_parent if v == parent_value), None)
+        return choices is not None, choices
+    if spec.is_relative:
+        return True, parent_value
+    return True, None
+
+
+def _values(
     vector: Sequence[float],
     specs: Sequence[ParameterSpec],
     order: Sequence[ParameterSpec],
     dimensions: int,
 ) -> dict[str, Any]:
-    """decode_parameters() for specs already validated and ordered parents first."""
+    """Active specs' values by path, for specs already validated and ordered parents first."""
     if len(vector) != dimensions:
         raise ValueError(f"Expected vector of length {dimensions}, got {len(vector)}")
 
@@ -309,22 +348,14 @@ def _decode(
 
     values: dict[str, Any] = {}
     for spec in order:
-        choices = None
-        parent_value: Any = None
-        if spec.parent is not None:
-            if spec.parent not in values:
-                continue  # parent inactive
-            parent_value = values[spec.parent]
-            if spec.active_values is not None and parent_value not in spec.active_values:
-                continue
-            if spec.choices_by_parent is not None:
-                choices = next((o for v, o in spec.choices_by_parent if v == parent_value), None)
-                if choices is None:
-                    continue
-            elif spec.is_relative:
-                choices = parent_value
-        values[spec.path] = decode_value(spec, positions[spec.path], choices)
+        active, choices = resolve(spec, values)
+        if active:
+            values[spec.path] = decode_value(spec, positions[spec.path], choices)
+    return values
 
+
+def _nest(specs: Sequence[ParameterSpec], values: dict[str, Any]) -> dict[str, Any]:
+    """Values by dot path as a nested dict, in ``specs`` order."""
     decoded: dict[str, Any] = {}
     for spec in specs:
         if spec.path in values:
