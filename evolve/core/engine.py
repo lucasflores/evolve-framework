@@ -23,7 +23,7 @@ from uuid import uuid4
 
 import numpy as np
 
-from evolve.core.callbacks import Callback
+from evolve.core.callbacks import Callback, notify_error
 from evolve.core.operators.selection import check_selection_direction
 from evolve.core.population import Population
 from evolve.core.stopping import (
@@ -267,6 +267,15 @@ class EvolutionEngine(Generic[G]):
         """
         Execute full evolution run.
 
+        The evaluator's ``on_run_start()``, if it has one, runs once after the
+        callbacks' own ``on_run_start`` (so tracking is live) and before the
+        first evaluation, in this thread: the place for work a run must do
+        once every component is built and checked, such as opening a search
+        that can't be undone. If anything fails from the callbacks'
+        ``on_run_start`` on, each callback's ``on_error`` is called (the
+        tracking callback ends its run as failed) and the error is re-raised
+        unchanged.
+
         Args:
             initial_population: Starting population
             callbacks: Optional event callbacks
@@ -285,10 +294,22 @@ class EvolutionEngine(Generic[G]):
         if hasattr(self.stopping, "reset"):
             self.stopping.reset()
 
+        try:
+            return self._run(initial_population)
+        except BaseException as error:
+            notify_error(self._callbacks, error)
+            raise
+
+    def _run(self, initial_population: Population[G]) -> EvolutionResult[G]:
+        """run() from the callbacks' on_run_start to the result."""
         # Notify run start
         for cb in self._callbacks:
             if hasattr(cb, "on_run_start"):
                 cb.on_run_start(self.config)
+
+        start = getattr(self.evaluator, "on_run_start", None)
+        if callable(start):
+            start()
 
         # Evaluate initial population
         population = self._evaluate_population(initial_population)
