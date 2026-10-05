@@ -442,6 +442,98 @@ def _leaves(node: Any) -> list[int]:
     return [1]
 
 
+EPOCHS = ParameterSpec(path="train.epochs", param_type="integer", bounds=(1, 5))
+RATE = ParameterSpec(path="train.rate", bounds=(1e-4, 1e-1), log_scale=True)
+
+
+class TestEncode:
+    """ParameterDecoder.encode(): the genome that decodes to given values."""
+
+    SPECS = (*TestParameterDecoderValidatesOnce.SPECS, EPOCHS, RATE)
+
+    def test_decoding_what_was_encoded_gives_the_values_back(self) -> None:
+        decoder = ParameterDecoder(self.SPECS)
+        rng = np.random.default_rng(3)
+        for _ in range(200):
+            values = decoder.decode(VectorGenome(genes=rng.uniform(0, 1, decoder.dimensions)))
+            again = decoder.decode(VectorGenome(genes=np.array(decoder.encode(values))))
+            rate = again["train"].pop("rate")
+            assert rate == pytest.approx(values["train"].pop("rate"), rel=1e-12)
+            assert again == values
+
+    def test_positions_sit_where_a_known_candidate_is_placed(self) -> None:
+        decoder = ParameterDecoder((POLICY, THRESHOLD, EPOCHS, TRAINING, RATE))
+        genome = decoder.encode(
+            {
+                "holding": {"policy": "hold"},
+                "train": {"epochs": 2, "rate": 1e-3},
+                "training_pool": ["a", "c"],
+            }
+        )
+        # policy mid-bin; threshold inactive at 0.5; epochs at its own point;
+        # subset choices at 0.75 in, 0.25 out; rate a third of the way in logs
+        assert genome[:6] == [0.25, 0.5, 0.25, 0.75, 0.25, 0.75]
+        assert genome[6] == pytest.approx(1 / 3)
+
+    def test_options_follow_the_parents_value(self) -> None:
+        decoder = ParameterDecoder((ENCODER, READING_LENGTH))
+        assert decoder.encode({"encoder": {"name": "bge", "reading_length": 256}}) == [
+            pytest.approx(1 / 6),
+            0.5,
+        ]
+
+    @pytest.mark.parametrize(
+        ("values", "match"),
+        [
+            ({"holding": {}}, "'holding.policy' is active and has no value"),
+            (
+                {"holding": {"policy": "hold", "switch_threshold": 0.5}},
+                "'holding.switch_threshold' is inactive",
+            ),
+            ({"holding": {"policy": "hold"}, "extra": 1}, r"no parameter: \['extra'\]"),
+            ({"holding": {"policy": "sell"}}, "'sell' isn't one of"),
+        ],
+    )
+    def test_values_no_genome_decodes_to_are_refused(self, values: dict, match: str) -> None:
+        with pytest.raises(ValueError, match=match):
+            ParameterDecoder((POLICY, THRESHOLD)).encode(values)
+
+    @pytest.mark.parametrize(
+        ("value", "match"),
+        [(0, "outside 1..5"), (6, "outside 1..5"), (2.5, "whole number"), (True, "whole number")],
+    )
+    def test_an_integer_must_be_one_it_can_take(self, value: object, match: str) -> None:
+        with pytest.raises(ValueError, match=match):
+            ParameterDecoder((EPOCHS,)).encode({"train": {"epochs": value}})
+
+    def test_a_number_outside_its_bounds_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="outside"):
+            ParameterDecoder((RATE,)).encode({"train": {"rate": 0.5}})
+
+    def test_an_option_closed_under_the_parents_value_is_refused(self) -> None:
+        # "e5" offers only 512
+        with pytest.raises(ValueError, match=r"128 isn't one of \[512\]"):
+            ParameterDecoder((ENCODER, READING_LENGTH)).encode(
+                {"encoder": {"name": "e5", "reading_length": 128}}
+            )
+
+    def test_subset_choices_must_be_its_own_and_allowed_by_its_parent(self) -> None:
+        decoder = ParameterDecoder((TRAINING, SERVING))
+        with pytest.raises(ValueError, match=r"\['z'\] aren't among its choices"):
+            decoder.encode({"training_pool": ["a", "z"], "serving_pool": []})
+        # serving may only keep what training holds
+        with pytest.raises(ValueError, match=r"\['c'\] aren't allowed by its parent"):
+            decoder.encode({"training_pool": ["a", "b"], "serving_pool": ["a", "c"]})
+        assert decoder.encode({"training_pool": ["a", "b"], "serving_pool": ["b"]}) == [
+            0.75,
+            0.75,
+            0.25,
+            0.25,
+            0.75,
+            0.25,
+        ]
+
+
 class TestRegisteredDecoder:
     """The "parameters" built-in decoder."""
 

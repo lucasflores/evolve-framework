@@ -9,7 +9,7 @@ vector genome against parameter specs into a plain nested dict.
 from __future__ import annotations
 
 import math
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import lru_cache
 from graphlib import CycleError, TopologicalSorter
@@ -202,10 +202,96 @@ class ParameterDecoder:
         """Decode the genome's genes as decode_parameters() does."""
         return _nest(self.specs, self.values(genome.genes.tolist()))
 
+    def encode(self, values: Mapping[str, Any]) -> list[float]:
+        """
+        Genome positions on [0, 1] that decode to ``values``: decode()'s inverse.
+
+        For placing a known candidate in a search, such as its baseline.
+        ``values`` is a nested dict as decode() returns it: exactly the active
+        parameters, each with a value it can take under its parent's value.
+
+        Positions: a categorical at the middle of its option's bin, a number
+        at its own position (on the log scale where declared), a subset choice
+        at 0.75 when in and 0.25 when out, and every position of an inactive
+        parameter at 0.5, where it has no effect.
+
+        Raises:
+            ValueError: For values no genome decodes to: an active parameter
+                with no value, a value for an inactive parameter or for none
+                at all, a number out of its bounds or an integer that isn't a
+                whole number, an option not open under the parent's value, or
+                a subset choice the parameter or its parent doesn't allow.
+        """
+        paths = {spec.path for spec in self.specs}
+        given = _leaves(values, paths)
+        unknown = sorted(set(given) - paths)
+        if unknown:
+            raise ValueError(f"values for no parameter: {unknown}")
+
+        decoded: dict[str, Any] = {}
+        positions: dict[str, list[float]] = {}
+        for spec in self._order:
+            active, choices = resolve(spec, decoded)
+            if not active:
+                if spec.path in given:
+                    raise ValueError(
+                        f"'{spec.path}' is inactive under its parent's value, so takes no value"
+                    )
+                positions[spec.path] = [0.5] * spec.num_dimensions
+                continue
+            if spec.path not in given:
+                raise ValueError(f"'{spec.path}' is active and has no value")
+            positions[spec.path] = _encode_value(spec, given[spec.path], choices)
+            decoded[spec.path] = given[spec.path]
+        return [p for spec in self.specs for p in positions[spec.path]]
+
     def values(self, vector: Sequence[float]) -> dict[str, Any]:
         """Each active parameter's decoded value, by its dot path (not nested),
         from genome positions as decode() reads them."""
         return _values(vector, self.specs, self._order, self._dimensions)
+
+
+def _leaves(node: Mapping[str, Any], paths: set[str], prefix: str = "") -> dict[str, Any]:
+    """A nested dict's values by dot path, stopping at parameter paths."""
+    found: dict[str, Any] = {}
+    for key, value in node.items():
+        path = f"{prefix}.{key}" if prefix else str(key)
+        if path in paths or not isinstance(value, Mapping):
+            found[path] = value
+        else:
+            found.update(_leaves(value, paths, path))
+    return found
+
+
+def _encode_value(spec: ParameterSpec, value: Any, choices: Sequence[Any] | None) -> list[float]:
+    """One active parameter's positions for ``value``; decode_value()'s inverse."""
+    if spec.param_type == "subset":
+        assert spec.choices is not None
+        stray = [c for c in value if c not in spec.choices]
+        if stray:
+            raise ValueError(f"'{spec.path}': {stray} aren't among its choices")
+        barred = [c for c in value if choices is not None and c not in choices]
+        if barred:
+            raise ValueError(f"'{spec.path}': {barred} aren't allowed by its parent's value")
+        return [0.75 if c in value else 0.25 for c in spec.choices]
+
+    if spec.param_type == "categorical":
+        options = list(choices if choices is not None else spec.choices or ())
+        if value not in options:
+            raise ValueError(f"'{spec.path}': {value!r} isn't one of {options}")
+        return [(options.index(value) + 0.5) / len(options)]
+
+    assert spec.bounds is not None
+    lo, hi = spec.bounds
+    if spec.param_type == "integer" and (isinstance(value, bool) or not isinstance(value, int)):
+        raise ValueError(f"'{spec.path}': {value!r} isn't a whole number")
+    if isinstance(value, bool) or not isinstance(value, int | float) or not lo <= value <= hi:
+        raise ValueError(f"'{spec.path}': {value!r} is outside {lo:g}..{hi:g}")
+    if hi == lo:
+        return [0.5]
+    if spec.param_type == "continuous" and spec.log_scale:
+        return [(math.log(value) - math.log(lo)) / (math.log(hi) - math.log(lo))]
+    return [(value - lo) / (hi - lo)]
 
 
 def parameter_decoder_of(decoder: Any, user: str) -> ParameterDecoder:
