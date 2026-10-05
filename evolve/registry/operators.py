@@ -219,6 +219,7 @@ def _register_builtin_operators(registry: OperatorRegistry) -> None:
         UniformCrossover,
     )
     from evolve.core.operators.mutation import (
+        ByKindMutation,
         CreepMutation,
         GaussianMutation,
         NEATMutation,
@@ -317,6 +318,12 @@ def _register_builtin_operators(registry: OperatorRegistry) -> None:
         "mutation",
         "uniform",
         UniformMutation,
+        compatible_genomes={"vector"},
+    )
+    registry.register(
+        "mutation",
+        "by_kind",
+        ByKindMutation,
         compatible_genomes={"vector"},
     )
     registry.register(

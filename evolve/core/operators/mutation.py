@@ -3,7 +3,7 @@ Mutation operators - Modify individual genomes.
 
 Registry names (for ``UnifiedConfig(mutation=...)``)::
 
-    "gaussian", "uniform", "polynomial"
+    "gaussian", "uniform", "polynomial", "creep", "by_kind"
 
 Mutation operators MUST:
 - Accept explicit RNG for determinism
@@ -13,9 +13,9 @@ Mutation operators MUST:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from random import Random
-from typing import TYPE_CHECKING, Protocol, TypeVar, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 
 import numpy as np
 
@@ -100,6 +100,162 @@ class GaussianMutation:
             mutated = mutated.clip_to_bounds()
 
         return mutated
+
+
+@dataclass
+class ByKindMutation:
+    """
+    Mutation that moves each gene of a parameter genome by its kind.
+
+    For a VectorGenome decoded by a ``ParameterDecoder`` (positions on
+    [0, 1]). Under Gaussian mutation a discrete gene changes only when a
+    nudge crosses a bin boundary, which from mid-bin is rare; here each
+    active gene changes with exactly its rate, wherever it sits:
+
+    - continuous: a Gaussian nudge of ``sigma``, clipped to the genome's bounds;
+    - integer: at least one step, ``round(|N(0, sigma * range)|)`` steps in a
+      random direction, turning back at a bound;
+    - categorical: a different option, uniformly, among those open under its
+      parent's value;
+    - subset: one choice its parent allows flips in or out.
+
+    A gene with only one possible value is left alone and draws nothing. An
+    inactive gene keeps its positions. A gene whose parent just changed is
+    re-drawn uniformly if it has just become active, or if it is a
+    categorical whose options follow that parent: its old position means
+    nothing under the new value.
+
+    Registry name ``"by_kind"``; the factory passes the declared decoder.
+
+    Attributes:
+        decoder: A ``ParameterDecoder``, or a decoder exposing one as
+            ``parameter_decoder``.
+        mutation_rate: Chance per continuous gene (default 0.1, as GaussianMutation).
+        discrete_rate: Chance per integer, categorical or subset gene
+            (default: ``mutation_rate``).
+        sigma: Standard deviation of a continuous nudge, in genome units; an
+            integer's step uses it scaled by the integer's range.
+    """
+
+    decoder: Any = field(default=None, repr=False)
+    mutation_rate: float = 0.1
+    discrete_rate: float | None = None
+    sigma: float = 0.1
+
+    def __post_init__(self) -> None:
+        """Find the parameter decoder; check the settings."""
+        from evolve.meta.codec import ParameterDecoder
+
+        parameters = (
+            self.decoder
+            if isinstance(self.decoder, ParameterDecoder)
+            else getattr(self.decoder, "parameter_decoder", None)
+        )
+        if not isinstance(parameters, ParameterDecoder):
+            raise ValueError(
+                "mutation 'by_kind' needs a decoder built on ParameterDecoder: declare "
+                "one as UnifiedConfig.decoder, such as 'parameters'"
+            )
+        self._discrete_rate: float = (
+            self.mutation_rate if self.discrete_rate is None else self.discrete_rate
+        )
+        self.discrete_rate = self._discrete_rate
+        for name in ("mutation_rate", "discrete_rate"):
+            if not 0.0 <= getattr(self, name) <= 1.0:
+                raise ValueError(f"{name} must be in [0, 1]")
+        if self.sigma < 0.0:
+            raise ValueError("sigma must be non-negative")
+        self._parameters = parameters
+        self._starts: dict[str, int] = {}
+        start = 0
+        for spec in parameters.specs:
+            self._starts[spec.path] = start
+            start += spec.num_dimensions
+
+    def mutate(
+        self,
+        genome: VectorGenome,
+        rng: Random,
+    ) -> VectorGenome:
+        """Mutate each active gene by its kind, parents before their dependents."""
+        from evolve.meta.codec import decode_value, resolve
+        from evolve.representation.vector import VectorGenome
+
+        genes = genome.genes.copy()
+        before = self._parameters.values(genome.genes.tolist())
+        after: dict[str, Any] = {}
+        changed: set[str] = set()
+        for spec in self._parameters.order:
+            active, choices = resolve(spec, after)
+            if not active:
+                continue
+            start = self._starts[spec.path]
+            end = start + spec.num_dimensions
+            was_active = spec.path in before
+            follows_parent = spec.param_type == "categorical" and spec.choices_by_parent is not None
+            if spec.parent in changed and (not was_active or follows_parent):
+                for i in range(start, end):
+                    genes[i] = rng.random()
+            elif _can_move(spec, choices):
+                rate = (
+                    self.mutation_rate if spec.param_type == "continuous" else self._discrete_rate
+                )
+                if rng.random() < rate:
+                    self._move(spec, choices, genes, start, genome.bounds, rng)
+            value = decode_value(spec, genes[start:end].tolist(), choices)
+            after[spec.path] = value
+            if not was_active or value != before[spec.path]:
+                changed.add(spec.path)
+
+        return VectorGenome(genes=genes, bounds=genome.bounds)
+
+    def _move(
+        self,
+        spec: Any,
+        choices: Any,
+        genes: np.ndarray,
+        start: int,
+        bounds: tuple[np.ndarray, np.ndarray] | None,
+        rng: Random,
+    ) -> None:
+        """Change one gene's positions in place to a different value."""
+        from evolve.meta.codec import decode_value
+
+        if spec.param_type == "continuous":
+            genes[start] += rng.gauss(0, self.sigma)
+            if bounds is not None:
+                genes[start] = min(max(genes[start], bounds[0][start]), bounds[1][start])
+        elif spec.param_type == "integer":
+            lo, hi = int(spec.bounds[0]), int(spec.bounds[1])
+            value = decode_value(spec, [genes[start]])
+            step = max(1, round(abs(rng.gauss(0, self.sigma * (hi - lo)))))
+            direction = 1 if rng.random() < 0.5 else -1
+            new = min(hi, max(lo, value + direction * step))
+            if new == value:  # at a bound: turn back
+                new = min(hi, max(lo, value - direction * step))
+            genes[start] = (new - lo) / (hi - lo)
+        elif spec.param_type == "categorical":
+            k = len(spec.choices if choices is None else choices)
+            # The option's index as decode_value() reads it
+            index = min(int(min(1.0, max(0.0, genes[start])) * k), k - 1)
+            new = rng.randrange(k - 1)
+            new += new >= index
+            genes[start] = (new + 0.5) / k
+        else:  # subset: one allowed choice flips
+            allowed = [i for i, c in enumerate(spec.choices) if choices is None or c in choices]
+            i = start + rng.choice(allowed)
+            genes[i] = 0.25 if genes[i] >= 0.5 else 0.75
+
+
+def _can_move(spec: Any, choices: Any) -> bool:
+    """Whether a gene has a value other than its current one to move to."""
+    if spec.param_type == "subset":
+        return any(choices is None or c in choices for c in spec.choices)
+    if spec.param_type == "categorical":
+        return len(spec.choices if choices is None else choices) > 1
+    if spec.param_type == "integer":
+        return int(spec.bounds[1]) > int(spec.bounds[0])
+    return bool(spec.bounds[1] > spec.bounds[0])
 
 
 @dataclass
