@@ -75,3 +75,10 @@ def test_a_candidate_with_an_infeasible_copy_is_infeasible() -> None:
     # Noisy copies of "a": one evaluation broke a constraint, so "a" isn't picked
     individuals = [_ind("a", (0, 2), (0.5,)), _ind("a", (0, 2)), _ind("b", (2, 0))]
     assert _labels(pick_distinct(individuals, MINIMIZE_BOTH, 3)) == ["b"]
+
+
+def test_in_penalty_mode_the_penalised_ranking_decides() -> None:
+    # Every candidate slightly breaks its constraint: soft under penalty weights
+    ranker = NSGA2Selector(directions=("minimize", "minimize"), penalty_weights=(1.0,))
+    individuals = [_ind("a", (0, 2), (0.01,)), _ind("b", (2, 0), (0.01,))]
+    assert sorted(_labels(pick_distinct(individuals, ranker, 2))) == ["a", "b"]

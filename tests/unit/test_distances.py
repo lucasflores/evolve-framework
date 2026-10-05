@@ -101,6 +101,24 @@ class TestParameterDistance:
         distance(a, b)
         assert Folding.calls == 3  # once per distinct genome
 
+    def test_folded_copies_are_one_point_for_everyone_else(self) -> None:
+        cont = ParameterSpec(path="x", bounds=(0.0, 1.0))
+
+        class Folding(ParameterDecoder):
+            calls = 0
+
+            def identity(self, genome: VectorGenome) -> str:
+                Folding.calls += 1
+                return "low" if genome.genes[0] < 0.5 else str(genome.genes[0])
+
+        distance = ParameterDistance(decoder=Folding((cont,)))
+        a, b, c = _v(0.1), _v(0.3), _v(0.9)
+        assert distance(a, b) == 0.0
+        assert distance(a, c) == distance(b, c)
+        # Identity is computed once per set of positions, not per genome object
+        distance(_v(0.1), _v(0.3))
+        assert Folding.calls == 3
+
     def test_a_subclass_with_its_own_identity_is_honoured(self) -> None:
         class Folding(ParameterDecoder):
             def identity(self, genome: VectorGenome) -> str:

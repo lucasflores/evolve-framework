@@ -512,6 +512,17 @@ class TestEncode:
         with pytest.raises(ValueError, match=match):
             ParameterDecoder((EPOCHS,)).encode({"train": {"epochs": value}})
 
+    @pytest.mark.parametrize("value", [True, 1.0])
+    def test_a_categorical_takes_its_option_not_an_equal_of_another_kind(
+        self, value: object
+    ) -> None:
+        decoder = ParameterDecoder(
+            (ParameterSpec(path="k", param_type="categorical", choices=(1, 2)),)
+        )
+        with pytest.raises(ValueError, match="isn't one of"):
+            decoder.encode({"k": value})
+        assert decoder.encode({"k": np.int64(1)}) == [0.25]
+
     def test_numpy_numbers_are_numbers(self) -> None:
         decoder = ParameterDecoder((EPOCHS, RATE))
         genome = decoder.encode({"train": {"epochs": np.int64(3), "rate": np.float32(1e-3)}})
@@ -574,6 +585,14 @@ class TestIdentity:
             path="arch",
             param_type="categorical",
             choices=({"kind": "lstm", "sizes": [64, 32]}, [1, [2]]),
+        )
+        decoder = ParameterDecoder((spec,))
+        a, b = (VectorGenome(genes=np.array([p])) for p in (0.2, 0.8))
+        assert len({decoder.identity(a), decoder.identity(b)}) == 2
+
+    def test_set_and_array_options_give_a_hashable_identity(self) -> None:
+        spec = ParameterSpec(
+            path="opt", param_type="categorical", choices=(frozenset({1, 2}), np.array([3, 4]))
         )
         decoder = ParameterDecoder((spec,))
         a, b = (VectorGenome(genes=np.array([p])) for p in (0.2, 0.8))

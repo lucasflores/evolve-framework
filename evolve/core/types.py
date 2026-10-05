@@ -46,7 +46,9 @@ class IndividualMetadata:
     age: int = 0
     parent_ids: tuple[UUID, ...] | None = None
     species_id: int | None = None
-    origin: str = "init"  # "init" | "crossover" | "mutation" | "migration" | "symbiogenetic_merge"
+    # "init" | "given" | "crossover" | "mutation" | "migration" | "immigration"
+    # | "symbiogenetic_merge"
+    origin: str = "init"
     source_strategy: str | None = None  # "cross_species" | "archive" (merge only)
 
 

@@ -790,8 +790,9 @@ def create_initial_population(
             VectorGenome or its positions (ParameterDecoder.encode()'s output);
             either way it gets the configured bounds, so its descendants are
             clipped like everyone else's, and one of the wrong length, outside
-            those bounds, or with other bounds is refused. Other genome types
-            are placed as given.
+            those bounds, with other bounds, or with positions that aren't
+            finite is refused. Other genome types must be the configured
+            genome's type, and are placed as given.
 
     Returns:
         Initial population.
@@ -834,6 +835,11 @@ def create_initial_population(
     for i, genome in enumerate(genomes):
         if config.genome_type == "vector":
             genome = _given_vector(i, genome, individuals[i].genome)
+        elif type(genome) is not type(individuals[i].genome):
+            raise ValueError(
+                f"given genome {i} is a {type(genome).__name__}; "
+                f"the genome is a {type(individuals[i].genome).__name__}"
+            )
         individuals[i] = Individual(
             genome=genome,
             fitness=None,
@@ -858,6 +864,8 @@ def _given_vector(index: int, given: Any, drawn: Any) -> Any:
     own = given.bounds if isinstance(given, VectorGenome) else None
     if own is not None and not (np.array_equal(own[0], lower) and np.array_equal(own[1], upper)):
         raise ValueError(f"given genome {index} has bounds other than the configured genome's")
+    if not np.all(np.isfinite(genes)):
+        raise ValueError(f"given genome {index} has positions that aren't finite numbers")
     if np.any(genes < lower) or np.any(genes > upper):
         raise ValueError(f"given genome {index} has positions outside the configured bounds")
     return VectorGenome(genes=genes, bounds=(lower.copy(), upper.copy()))
