@@ -83,6 +83,24 @@ class TestParameterDistance:
         assert (info.misses, info.hits) == (2, 8)
         assert info.maxsize == 10_000
 
+    def test_one_candidate_under_the_decoders_identity_is_at_zero(self) -> None:
+        # A decoder that folds enc "a" and "b" into one candidate, as a search's
+        # decoder may when several values make the same thing
+        class Folding:
+            parameter_decoder = ParameterDecoder((ENC,))
+            calls = 0
+
+            def identity(self, genome: VectorGenome) -> str:
+                Folding.calls += 1
+                return "ab" if genome.genes[0] < 0.5 else "cd"
+
+        distance = ParameterDistance(decoder=Folding())
+        a, b, c = _v(0.1), _v(0.3), _v(0.6)
+        assert distance(a, b) == 0.0  # "a" and "b": one candidate
+        assert distance(a, c) == 1.0  # different candidates: Gower
+        distance(a, b)
+        assert Folding.calls == 3  # once per distinct genome
+
     def test_takes_a_decoder_exposing_one(self) -> None:
         class Wrapper:
             parameter_decoder = ParameterDecoder((ENC,))

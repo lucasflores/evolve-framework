@@ -9,7 +9,7 @@ vector genome against parameter specs into a plain nested dict.
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping, Sequence
+from collections.abc import Hashable, Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import lru_cache
 from graphlib import CycleError, TopologicalSorter
@@ -245,6 +245,20 @@ class ParameterDecoder:
             decoded[spec.path] = given[spec.path]
         return [p for spec in self.specs for p in positions[spec.path]]
 
+    def identity(self, genome: VectorGenome) -> Hashable:
+        """
+        What makes two genomes one candidate: equal decoded values, exactly.
+
+        Positions inside one bin, and positions of inactive parameters, don't
+        count. A search's own decoder may define ``identity`` too, when several
+        values make one candidate; the "parameters" distance and the finalist
+        pick compare identities when the decoder has one.
+        """
+        values = self.values(genome.genes.tolist())
+        return tuple(
+            (path, tuple(v) if isinstance(v, list) else v) for path, v in sorted(values.items())
+        )
+
     def values(self, vector: Sequence[float]) -> dict[str, Any]:
         """Each active parameter's decoded value, by its dot path (not nested),
         from genome positions as decode() reads them."""
@@ -338,6 +352,10 @@ class ParameterDistance:
     - a gene active in only one of the two: 1.
 
     Genomes that decode to the same values are at 0, whatever their positions.
+    So are two genomes the declared decoder's ``identity`` calls one candidate,
+    when a decoder wrapping the ParameterDecoder defines one: a search whose
+    decoder makes one candidate of several values (scaled weights, say) groups
+    them as copies.
     """
 
     decoder: Any = field(default=None, repr=False)
@@ -346,13 +364,23 @@ class ParameterDistance:
         """Find the parameter decoder."""
         parameters = parameter_decoder_of(self.decoder, "distance 'parameters'")
         self._parameters = parameters
+        # A decoder wrapping a ParameterDecoder may fold several values into one
+        # candidate; its identity says which. Gower already puts equal values at 0.
+        identity = getattr(self.decoder, "identity", None)
+        self._identity = (
+            lru_cache(maxsize=10_000)(identity)
+            if callable(identity) and self.decoder is not parameters
+            else None
+        )
         # Decoded once per distinct genome, since a pairwise pass meets each one
         # many times; the most recent are kept, enough for a generation's pool.
         # ponytail: 10,000 genomes; raise it for pools larger than that
         self._values = lru_cache(maxsize=10_000)(lambda genes: parameters.values(list(genes)))
 
     def __call__(self, a: VectorGenome, b: VectorGenome) -> float:
-        """Gower distance between the two genomes' decoded values."""
+        """0 for one candidate under the decoder's identity, else Gower distance."""
+        if self._identity is not None and self._identity(a) == self._identity(b):
+            return 0.0
         return gower(
             self._parameters.specs,
             self._values(tuple(a.genes.tolist())),
