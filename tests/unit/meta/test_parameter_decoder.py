@@ -534,6 +534,24 @@ class TestEncode:
         ]
 
 
+class TestIdentity:
+    """ParameterDecoder.identity(): genomes that decode alike are one candidate."""
+
+    def test_genomes_decoding_alike_share_it(self) -> None:
+        decoder = ParameterDecoder((POLICY, THRESHOLD, TRAINING))
+        a = VectorGenome(genes=np.array([0.1, 0.9, 0.6, 0.2, 0.7]))
+        b = VectorGenome(genes=np.array([0.4, 0.1, 0.9, 0.0, 0.5]))  # threshold inactive
+        assert decoder.identity(a) == decoder.identity(b)
+        assert hash(decoder.identity(a)) == hash(decoder.identity(b))
+
+    def test_any_decoded_difference_separates_them(self) -> None:
+        decoder = ParameterDecoder((POLICY, THRESHOLD, TRAINING))
+        a = VectorGenome(genes=np.array([0.9, 0.3, 0.6, 0.2, 0.7]))
+        b = VectorGenome(genes=np.array([0.9, 0.3000001, 0.6, 0.2, 0.7]))
+        c = VectorGenome(genes=np.array([0.9, 0.3, 0.6, 0.6, 0.7]))
+        assert len({decoder.identity(g) for g in (a, b, c)}) == 3
+
+
 class TestRegisteredDecoder:
     """The "parameters" built-in decoder."""
 
