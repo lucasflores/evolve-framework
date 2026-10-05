@@ -120,6 +120,7 @@ def create_engine(
     if config.decoder is not None:
         dec_registry = get_decoder_registry()
         decoder = dec_registry.get(config.decoder, **config.decoder_params)
+        _check_parameter_genome(config, decoder)
 
     # --- Evaluator resolution ---
     from evolve.evaluation.evaluator import FunctionEvaluator
@@ -420,6 +421,42 @@ def _validate_operator_compatibility(config: UnifiedConfig) -> None:
                 config.genome_type,
                 op_registry.get_compatibility(config.merge.operator, "merge"),
             )
+
+
+def _check_parameter_genome(config: UnifiedConfig, decoder: Any) -> None:
+    """
+    Refuse a genome a parameter decoder can't read as declared.
+
+    A ParameterDecoder (or a decoder exposing one as ``parameter_decoder``)
+    reads a vector genome with one position per parameter position, on
+    [0, 1]. The vector genome's defaults are 10 positions on (-1, 1), where
+    half of every range decodes to its lowest value, so nothing is filled in:
+    the config must say what the run used. Refused before the evaluator is
+    built.
+    """
+    from evolve.meta.codec import parameter_decoder_of
+
+    try:
+        parameters = parameter_decoder_of(decoder, "")
+    except ValueError:
+        return  # not a parameter decoder
+    bounds = config.genome_params.get("bounds")
+    try:
+        unit = bounds is not None and [float(b) for b in bounds] == [0.0, 1.0]
+    except (TypeError, ValueError):
+        unit = False
+    if (
+        config.genome_type != "vector"
+        or config.genome_params.get("dimensions") != parameters.dimensions
+        or not unit
+    ):
+        raise ValueError(
+            f"decoder {config.decoder!r} reads a vector genome of {parameters.dimensions} "
+            f"positions on [0, 1]: set genome_type='vector' and genome_params="
+            f"{{'dimensions': {parameters.dimensions}, 'bounds': (0.0, 1.0)}} "
+            f"(got genome_type={config.genome_type!r}, "
+            f"genome_params={dict(config.genome_params)})"
+        )
 
 
 def _distance_name(config: UnifiedConfig) -> str:
