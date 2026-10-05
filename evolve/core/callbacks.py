@@ -10,6 +10,8 @@ Callbacks allow users to:
 
 from __future__ import annotations
 
+import warnings
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 
@@ -520,3 +522,22 @@ class HallOfFameCallback:
     ) -> None:
         """No-op."""
         pass
+
+
+def notify_error(callbacks: Sequence[Any], error: BaseException) -> None:
+    """
+    Tell each callback that a run failed, through its ``on_error``, if it has one.
+
+    The engines call it before re-raising a run's error, so a callback holding
+    a resource (the tracking callback's MLflow run) can close it: ending it as
+    failed rather than leaving it open. A callback that fails here gives a
+    RuntimeWarning, so the run's own error is the one that reaches the caller.
+    """
+    for cb in callbacks:
+        if hasattr(cb, "on_error"):
+            try:
+                cb.on_error(error)
+            except Exception as exc:
+                warnings.warn(
+                    f"{type(cb).__name__}.on_error failed: {exc}", RuntimeWarning, stacklevel=2
+                )

@@ -18,7 +18,7 @@ from uuid import uuid4
 
 import numpy as np
 
-from evolve.core.callbacks import Callback
+from evolve.core.callbacks import Callback, notify_error
 from evolve.core.operators.selection import check_selection_direction
 from evolve.core.population import Population
 from evolve.core.types import Individual, fitness_sort_key
@@ -196,8 +196,24 @@ class IslandEvolutionEngine(Generic[G]):
 
         Returns:
             IslandResult with best individual and all islands
+
+        The evaluator's ``on_run_start()``, if it has one, runs once before
+        the first evaluation. If anything fails, each callback's ``on_error``
+        is called and the error re-raised unchanged.
         """
         self._callbacks = list(callbacks) if callbacks else []
+        try:
+            return self._run(genome_factory, initial_islands)
+        except BaseException as error:
+            notify_error(self._callbacks, error)
+            raise
+
+    def _run(
+        self,
+        genome_factory: Callable[[Random], G],
+        initial_islands: list[Island[G]] | None,
+    ) -> IslandResult[G]:
+        """run() after the callbacks are set."""
         self._history = []
         self._generation = 0
         self._migration_stats = {
@@ -215,6 +231,10 @@ class IslandEvolutionEngine(Generic[G]):
                     island.topology = self.topology.get(island.id, [])
         else:
             self._islands = self._initialize_islands(genome_factory)
+
+        start = getattr(self.evaluator, "on_run_start", None)
+        if callable(start):
+            start()
 
         # Evaluate all islands
         self._evaluate_all_islands()
