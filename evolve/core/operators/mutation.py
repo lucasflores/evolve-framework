@@ -147,18 +147,9 @@ class ByKindMutation:
 
     def __post_init__(self) -> None:
         """Find the parameter decoder; check the settings."""
-        from evolve.meta.codec import ParameterDecoder
+        from evolve.meta.codec import parameter_decoder_of
 
-        parameters = (
-            self.decoder
-            if isinstance(self.decoder, ParameterDecoder)
-            else getattr(self.decoder, "parameter_decoder", None)
-        )
-        if not isinstance(parameters, ParameterDecoder):
-            raise ValueError(
-                "mutation 'by_kind' needs a decoder built on ParameterDecoder: declare "
-                "one as UnifiedConfig.decoder, such as 'parameters'"
-            )
+        parameters = parameter_decoder_of(self.decoder, "mutation 'by_kind'")
         if self.discrete_rate is None:
             self.discrete_rate = self.mutation_rate
         for name in ("mutation_rate", "discrete_rate"):

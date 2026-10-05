@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Generic, Protocol, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, cast
 
 import numpy as np
 
@@ -205,6 +205,36 @@ def neat_distance(
     n = max(len(a.connections), len(b.connections), 1)
 
     return (c_excess * excess / n) + (c_disjoint * disjoint / n) + (c_weight * weight_diff)
+
+
+class GenomeDistance:
+    """
+    Each genome's own ``distance()``: Euclidean for vectors, edit distance for
+    sequences. Registry name ``"genome"`` in the ``"distance"`` category, the
+    default for genome types that have the method.
+    """
+
+    def __call__(self, a: Any, b: Any) -> float:
+        """The genomes' own distance."""
+        return float(a.distance(b))
+
+
+@dataclass
+class NEATDistance:
+    """
+    NEAT compatibility distance (``neat_distance``) with set coefficients.
+
+    Registry name ``"neat"`` in the ``"distance"`` category, the default for
+    graph genomes, which have no ``distance()`` of their own.
+    """
+
+    c_disjoint: float = 1.0
+    c_excess: float = 1.0
+    c_weight: float = 0.4
+
+    def __call__(self, a: GraphGenome, b: GraphGenome) -> float:
+        """NEAT distance between two graph genomes."""
+        return neat_distance(a, b, self.c_disjoint, self.c_excess, self.c_weight)
 
 
 # ============================================================================

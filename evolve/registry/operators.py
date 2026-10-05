@@ -27,6 +27,8 @@ class OperatorRegistry:
         - "selection": Selection operators
         - "crossover": Crossover operators
         - "mutation": Mutation operators
+        - "merge": Symbiogenetic merge operators
+        - "distance": Distances between two genomes, called as ``distance(a, b)``
 
     Tracks genome compatibility metadata for validation at factory time.
     Uses lazy initialization - built-in operators registered on first access.
@@ -37,7 +39,7 @@ class OperatorRegistry:
         >>> registry.register("mutation", "custom", CustomMutation, compatible_genomes={"vector"})
     """
 
-    CATEGORIES = ("selection", "crossover", "mutation", "merge")
+    CATEGORIES = ("selection", "crossover", "mutation", "merge", "distance")
 
     def __init__(self) -> None:
         """Initialize empty registry."""
@@ -382,6 +384,31 @@ def _register_builtin_operators(registry: OperatorRegistry) -> None:
         "graph_symbiogenetic",
         GraphSymbiogeneticMerge,
         compatible_genomes={"graph"},
+    )
+
+    # -----------------------------------------
+    # Distances between two genomes (clearing)
+    # -----------------------------------------
+    from evolve.diversity.speciation import GenomeDistance, NEATDistance
+    from evolve.meta.codec import ParameterDistance
+
+    registry.register(
+        "distance",
+        "genome",
+        GenomeDistance,
+        compatible_genomes={"vector", "sequence", "embedding"},
+    )
+    registry.register(
+        "distance",
+        "neat",
+        NEATDistance,
+        compatible_genomes={"graph"},
+    )
+    registry.register(
+        "distance",
+        "parameters",
+        ParameterDistance,
+        compatible_genomes={"vector"},
     )
 
 
