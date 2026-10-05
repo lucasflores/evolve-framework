@@ -281,6 +281,7 @@ def create_engine(
             stopping=stopping,
             callbacks=all_callbacks,
             merge=merge_operator,
+            clearing=_build_clearing(config, decoder),
         )
 
     # Check for ERP mode (FR-029)
@@ -377,6 +378,25 @@ def _validate_operator_compatibility(config: UnifiedConfig) -> None:
             op_registry.get_compatibility(config.mutation),
         )
 
+    # Clearing runs in multi-objective survival only, with a distance for the genome
+    if config.clearing is not None:
+        if not config.is_multiobjective:
+            raise ValueError(
+                "clearing runs in multi-objective survival only: declare objectives "
+                "with UnifiedConfig(...).with_multiobjective(...), or remove the "
+                "clearing settings"
+            )
+        name = _distance_name(config)
+        if op_registry.is_registered("distance", name) and not op_registry.is_compatible(
+            name, config.genome_type
+        ):
+            raise OperatorCompatibilityError(
+                name,
+                "distance",
+                config.genome_type,
+                op_registry.get_compatibility(name),
+            )
+
     # Check merge (if configured)
     if config.is_merge_enabled:
         assert config.merge is not None
@@ -387,6 +407,37 @@ def _validate_operator_compatibility(config: UnifiedConfig) -> None:
                 config.genome_type,
                 op_registry.get_compatibility(config.merge.operator),
             )
+
+
+def _distance_name(config: UnifiedConfig) -> str:
+    """The clearing distance's name: the declared one, else the genome type's default."""
+    assert config.clearing is not None
+    if config.clearing.distance is not None:
+        return config.clearing.distance
+    return "neat" if config.genome_type == "graph" else "genome"
+
+
+def _build_clearing(config: UnifiedConfig, decoder: Any) -> Any:
+    """
+    The engine's Clearing from the config's settings, or None when absent.
+
+    A distance whose constructor names ``decoder`` receives the declared one,
+    as mutation operators and evaluator factories do.
+    """
+    if config.clearing is None:
+        return None
+    from evolve.diversity.niching import Clearing
+
+    registry = get_operator_registry()
+    name = _distance_name(config)
+    params = dict(config.clearing.distance_params)
+    if decoder is not None and registry.accepts_param("distance", name, "decoder"):
+        params.setdefault("decoder", decoder)
+    return Clearing(
+        distance=registry.get("distance", name, **params),
+        closeness=config.clearing.closeness,
+        copies=config.clearing.copies,
+    )
 
 
 def _build_stopping_criteria(config: UnifiedConfig) -> Any:
@@ -639,6 +690,7 @@ def _create_multiobjective_engine(
     stopping: Any,
     callbacks: list[Callback],
     merge: Any | None = None,
+    clearing: Any | None = None,
 ) -> EvolutionEngine:
     """
     Create a multi-objective engine with NSGA-II selection (FR-030).
@@ -698,6 +750,7 @@ def _create_multiobjective_engine(
         stopping=stopping,
         merge=merge,
         multiobjective=mo_settings,
+        clearing=clearing,
     )
 
     # Attach callbacks as creation callbacks for persistence
