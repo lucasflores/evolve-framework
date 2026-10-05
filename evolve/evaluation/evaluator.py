@@ -191,6 +191,12 @@ class FunctionEvaluator(Generic[G]):
         """Return evaluator capabilities."""
         return self._capabilities
 
+    def on_run_start(self) -> None:
+        """The wrapped function's own ``on_run_start()``, if it has one."""
+        start = getattr(self._fitness_fn, "on_run_start", None)
+        if callable(start):
+            start()
+
     def evaluate(
         self,
         individuals: Sequence[Individual[G]],

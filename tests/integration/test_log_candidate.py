@@ -64,7 +64,8 @@ def test_a_failure_is_a_warning_and_the_run_goes_on(monkeypatch: pytest.MonkeyPa
     def broken(_metrics: object) -> None:
         raise OSError("disk full")
 
-    with mlflow.start_run() as parent:
+    # An explicit experiment: the current one may be a tracker's from an earlier test
+    with mlflow.start_run(experiment_id=mlflow.create_experiment("search")) as parent:
         monkeypatch.setattr(mlflow, "log_metrics", broken)
         with pytest.warns(RuntimeWarning, match="candidate-x.*disk full"):
             assert log_candidate("candidate-x", metrics={"m": 1.0}) is False

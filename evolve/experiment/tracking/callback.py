@@ -368,19 +368,20 @@ class TrackingCallback(Callback):
 
     def on_error(
         self,
-        _error: Exception,
+        error: BaseException,
         **_kwargs: Any,
     ) -> None:
         """
         Called when an error occurs during evolution.
 
-        Marks tracking run as failed.
+        Marks tracking run as failed, or as killed when the run was stopped
+        rather than broken (Ctrl-C, SystemExit).
         """
         if not self._started:
             return
 
         try:
-            self._tracker.end_run(status="FAILED")
+            self._tracker.end_run(status="FAILED" if isinstance(error, Exception) else "KILLED")
         except Exception:
             pass
         finally:

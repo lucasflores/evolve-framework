@@ -59,15 +59,10 @@ class MLflowTracker:
 
     def start_run(self, config: ExperimentConfig) -> None:
         """Start MLflow run."""
-        # Create or get experiment
-        experiment = mlflow.get_experiment_by_name(self.experiment_name)
-        if experiment is None:
-            experiment_id = mlflow.create_experiment(self.experiment_name)
-        else:
-            experiment_id = experiment.experiment_id
-        # Current, not just named: a nested run started without an id goes to
-        # the current experiment, the default one otherwise
-        mlflow.set_experiment(experiment_id=experiment_id)
+        # Create or get the experiment, and make it current, not just named:
+        # a nested run started without an id goes to the current experiment,
+        # the default one otherwise
+        experiment_id = mlflow.set_experiment(self.experiment_name).experiment_id
 
         # Start run
         run = mlflow.start_run(
@@ -236,16 +231,10 @@ class ResilientMLflowTracker:
             if self.config.system_metrics:
                 mlflow.enable_system_metrics_logging()
 
-            # Create or get experiment
-            experiment = mlflow.get_experiment_by_name(self.experiment_name)
-            if experiment is None:
-                experiment_id = mlflow.create_experiment(self.experiment_name)
-            else:
-                experiment_id = experiment.experiment_id
-            # Current, not just named: a nested run started without an id
-            # (one per candidate, say) goes to the current experiment, the
-            # default one otherwise
-            mlflow.set_experiment(experiment_id=experiment_id)
+            # Create or get the experiment, and make it current, not just named:
+            # a nested run started without an id goes to the current experiment,
+            # the default one otherwise
+            experiment_id = mlflow.set_experiment(self.experiment_name).experiment_id
 
             # Clear any stale active run from a previous crashed session
             if mlflow.active_run() is not None:
