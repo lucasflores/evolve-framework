@@ -711,6 +711,86 @@ class TestDecoderReachesMutation:
         assert not hasattr(engine.mutation, "decoder")
 
 
+class TestGenomeFitsParameterDecoder:
+    """A parameter decoder reads a vector genome on [0, 1], one position per position."""
+
+    SPECS = [
+        {"path": "x", "param_type": "continuous", "bounds": [0.0, 2.0]},
+        {"path": "k", "param_type": "categorical", "choices": ["a", "b"]},
+    ]
+
+    def _config(self, **fields: Any) -> UnifiedConfig:
+        settings = {
+            "population_size": 4,
+            "selection": "tournament",
+            "crossover": "sbx",
+            "mutation": "gaussian",
+            "genome_type": "vector",
+            "genome_params": {"dimensions": 2, "bounds": (0.0, 1.0)},
+            "decoder": "parameters",
+            "decoder_params": {"params": self.SPECS},
+        }
+        settings.update(fields)
+        return UnifiedConfig(**settings)
+
+    def test_a_fitting_genome_builds(self) -> None:
+        assert create_engine(self._config(), evaluator=lambda _values: 0.0) is not None
+
+    @pytest.mark.parametrize(
+        "fields",
+        [
+            {"genome_params": {"dimensions": 3, "bounds": (0.0, 1.0)}},
+            {"genome_params": {"dimensions": 2, "bounds": (-1.0, 1.0)}},
+            {"genome_params": {"dimensions": 2}},
+            {"genome_type": "sequence"},
+        ],
+    )
+    def test_a_genome_the_decoder_cant_read_is_refused(self, fields: dict[str, Any]) -> None:
+        with pytest.raises(ValueError, match="reads a vector genome of 2 positions on \\[0, 1\\]"):
+            create_engine(self._config(**fields), evaluator=lambda _values: 0.0)
+
+    def test_refused_before_the_evaluator_is_built(self) -> None:
+        built: list[str] = []
+
+        def factory(**_kw: Any) -> Any:
+            built.append("evaluator")
+            raise AssertionError("evaluator built")
+
+        get_evaluator_registry().register("watched", factory)
+        config = self._config(
+            genome_params={"dimensions": 5, "bounds": (0.0, 1.0)}, evaluator="watched"
+        )
+        with pytest.raises(ValueError, match="reads a vector genome"):
+            create_engine(config)
+        assert built == []
+
+    def test_a_decoder_wrapping_one_is_checked_too(self) -> None:
+        from evolve.config.meta import ParameterSpec
+        from evolve.meta.codec import ParameterDecoder
+
+        class Wrapping:
+            parameter_decoder = ParameterDecoder(
+                tuple(ParameterSpec.from_dict(p) for p in self.SPECS)
+            )
+
+        get_decoder_registry().register("wrapping", lambda **_kw: Wrapping())
+        config = self._config(
+            decoder="wrapping",
+            decoder_params={},
+            genome_params={"dimensions": 7, "bounds": (0.0, 1.0)},
+        )
+        with pytest.raises(ValueError, match="'wrapping' reads a vector genome of 2 positions"):
+            create_engine(config, evaluator=lambda _values: 0.0)
+
+    def test_other_decoders_are_not_checked(self) -> None:
+        config = self._config(
+            decoder="identity",
+            decoder_params={},
+            genome_params={"dimensions": 5, "bounds": (-1.0, 1.0)},
+        )
+        assert create_engine(config, evaluator=lambda _genes: 0.0) is not None
+
+
 class _ScaledGenes:
     """Decoder turning a VectorGenome into its genes times ``factor``."""
 
