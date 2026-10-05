@@ -10,7 +10,8 @@ NO ML FRAMEWORK IMPORTS ALLOWED (except NumPy).
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import TypeVar
+from dataclasses import dataclass
+from typing import Any, TypeVar
 
 import numpy as np
 
@@ -165,6 +166,30 @@ def crowding_distance(
             distances[idx] += (f_next - f_prev) / f_range
 
     return distances
+
+
+@dataclass(frozen=True)
+class Clearing:
+    """
+    Clearing in survival: the settings ``clear()`` runs with each generation.
+
+    Attributes:
+        distance: Distance between two genomes; 0 for copies.
+        closeness: Largest distance that still counts as a copy (``<=``).
+        copies: Survivors per group before any held-back candidate; None
+            holds nothing back, so the groups are only measured and logged.
+    """
+
+    distance: Callable[[Any, Any], float]
+    closeness: float = 0.0
+    copies: int | None = None
+
+    def __post_init__(self) -> None:
+        """Refuse a cap below 1 or a negative closeness."""
+        if self.copies is not None and self.copies < 1:
+            raise ValueError(f"copies must be at least 1 (or None), got {self.copies}")
+        if self.closeness < 0:
+            raise ValueError(f"closeness must be non-negative, got {self.closeness}")
 
 
 def clear(

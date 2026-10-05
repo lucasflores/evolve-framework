@@ -37,6 +37,7 @@ from evolve.utils.timing import GenerationTimer
 
 if TYPE_CHECKING:
     from evolve.config.multiobjective import MultiObjectiveConfig
+    from evolve.diversity.niching import Clearing
     from evolve.multiobjective.selection import NSGA2Selector
 
 G = TypeVar("G")
@@ -152,6 +153,7 @@ class EvolutionEngine(Generic[G]):
         callbacks: Sequence[Callback[G]] | None = None,
         merge: Any | None = None,  # SymbiogeneticMerge[G]
         multiobjective: MultiObjectiveConfig | None = None,
+        clearing: Clearing | None = None,
     ) -> None:
         """
         Initialize engine with configuration.
@@ -170,7 +172,20 @@ class EvolutionEngine(Generic[G]):
                 engine runs NSGA-II and ``selection`` must accept
                 ``(population, n, ranks, crowding, rng)``, e.g.
                 ``CrowdedTournamentSelection``.
+            clearing: Optional clearing in survival: near-copies beyond the
+                cap go to the back of the line, and each generation's groups
+                are logged. Multi-objective mode only.
+
+        Raises:
+            ValueError: If ``clearing`` is given without ``multiobjective``.
         """
+        if clearing is not None and multiobjective is None:
+            raise ValueError(
+                "clearing runs in multi-objective survival only; single-objective "
+                "mode has no clearing hook yet"
+            )
+        self._clearing = clearing
+        self._clearing_stats: dict[str, int] | None = None
         if multiobjective is None:
             # MO mode ranks with each ObjectiveSpec.direction instead
             check_selection_direction(selection, config.minimize)
@@ -440,7 +455,7 @@ class EvolutionEngine(Generic[G]):
 
         # NSGA-II environmental selection: non-dominated fronts, then crowding
         if nsga2 is not None:
-            survivors, ranking = nsga2.select_ranked(evaluated_population.individuals, pop_size)
+            survivors, ranking = self._survive(evaluated_population.individuals, pop_size, nsga2)
             evaluated_population = Population(
                 individuals=survivors,
                 generation=self._generation + 1,
@@ -453,6 +468,49 @@ class EvolutionEngine(Generic[G]):
         self._timer.end_generation()
 
         return evaluated_population
+
+    def _survive(
+        self,
+        individuals: Sequence[Individual[G]],
+        n: int,
+        nsga2: NSGA2Selector[G],
+    ) -> tuple[list[Individual[G]], tuple[dict[int, int], dict[int, float]]]:
+        """
+        NSGA-II survival; with clearing, near-copies beyond the cap go last.
+
+        Clearing groups the pool best first, by Pareto rank then crowding
+        distance, so the better-ranked candidate leads each group. Survival
+        then runs over the winners alone; held-back candidates fill only the
+        places the winners can't, ranked among themselves. Nothing here draws
+        from the engine's random generator.
+        """
+        clearing = self._clearing
+        if clearing is None:
+            return nsga2.select_ranked(individuals, n)
+        from evolve.diversity.niching import clear
+
+        ranks, crowding = nsga2.get_ranking_info(individuals)
+        order = sorted(range(len(individuals)), key=lambda i: (ranks[i], -crowding[i]))
+        winners, held_back, sizes = clear(
+            [ind.genome for ind in individuals],
+            order,
+            clearing.distance,
+            clearing.closeness,
+            clearing.copies,
+        )
+        self._clearing_stats = {
+            "clearing_groups": len(sizes),
+            "clearing_largest": max(sizes, default=0),
+            "clearing_held_back": len(held_back),
+        }
+        if not held_back:
+            return nsga2.select_ranked(individuals, n)
+        first = [individuals[i] for i in winners]
+        if len(first) >= n:
+            return nsga2.select_ranked(first, n)
+        rest, _ = nsga2.select_ranked([individuals[i] for i in held_back], n - len(first))
+        survivors = first + rest
+        return survivors, nsga2.get_ranking_info(survivors)
 
     def _apply_merge(self, offspring: list[Individual[G]]) -> list[Individual[G]]:
         """
@@ -643,6 +701,9 @@ class EvolutionEngine(Generic[G]):
         nsga2 = self._nsga2
         if nsga2 is not None:
             self._compute_multiobjective_metrics(population, nsga2, metrics)
+            if self._clearing_stats is not None:
+                # Groups in this generation's pool of parents and children
+                metrics.update(self._clearing_stats)
         else:
             if stats.best_fitness is not None:
                 metrics["best_fitness"] = float(stats.best_fitness.values[0])
