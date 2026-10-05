@@ -51,6 +51,13 @@ class Recording:
         return [Fitness(values=np.array([float(np.sum(i.genome.genes))])) for i in individuals]
 
 
+class Interrupted(Recording):
+    """An evaluator whose start the user interrupts (Ctrl-C)."""
+
+    def on_run_start(self) -> None:
+        raise KeyboardInterrupt
+
+
 class Watching:
     """A callback recording the run-level hooks."""
 
@@ -77,6 +84,20 @@ def _engine(evaluator: Any, generations: int = 2) -> EvolutionEngine:
         crossover=SimulatedBinaryCrossover(),
         mutation=GaussianMutation(),
         seed=1,
+    )
+
+
+def _config(**overrides: Any) -> UnifiedConfig:
+    return UnifiedConfig(
+        population_size=4,
+        max_generations=2,
+        selection="tournament",
+        crossover="sbx",
+        mutation="gaussian",
+        genome_type="vector",
+        genome_params={"dimensions": 2, "bounds": (0.0, 1.0)},
+        seed=1,
+        **overrides,
     )
 
 
@@ -107,6 +128,20 @@ class TestEvaluatorStartHook:
 
         assert _engine(Plain()).run(_start()).generations == 2
 
+    def test_a_plain_callable_keeps_its_hook_when_the_factory_wraps_it(self) -> None:
+        events: list[str] = []
+
+        class Scoring:
+            def on_run_start(self) -> None:
+                events.append("fitness.on_run_start")
+
+            def __call__(self, _genome: Any) -> float:
+                return 0.0
+
+        config = _config()
+        create_engine(config, evaluator=Scoring()).run(create_initial_population(config))
+        assert events == ["fitness.on_run_start"]
+
 
 class TestFailures:
     def test_a_refused_start_reaches_the_caller_unchanged_and_the_callbacks(self) -> None:
@@ -133,30 +168,34 @@ class TestFailures:
                 _start(), callbacks=[Watching(events, fail_in_on_error=True)]
             )
 
-    def test_a_refused_start_closes_the_tracked_run_as_failed(
-        self, tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+    @pytest.mark.parametrize(
+        ("evaluator", "error", "status"),
+        [
+            (Recording([], refuse=True), Refused, "FAILED"),
+            (Interrupted([]), KeyboardInterrupt, "KILLED"),
+        ],
+    )
+    def test_a_stopped_start_closes_the_tracked_run(
+        self,
+        evaluator: Any,
+        error: type[BaseException],
+        status: str,
+        tmp_path: Any,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         mlflow = pytest.importorskip("mlflow")
         monkeypatch.chdir(tmp_path)  # an sqlite store writes artifacts under ./mlruns
         uri = f"sqlite:///{tmp_path / 'mlflow.db'}"
-        config = UnifiedConfig(
-            population_size=4,
-            max_generations=2,
-            selection="tournament",
-            crossover="sbx",
-            mutation="gaussian",
-            genome_type="vector",
-            genome_params={"dimensions": 2, "bounds": (0.0, 1.0)},
-            seed=1,
-            tracking=TrackingConfig(backend="mlflow", experiment_name="refused", tracking_uri=uri),
+        config = _config(
+            tracking=TrackingConfig(backend="mlflow", experiment_name="stopped", tracking_uri=uri)
         )
-        engine = create_engine(config, evaluator=Recording([], refuse=True))
-        with pytest.raises(Refused):
+        engine = create_engine(config, evaluator=evaluator)
+        with pytest.raises(error):
             engine.run(create_initial_population(config))
         assert mlflow.active_run() is None
         mlflow.set_tracking_uri(uri)
-        runs = mlflow.search_runs(experiment_names=["refused"])
-        assert list(runs["status"]) == ["FAILED"]
+        runs = mlflow.search_runs(experiment_names=["stopped"])
+        assert list(runs["status"]) == [status]
 
 
 class TestIslandEngine:

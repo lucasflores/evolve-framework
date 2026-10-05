@@ -131,9 +131,10 @@ EvaluatorRegistry: '{name}' is not registered.
 Available evaluators: {sorted_list}
 ```
 
-**Factory instantiation failure**:
+**Factory instantiation failure**: the factory's own exception, re-raised unchanged
+(its type and message are what callers act on). On Python 3.11+ it carries a note:
 ```
-Failed to create evaluator '{name}' with params {params}: {original_error}
+Failed to create evaluator '{name}' with params {params}
 ```
 
 **Missing evaluator**:

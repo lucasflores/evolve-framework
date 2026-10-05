@@ -37,7 +37,8 @@ def log_candidate(
     Returns:
         True if logged. False, doing nothing, when MLflow isn't installed or
         no run is active; False with a RuntimeWarning when logging fails,
-        since tracking must never fail a candidate.
+        since tracking must never fail a candidate. What was written before
+        the failure stays, in a nested run ended as FAILED.
     """
     try:
         import mlflow
