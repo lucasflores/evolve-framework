@@ -197,7 +197,7 @@ class IslandEvolutionEngine(Generic[G]):
         Returns:
             IslandResult with best individual and all islands
 
-        The evaluator's ``on_run_start()``, if it has one, runs once before
+        The evaluator's ``prepare_run()``, if it has one, runs once before
         the first evaluation. If anything fails, each callback's ``on_error``
         is called and the error re-raised unchanged.
         """
@@ -232,9 +232,9 @@ class IslandEvolutionEngine(Generic[G]):
         else:
             self._islands = self._initialize_islands(genome_factory)
 
-        start = getattr(self.evaluator, "on_run_start", None)
-        if callable(start):
-            start()
+        prepare = getattr(self.evaluator, "prepare_run", None)
+        if callable(prepare):
+            prepare()
 
         # Evaluate all islands
         self._evaluate_all_islands()

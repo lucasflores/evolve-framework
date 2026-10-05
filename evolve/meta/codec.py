@@ -344,6 +344,14 @@ def _encode_value(spec: ParameterSpec, value: Any, choices: Sequence[Any] | None
     return [(value - lo) / (hi - lo)]
 
 
+def find_parameter_decoder(decoder: Any) -> ParameterDecoder | None:
+    """The ParameterDecoder a decoder is, or exposes as ``parameter_decoder``; else None."""
+    if isinstance(decoder, ParameterDecoder):
+        return decoder
+    found = getattr(decoder, "parameter_decoder", None)
+    return found if isinstance(found, ParameterDecoder) else None
+
+
 def parameter_decoder_of(decoder: Any, user: str) -> ParameterDecoder:
     """
     The ParameterDecoder a decoder is, or exposes as ``parameter_decoder``.
@@ -358,12 +366,8 @@ def parameter_decoder_of(decoder: Any, user: str) -> ParameterDecoder:
     Raises:
         ValueError: If neither holds a ParameterDecoder.
     """
-    found = (
-        decoder
-        if isinstance(decoder, ParameterDecoder)
-        else getattr(decoder, "parameter_decoder", None)
-    )
-    if not isinstance(found, ParameterDecoder):
+    found = find_parameter_decoder(decoder)
+    if found is None:
         raise ValueError(
             f"{user} needs a decoder built on ParameterDecoder: declare one as "
             "UnifiedConfig.decoder, such as 'parameters'"

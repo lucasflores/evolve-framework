@@ -782,6 +782,17 @@ class TestGenomeFitsParameterDecoder:
         with pytest.raises(ValueError, match="'wrapping' reads a vector genome of 2 positions"):
             create_engine(config, evaluator=lambda _values: 0.0)
 
+    def test_a_failing_parameter_decoder_is_not_taken_for_none(self) -> None:
+        class Broken:
+            @property
+            def parameter_decoder(self) -> Any:
+                raise ValueError("specs inconsistent")
+
+        get_decoder_registry().register("broken", lambda **_kw: Broken())
+        config = self._config(decoder="broken", decoder_params={})
+        with pytest.raises(ValueError, match="specs inconsistent"):
+            create_engine(config, evaluator=lambda _values: 0.0)
+
     def test_other_decoders_are_not_checked(self) -> None:
         config = self._config(
             decoder="identity",
