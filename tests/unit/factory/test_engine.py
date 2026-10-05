@@ -461,6 +461,40 @@ class TestCreateInitialPopulation:
             i.genome for i in plain.individuals[1:]
         ]
 
+    def test_positions_become_a_genome_with_the_configured_bounds(self) -> None:
+        import numpy as np
+
+        from evolve.representation.vector import VectorGenome
+
+        population = create_initial_population(
+            self._seeded_config(), genomes=[[0.25, 0.5], VectorGenome(genes=np.array([0.1, 0.9]))]
+        )
+        for ind, genes in zip(population.individuals[:2], ([0.25, 0.5], [0.1, 0.9])):
+            assert isinstance(ind.genome, VectorGenome)
+            assert ind.genome.genes.tolist() == genes
+            assert ind.genome.bounds is not None
+            assert [b.tolist() for b in ind.genome.bounds] == [[0.0, 0.0], [1.0, 1.0]]
+
+    @pytest.mark.parametrize(
+        ("given", "match"),
+        [
+            ([0.5, 0.5, 0.5], "has 3 positions; the genome has 2"),
+            ([0.5, 1.5], "outside the configured bounds"),
+        ],
+    )
+    def test_a_vector_that_doesnt_fit_is_refused(self, given: list[float], match: str) -> None:
+        with pytest.raises(ValueError, match=match):
+            create_initial_population(self._seeded_config(), genomes=[given])
+
+    def test_a_vector_with_other_bounds_is_refused(self) -> None:
+        import numpy as np
+
+        from evolve.representation.vector import VectorGenome
+
+        other = VectorGenome(genes=np.array([0.5, 0.5]), bounds=(np.full(2, -1.0), np.ones(2)))
+        with pytest.raises(ValueError, match="bounds other than the configured"):
+            create_initial_population(self._seeded_config(), genomes=[other])
+
     def test_more_genomes_than_places_is_refused(self) -> None:
         import numpy as np
 

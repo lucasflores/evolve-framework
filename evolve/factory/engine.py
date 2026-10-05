@@ -786,13 +786,19 @@ def create_initial_population(
         genomes: Known genomes, such as a search's baseline, placed first and
             marked ``origin="given"``. The random members are drawn as without
             them, and the first ones replaced, so the rest match an unseeded
-            population at the same seed.
+            population at the same seed. For a vector genome each may be a
+            VectorGenome or its positions (ParameterDecoder.encode()'s output);
+            either way it gets the configured bounds, so its descendants are
+            clipped like everyone else's, and one of the wrong length, outside
+            those bounds, or with other bounds is refused. Other genome types
+            are placed as given.
 
     Returns:
         Initial population.
 
     Raises:
-        ValueError: If more genomes are given than the population holds.
+        ValueError: If more genomes are given than the population holds, or a
+            vector genome doesn't fit the configured genome.
     """
     if len(genomes) > config.population_size:
         raise ValueError(
@@ -826,6 +832,8 @@ def create_initial_population(
         )
         individuals.append(individual)
     for i, genome in enumerate(genomes):
+        if config.genome_type == "vector":
+            genome = _given_vector(i, genome, individuals[i].genome)
         individuals[i] = Individual(
             genome=genome,
             fitness=None,
@@ -833,3 +841,23 @@ def create_initial_population(
         )
 
     return Population(individuals)
+
+
+def _given_vector(index: int, given: Any, drawn: Any) -> Any:
+    """A given vector genome, or positions, as a genome shaped like the drawn ones."""
+    import numpy as np
+
+    from evolve.representation.vector import VectorGenome
+
+    genes = np.array(given.genes if isinstance(given, VectorGenome) else given, dtype=float)
+    lower, upper = drawn.bounds
+    if genes.shape != drawn.genes.shape:
+        raise ValueError(
+            f"given genome {index} has {genes.size} positions; the genome has {drawn.genes.size}"
+        )
+    own = given.bounds if isinstance(given, VectorGenome) else None
+    if own is not None and not (np.array_equal(own[0], lower) and np.array_equal(own[1], upper)):
+        raise ValueError(f"given genome {index} has bounds other than the configured genome's")
+    if np.any(genes < lower) or np.any(genes > upper):
+        raise ValueError(f"given genome {index} has positions outside the configured bounds")
+    return VectorGenome(genes=genes, bounds=(lower.copy(), upper.copy()))

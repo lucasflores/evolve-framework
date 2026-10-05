@@ -500,11 +500,36 @@ class TestEncode:
 
     @pytest.mark.parametrize(
         ("value", "match"),
-        [(0, "outside 1..5"), (6, "outside 1..5"), (2.5, "whole number"), (True, "whole number")],
+        [
+            (0, "outside 1..5"),
+            (6, "outside 1..5"),
+            (2.5, "isn't an integer"),
+            (3.0, "isn't an integer"),
+            (True, "isn't an integer"),
+        ],
     )
     def test_an_integer_must_be_one_it_can_take(self, value: object, match: str) -> None:
         with pytest.raises(ValueError, match=match):
             ParameterDecoder((EPOCHS,)).encode({"train": {"epochs": value}})
+
+    def test_numpy_numbers_are_numbers(self) -> None:
+        decoder = ParameterDecoder((EPOCHS, RATE))
+        genome = decoder.encode({"train": {"epochs": np.int64(3), "rate": np.float32(1e-3)}})
+        assert genome[0] == 0.5
+        assert genome[1] == pytest.approx(1 / 3, rel=1e-6)
+
+    def test_an_integer_reads_its_bounds_as_decoding_does(self) -> None:
+        # Bounds that aren't whole: decoding reads them as int(lo)..int(hi)
+        spec = ParameterSpec(path="n", param_type="integer", bounds=(0.5, 10.7))
+        decoder = ParameterDecoder((spec,))
+        for n in range(0, 11):
+            genome = VectorGenome(genes=np.array(decoder.encode({"n": n})))
+            assert decoder.decode(genome) == {"n": n}
+
+    @pytest.mark.parametrize("value", ["ab", None, 3])
+    def test_a_subset_must_be_given_a_list_of_choices(self, value: object) -> None:
+        with pytest.raises(ValueError, match="isn't a list of choices"):
+            ParameterDecoder((TRAINING,)).encode({"training_pool": value})
 
     def test_a_number_outside_its_bounds_is_refused(self) -> None:
         with pytest.raises(ValueError, match="outside"):
@@ -543,6 +568,16 @@ class TestIdentity:
         b = VectorGenome(genes=np.array([0.4, 0.1, 0.9, 0.0, 0.5]))  # threshold inactive
         assert decoder.identity(a) == decoder.identity(b)
         assert hash(decoder.identity(a)) == hash(decoder.identity(b))
+
+    def test_options_of_any_shape_give_a_hashable_identity(self) -> None:
+        spec = ParameterSpec(
+            path="arch",
+            param_type="categorical",
+            choices=({"kind": "lstm", "sizes": [64, 32]}, [1, [2]]),
+        )
+        decoder = ParameterDecoder((spec,))
+        a, b = (VectorGenome(genes=np.array([p])) for p in (0.2, 0.8))
+        assert len({decoder.identity(a), decoder.identity(b)}) == 2
 
     def test_any_decoded_difference_separates_them(self) -> None:
         decoder = ParameterDecoder((POLICY, THRESHOLD, TRAINING))

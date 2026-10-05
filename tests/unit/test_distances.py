@@ -101,6 +101,15 @@ class TestParameterDistance:
         distance(a, b)
         assert Folding.calls == 3  # once per distinct genome
 
+    def test_a_subclass_with_its_own_identity_is_honoured(self) -> None:
+        class Folding(ParameterDecoder):
+            def identity(self, genome: VectorGenome) -> str:
+                return "ab" if genome.genes[0] < 0.5 else "cd"
+
+        distance = ParameterDistance(decoder=Folding((ENC,)))
+        assert distance(_v(0.1), _v(0.3)) == 0.0
+        assert distance(_v(0.1), _v(0.6)) == 1.0
+
     def test_takes_a_decoder_exposing_one(self) -> None:
         class Wrapper:
             parameter_decoder = ParameterDecoder((ENC,))
