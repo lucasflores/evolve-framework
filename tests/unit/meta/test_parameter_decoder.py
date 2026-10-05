@@ -11,7 +11,7 @@ import pytest
 from evolve.config.meta import ParameterSpec
 from evolve.config.unified import UnifiedConfig
 from evolve.factory.engine import create_engine, create_initial_population
-from evolve.meta.codec import ParameterDecoder, decode_parameters, decode_value
+from evolve.meta.codec import ParameterDecoder, decode_parameters, decode_value, resolve
 from evolve.registry.decoders import get_decoder_registry, reset_decoder_registry
 from evolve.representation.vector import VectorGenome
 
@@ -387,6 +387,59 @@ class TestParameterDecoderValidatesOnce:
 
         monkeypatch.setattr("evolve.meta.codec._dependency_order", fail)
         decoder.decode(VectorGenome(genes=np.full(decoder.dimensions, 0.5)))
+
+
+class TestResolve:
+    """resolve(): the one rule for whether a spec is active and what it chooses from."""
+
+    def test_spec_without_parent_uses_its_own_choices(self) -> None:
+        assert resolve(ENCODER, {}) == (True, None)
+
+    def test_inactive_parent_makes_the_child_inactive(self) -> None:
+        assert resolve(THRESHOLD, {}) == (False, None)
+
+    def test_parent_value_outside_active_values(self) -> None:
+        assert resolve(THRESHOLD, {"holding.policy": "hold"}) == (False, None)
+        assert resolve(THRESHOLD, {"holding.policy": "switch_for_gain"}) == (True, None)
+
+    def test_options_for_the_parent_value(self) -> None:
+        assert resolve(READING_LENGTH, {"encoder.name": "bge"}) == (True, (128, 256, 512))
+        assert resolve(READING_LENGTH, {"encoder.name": "x"}) == (False, None)
+
+    def test_relative_subset_keeps_what_its_parent_holds(self) -> None:
+        assert resolve(SERVING, {"training_pool": ["a", "c"]}) == (True, ["a", "c"])
+
+
+class TestValuesAndOrder:
+    """ParameterDecoder.values() and .order, which callers walking the specs use."""
+
+    SPECS = TestParameterDecoderValidatesOnce.SPECS
+
+    def test_values_are_the_decoded_values_by_path(self) -> None:
+        decoder = ParameterDecoder(self.SPECS)
+        rng = np.random.default_rng(1)
+        for _ in range(50):
+            genes = rng.uniform(0.0, 1.0, decoder.dimensions).tolist()
+            values = decoder.values(genes)
+            decoded = decode_parameters(genes, self.SPECS)
+            for path, value in values.items():
+                node: Any = decoded
+                for part in path.split("."):
+                    node = node[part]
+                assert node == value
+            assert len(values) == sum(_leaves(decoded))
+
+    def test_order_puts_parents_first(self) -> None:
+        order = [s.path for s in ParameterDecoder(self.SPECS).order]
+        for spec in self.SPECS:
+            if spec.parent is not None:
+                assert order.index(spec.parent) < order.index(spec.path)
+
+
+def _leaves(node: Any) -> list[int]:
+    if isinstance(node, dict):
+        return [n for child in node.values() for n in _leaves(child)]
+    return [1]
 
 
 class TestRegisteredDecoder:
