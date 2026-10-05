@@ -14,7 +14,7 @@ from evolve.factory.engine import (
     create_engine,
     create_initial_population,
 )
-from evolve.meta.codec import ParameterDistance
+from evolve.meta.codec import ParameterDecoder, ParameterDistance
 from evolve.registry.operators import reset_operator_registry
 from tests.integration.test_fixed_seed_runs import (
     GOLDEN,
@@ -50,6 +50,22 @@ class TestSection:
     def test_bad_settings_are_refused(self, fields: dict, match: str) -> None:
         with pytest.raises(ValueError, match=match):
             ClearingConfig(**fields)
+
+    @pytest.mark.parametrize(
+        ("section", "match"),
+        [
+            ({"copies": 2.0}, "whole number"),
+            ({"copies": True}, "whole number"),
+            ({"copies": "2"}, "whole number"),
+            ({"closeness": None}, "closeness must be a number"),
+            ({"closeness": "0.1"}, "closeness must be a number"),
+        ],
+    )
+    def test_json_of_the_wrong_type_is_refused_on_load(self, section: dict, match: str) -> None:
+        data = multiobjective_config().to_dict()
+        data["clearing"] = section
+        with pytest.raises(ValueError, match=match):
+            UnifiedConfig.from_dict(data)
 
     def test_round_trip_through_json(self) -> None:
         config = multiobjective_config().with_clearing(
@@ -96,6 +112,22 @@ class TestFactory:
             engine = create_engine(config, evaluator=TwoObjectives())
         assert isinstance(engine._clearing.distance, ParameterDistance)
         assert engine._clearing.distance._parameters.specs == (spec,)
+
+    def test_a_decoder_already_in_distance_params_is_not_claimed(self) -> None:
+        spec = ParameterSpec(path="x", bounds=(0.0, 1.0))
+        own = ParameterDecoder((spec,))
+        config = multiobjective_config().with_params(
+            genome_params={"dimensions": 1, "bounds": (0.0, 1.0)},
+            decoder="parameters",
+            decoder_params={"params": [spec.to_dict()]},
+        )
+        config = config.with_clearing(
+            copies=1, distance="parameters", distance_params={"decoder": own}
+        )
+        # The distance keeps its own decoder, so the declared one reaches nothing
+        with pytest.warns(UserWarning, match="is ignored"):
+            engine = create_engine(config, evaluator=TwoObjectives())
+        assert engine._clearing.distance.decoder is own
 
     def test_single_objective_mode_is_refused(self) -> None:
         config = UnifiedConfig(

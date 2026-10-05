@@ -74,6 +74,15 @@ class TestParameterDistance:
         # neither has t: only flag counts
         assert self._d(off, _v(0.25, 0.9), specs) == 0.0
 
+    def test_decodes_each_genome_once_and_bounds_what_it_keeps(self) -> None:
+        distance = ParameterDistance(decoder=ParameterDecoder(self.SPECS))
+        a, b = _v(0.1, 0.0, 0.0, 0.9, 0.9, 0.1, 0.1), _v(0.4, 1.0, 0.25, 0.9, 0.1, 0.9, 0.1)
+        for _ in range(5):
+            distance(a, b)
+        info = distance._values.cache_info()
+        assert (info.misses, info.hits) == (2, 8)
+        assert info.maxsize == 10_000
+
     def test_takes_a_decoder_exposing_one(self) -> None:
         class Wrapper:
             parameter_decoder = ParameterDecoder((ENC,))
@@ -125,6 +134,13 @@ class TestRegistry:
         assert registry.is_compatible("neat", "graph")
         assert registry.is_compatible("parameters", "vector")
         assert not registry.is_compatible("parameters", "graph")
+
+    def test_a_name_in_two_categories_keeps_each_compatibility(self) -> None:
+        registry = get_operator_registry()
+        registry.register("distance", "gaussian", GenomeDistance)  # compatible with all
+        assert not registry.is_compatible("gaussian", "graph", "mutation")
+        assert registry.get_compatibility("gaussian", "mutation") == {"vector"}
+        assert registry.is_compatible("gaussian", "graph", "distance")
 
     def test_parameters_takes_the_decoder(self) -> None:
         registry = get_operator_registry()

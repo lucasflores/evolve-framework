@@ -481,7 +481,8 @@ class EvolutionEngine(Generic[G]):
         Clearing groups the pool best first, by Pareto rank then crowding
         distance, so the better-ranked candidate leads each group. Survival
         then runs over the winners alone; held-back candidates fill only the
-        places the winners can't, ranked among themselves. Nothing here draws
+        places the winners can't, ranked among themselves and, in the ranking
+        returned for mating selection, behind every winner. Nothing here draws
         from the engine's random generator.
         """
         clearing = self._clearing
@@ -508,9 +509,18 @@ class EvolutionEngine(Generic[G]):
         first = [individuals[i] for i in winners]
         if len(first) >= n:
             return nsga2.select_ranked(first, n)
-        rest, _ = nsga2.select_ranked([individuals[i] for i in held_back], n - len(first))
-        survivors = first + rest
-        return survivors, nsga2.get_ranking_info(survivors)
+        # Every winner survives, ranked among the winners; held-back candidates
+        # fill the rest ranked among themselves and behind every winner, so the
+        # crowded tournament also sees them at the back of the line
+        ranked, (ranks, crowding) = nsga2.select_ranked(first, len(first))
+        rest, (rest_ranks, rest_crowding) = nsga2.select_ranked(
+            [individuals[i] for i in held_back], n - len(first)
+        )
+        behind = max(ranks.values(), default=-1) + 1
+        for i, rank in rest_ranks.items():
+            ranks[len(ranked) + i] = behind + rank
+            crowding[len(ranked) + i] = rest_crowding[i]
+        return ranked + rest, (ranks, crowding)
 
     def _apply_merge(self, offspring: list[Individual[G]]) -> list[Individual[G]]:
         """
