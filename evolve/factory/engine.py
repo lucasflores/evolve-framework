@@ -8,7 +8,7 @@ automatically resolving operators and genome types from registries.
 from __future__ import annotations
 
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import fields, replace
 from random import Random
 from typing import TYPE_CHECKING, Any
@@ -775,6 +775,7 @@ def _create_multiobjective_engine(
 def create_initial_population(
     config: UnifiedConfig,
     seed: int | None = None,
+    genomes: Sequence[Any] = (),
 ) -> Population:
     """
     Create initial population from configuration.
@@ -782,10 +783,21 @@ def create_initial_population(
     Args:
         config: Unified configuration.
         seed: Random seed (default: use config.seed).
+        genomes: Known genomes, such as a search's baseline, placed first and
+            marked ``origin="given"``. The random members are drawn as without
+            them, and the first ones replaced, so the rest match an unseeded
+            population at the same seed.
 
     Returns:
-        Random initial population.
+        Initial population.
+
+    Raises:
+        ValueError: If more genomes are given than the population holds.
     """
+    if len(genomes) > config.population_size:
+        raise ValueError(
+            f"{len(genomes)} given genomes for a population of {config.population_size}"
+        )
 
     from evolve.core.types import Individual, IndividualMetadata
 
@@ -813,5 +825,11 @@ def create_initial_population(
             metadata=IndividualMetadata(origin="init"),
         )
         individuals.append(individual)
+    for i, genome in enumerate(genomes):
+        individuals[i] = Individual(
+            genome=genome,
+            fitness=None,
+            metadata=IndividualMetadata(origin="given"),
+        )
 
     return Population(individuals)
