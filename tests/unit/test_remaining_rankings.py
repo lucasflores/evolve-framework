@@ -16,7 +16,7 @@ import numpy as np
 import pytest
 
 from evolve.core.population import Population
-from evolve.core.types import Fitness, Individual
+from evolve.core.types import Fitness, Individual, fitness_sort_key
 from evolve.evaluation.evaluator import EvaluatorCapabilities
 from evolve.representation.vector import VectorGenome
 
@@ -269,11 +269,13 @@ def test_tracking_best_solution_artifact_is_feasible_first() -> None:
     assert logged[0]["genes"] == [5.0]
 
 
-def test_clearing_niche_winner_is_feasible_first() -> None:
-    from evolve.diversity.niching import clearing
+def test_clearing_by_feasibility_first_keeps_the_feasible_copy() -> None:
+    from evolve.diversity.niching import clear
 
     best, _, worst = _deb_ordered(minimize=False)
+    pool = [worst, best]
+    order = sorted(range(2), key=lambda i: fitness_sort_key(pool[i].fitness, minimize=False))
 
-    cleared = clearing([worst, best], lambda _a, _b: 0.0, sigma_clear=1.0, kappa=1)
+    winners, held, _ = clear([i.genome for i in pool], order, lambda _a, _b: 0.0, 1.0, 1)
 
-    assert cleared == [0.0, float(best.fitness.values[0])]
+    assert (winners, held) == ([1], [0])
