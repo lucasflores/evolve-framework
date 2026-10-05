@@ -30,6 +30,7 @@ except ImportError:
 
 # Tracking callback
 from evolve.experiment.tracking.callback import TrackingCallback  # noqa: E402
+from evolve.experiment.tracking.candidates import log_candidate  # noqa: E402
 
 try:
     from evolve.experiment.tracking.wandb_tracker import WandbTracker
@@ -61,4 +62,5 @@ __all__ = [
     "ResilientMLflowTracker",
     "TrackingCallback",
     "WandbTracker",
+    "log_candidate",
 ]
