@@ -592,7 +592,7 @@ class TestIdentity:
 
     def test_set_and_array_options_give_a_hashable_identity(self) -> None:
         spec = ParameterSpec(
-            path="opt", param_type="categorical", choices=(frozenset({1, 2}), np.array([3, 4]))
+            path="opt", param_type="categorical", choices=({1, 2}, np.array([3, 4]))
         )
         decoder = ParameterDecoder((spec,))
         a, b = (VectorGenome(genes=np.array([p])) for p in (0.2, 0.8))
