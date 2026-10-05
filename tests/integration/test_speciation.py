@@ -13,7 +13,7 @@ import pytest
 
 from evolve.core.types import Fitness, Individual
 from evolve.diversity.niching import (
-    clearing,
+    clear,
     crowding_distance,
     deterministic_crowding_pairing,
     explicit_fitness_sharing,
@@ -387,16 +387,19 @@ class TestFitnessSharing:
             for i in range(5)
         ]
 
-        cleared = clearing(
-            population,
+        best_first = sorted(range(5), key=lambda i: -population[i].fitness.values[0])
+        winners, held, sizes = clear(
+            [ind.genome for ind in population],
+            best_first,
             euclidean_distance,
-            sigma_clear=1.0,
-            kappa=2,
+            closeness=1.0,
+            copies=2,
         )
 
-        # Only top 2 should have non-zero fitness
-        non_zero = sum(1 for f in cleared if f > 0)
-        assert non_zero == 2
+        # Only the top 2 win; the other three are held back
+        assert winners == [4, 3]
+        assert held == [2, 1, 0]
+        assert sizes == [5]
 
 
 # ============================================================================

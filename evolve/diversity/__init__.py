@@ -22,7 +22,7 @@ from evolve.diversity.islands import (
     ring_topology,
 )
 from evolve.diversity.niching import (
-    clearing,
+    clear,
     crowding_distance,
     deterministic_crowding_pairing,
     explicit_fitness_sharing,
@@ -75,7 +75,7 @@ __all__ = [
     # Niching
     "explicit_fitness_sharing",
     "crowding_distance",
-    "clearing",
+    "clear",
     "deterministic_crowding_pairing",
     # Novelty search
     "BehaviorCharacterization",

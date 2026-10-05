@@ -167,84 +167,67 @@ def crowding_distance(
     return distances
 
 
-def clearing(
-    individuals: Sequence[Individual[G]],
-    distance_fn: Callable[[G, G], float],
-    sigma_clear: float,
-    kappa: int = 1,
-) -> list[float]:
+def clear(
+    genomes: Sequence[G],
+    order: Sequence[int],
+    distance: Callable[[G, G], float],
+    closeness: float,
+    copies: int | None,
+) -> tuple[list[int], list[int], list[int]]:
     """
-    Clearing procedure for niching.
+    Clearing (Petrowski 1996): group near-copies, keep a few of each group.
 
-    Within each niche (defined by sigma_clear), only the best
-    kappa individuals (highest fitness, feasibility first) keep their
-    fitness. Others get zero. This creates strong separation between niches.
+    Candidates are taken best first, in ``order``, which the caller ranks
+    (Pareto rank then crowding, or feasibility then value). The best
+    candidate not yet in a group leads a new one, and every ungrouped
+    candidate within ``closeness`` of the leader joins it: ``distance <=
+    closeness``, so a closeness of 0 groups exact copies. Membership is
+    distance to the leader, never chained through another member. The
+    first ``copies`` of each group, in order, win; the rest are held back.
 
     Args:
-        individuals: Population with fitness values
-        distance_fn: Function to compute genome distance
-        sigma_clear: Clearing radius
-        kappa: Number of winners per niche
+        genomes: The candidates' genomes.
+        order: Every index into ``genomes`` once, best first.
+        distance: Distance between two genomes; 0 for copies.
+        closeness: Largest distance that still counts as a copy.
+        copies: Winners per group, at least 1; None holds nothing back, so
+            the groups are only measured.
 
     Returns:
-        List of cleared fitness values
+        (winners, held_back, sizes): indices into ``genomes``, each list in
+        ``order``, and each group's size in the order the groups formed.
+
+    Raises:
+        ValueError: On a cap below 1, a negative closeness, or an order that
+            is not every index once.
     """
-    n = len(individuals)
+    if copies is not None and copies < 1:
+        raise ValueError(f"copies must be at least 1 (or None), got {copies}")
+    if closeness < 0:
+        raise ValueError(f"closeness must be non-negative, got {closeness}")
+    if sorted(order) != list(range(len(genomes))):
+        raise ValueError("order must list every candidate's index exactly once")
 
-    if n == 0:
-        return []
-
-    # Get raw fitness values
-    raw_fitness = []
-    for ind in individuals:
-        if ind.fitness is not None:
-            raw_fitness.append(ind.fitness.values[0])
-        else:
-            raw_fitness.append(0.0)
-
-    # Best first: highest fitness, feasibility first
-    sorted_indices = sorted(
-        range(n), key=lambda i: fitness_sort_key(individuals[i].fitness, minimize=False)
-    )
-
-    # Track which individuals are cleared
-    cleared = [False] * n
-    cleared_fitness = [0.0] * n
-
-    for idx in sorted_indices:
-        if cleared[idx]:
+    # ponytail: compares each candidate with every group leader, O(n x groups)
+    # distance calls; vectorise the distance if populations reach the thousands
+    grouped = [False] * len(genomes)
+    winners: list[int] = []
+    held_back: list[int] = []
+    sizes: list[int] = []
+    for leader in order:
+        if grouped[leader]:
             continue
-
-        # This individual is a niche winner
-        cleared_fitness[idx] = raw_fitness[idx]
-
-        # Count winners in this niche
-        niche_winners = 1
-
-        # Clear nearby individuals
-        for other_idx in sorted_indices:
-            if other_idx == idx or cleared[other_idx]:
-                continue
-
-            dist = distance_fn(
-                individuals[idx].genome,
-                individuals[other_idx].genome,
-            )
-
-            if dist < sigma_clear:
-                if niche_winners < kappa:
-                    # Still room for winners
-                    cleared_fitness[other_idx] = raw_fitness[other_idx]
-                    niche_winners += 1
-                else:
-                    # Clear this individual
-                    cleared_fitness[other_idx] = 0.0
-
-                cleared[other_idx] = True
-
-        cleared[idx] = True
-
-    return cleared_fitness
+        group = [leader]
+        grouped[leader] = True
+        for other in order:
+            if not grouped[other] and distance(genomes[leader], genomes[other]) <= closeness:
+                group.append(other)
+                grouped[other] = True
+        sizes.append(len(group))
+        keep = len(group) if copies is None else copies
+        winners += group[:keep]
+        held_back += group[keep:]
+    return winners, held_back, sizes
 
 
 def deterministic_crowding_pairing(
