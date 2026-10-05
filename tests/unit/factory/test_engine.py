@@ -556,6 +556,62 @@ class TestDecoderWiring:
         assert mock_decoder.hidden_size == 128
 
 
+class _NeedsDecoder:
+    """A mutation operator that asks for the declared decoder."""
+
+    def __init__(self, decoder: Any = None, sigma: float = 0.1) -> None:
+        self.decoder = decoder
+        self.sigma = sigma
+
+    def mutate(self, genome: Any, rng: Any) -> Any:
+        return genome
+
+
+class TestDecoderReachesMutation:
+    """A mutation operator that names `decoder` receives the declared one."""
+
+    @staticmethod
+    def _config(**fields: Any) -> UnifiedConfig:
+        from evolve.registry.operators import get_operator_registry
+
+        get_operator_registry().register(
+            "mutation", "needs_decoder", _NeedsDecoder, compatible_genomes={"vector"}
+        )
+        return UnifiedConfig(
+            population_size=4,
+            selection="tournament",
+            crossover="sbx",
+            mutation="needs_decoder",
+            mutation_params={"sigma": 0.3},
+            genome_type="vector",
+            genome_params={"dimensions": 3, "bounds": (0.0, 1.0)},
+            **fields,
+        )
+
+    def test_declared_decoder_is_delivered(self) -> None:
+        engine = create_engine(self._config(decoder="identity"), evaluator=simple_fitness)
+        assert engine.mutation.decoder is not None
+        assert engine.mutation.decoder is engine.evaluator._decoder
+        assert engine.mutation.sigma == 0.3
+
+    def test_no_declared_decoder_delivers_none(self) -> None:
+        engine = create_engine(self._config(), evaluator=simple_fitness)
+        assert engine.mutation.decoder is None
+
+    def test_a_mutation_without_the_parameter_gets_nothing(self) -> None:
+        config = UnifiedConfig(
+            population_size=4,
+            selection="tournament",
+            crossover="sbx",
+            mutation="gaussian",
+            genome_type="vector",
+            genome_params={"dimensions": 3, "bounds": (0.0, 1.0)},
+            decoder="identity",
+        )
+        engine = create_engine(config, evaluator=simple_fitness)
+        assert not hasattr(engine.mutation, "decoder")
+
+
 class _ScaledGenes:
     """Decoder turning a VectorGenome into its genes times ``factor``."""
 

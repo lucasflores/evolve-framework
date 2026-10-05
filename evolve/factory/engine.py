@@ -80,6 +80,7 @@ def create_engine(
     evaluator factory that names that parameter (unless ``evaluator_params``
     already set one), and injected into a ``FunctionEvaluator`` without a
     decoder. Otherwise it cannot be delivered and a ``UserWarning`` says so.
+    A mutation operator whose constructor names ``decoder`` receives it too.
 
     Args:
         config: Unified experiment configuration.
@@ -206,10 +207,15 @@ def create_engine(
         config.crossover,
         **config.crossover_params,
     )
+    mutation_params = dict(config.mutation_params)
+    # A mutation that names a `decoder` parameter receives the declared one,
+    # as evaluator factories do: one that moves genes by what they decode to
+    if decoder is not None and op_registry.accepts_param("mutation", config.mutation, "decoder"):
+        mutation_params.setdefault("decoder", decoder)
     mutation = op_registry.get(
         "mutation",
         config.mutation,
-        **config.mutation_params,
+        **mutation_params,
     )
 
     # Build merge operator if merge is enabled
