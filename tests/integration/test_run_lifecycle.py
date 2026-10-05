@@ -10,6 +10,7 @@ import pytest
 
 from evolve.config import UnifiedConfig
 from evolve.config.tracking import TrackingConfig
+from evolve.core.callbacks import SimpleCallback
 from evolve.core.engine import EvolutionConfig, EvolutionEngine
 from evolve.core.operators.crossover import SimulatedBinaryCrossover
 from evolve.core.operators.mutation import GaussianMutation
@@ -38,8 +39,8 @@ class Recording:
     def __init__(self, events: list[str], refuse: bool = False, fail_on: int = 0) -> None:
         self.events, self.refuse, self.fail_on, self.calls = events, refuse, fail_on, 0
 
-    def on_run_start(self) -> None:
-        self.events.append("evaluator.on_run_start")
+    def prepare_run(self) -> None:
+        self.events.append("evaluator.prepare_run")
         if self.refuse:
             raise Refused("the search can't open", "trainer uncommitted")
 
@@ -54,7 +55,7 @@ class Recording:
 class Interrupted(Recording):
     """An evaluator whose start the user interrupts (Ctrl-C)."""
 
-    def on_run_start(self) -> None:
+    def prepare_run(self) -> None:
         raise KeyboardInterrupt
 
 
@@ -115,8 +116,8 @@ class TestEvaluatorStartHook:
     def test_runs_once_after_the_callbacks_and_before_the_first_evaluation(self) -> None:
         events: list[str] = []
         _engine(Recording(events)).run(_start(), callbacks=[Watching(events)])
-        assert events[:3] == ["callback.on_run_start", "evaluator.on_run_start", "evaluate"]
-        assert events.count("evaluator.on_run_start") == 1
+        assert events[:3] == ["callback.on_run_start", "evaluator.prepare_run", "evaluate"]
+        assert events.count("evaluator.prepare_run") == 1
         assert events[-1] == "callback.on_run_end"
 
     def test_an_evaluator_without_it_runs_as_before(self) -> None:
@@ -132,15 +133,31 @@ class TestEvaluatorStartHook:
         events: list[str] = []
 
         class Scoring:
-            def on_run_start(self) -> None:
-                events.append("fitness.on_run_start")
+            def prepare_run(self) -> None:
+                events.append("fitness.prepare_run")
 
             def __call__(self, _genome: Any) -> float:
                 return 0.0
 
         config = _config()
         create_engine(config, evaluator=Scoring()).run(create_initial_population(config))
-        assert events == ["fitness.on_run_start"]
+        assert events == ["fitness.prepare_run"]
+
+    def test_a_fitness_function_that_is_also_a_callback_runs(self) -> None:
+        class Scoring(SimpleCallback):
+            def __init__(self) -> None:
+                self.configs: list[Any] = []
+
+            def on_run_start(self, config: Any) -> None:
+                self.configs.append(config)
+
+            def __call__(self, _genome: Any) -> float:
+                return 0.0
+
+        config, scoring = _config(), Scoring()
+        engine = create_engine(config, evaluator=scoring, callbacks=[scoring])
+        engine.run(create_initial_population(config))
+        assert len(scoring.configs) == 1
 
 
 class TestFailures:
@@ -180,20 +197,18 @@ class TestFailures:
         evaluator: Any,
         error: type[BaseException],
         status: str,
-        tmp_path: Any,
-        monkeypatch: pytest.MonkeyPatch,
+        mlflow_store: str,
     ) -> None:
         mlflow = pytest.importorskip("mlflow")
-        monkeypatch.chdir(tmp_path)  # an sqlite store writes artifacts under ./mlruns
-        uri = f"sqlite:///{tmp_path / 'mlflow.db'}"
         config = _config(
-            tracking=TrackingConfig(backend="mlflow", experiment_name="stopped", tracking_uri=uri)
+            tracking=TrackingConfig(
+                backend="mlflow", experiment_name="stopped", tracking_uri=mlflow_store
+            )
         )
         engine = create_engine(config, evaluator=evaluator)
         with pytest.raises(error):
             engine.run(create_initial_population(config))
         assert mlflow.active_run() is None
-        mlflow.set_tracking_uri(uri)
         runs = mlflow.search_runs(experiment_names=["stopped"])
         assert list(runs["status"]) == [status]
 
@@ -216,8 +231,8 @@ class TestIslandEngine:
     def test_the_start_hook_runs_before_the_first_evaluation(self) -> None:
         events: list[str] = []
         self._engine(Recording(events)).run(self._genome)
-        assert events[:2] == ["evaluator.on_run_start", "evaluate"]
-        assert events.count("evaluator.on_run_start") == 1
+        assert events[:2] == ["evaluator.prepare_run", "evaluate"]
+        assert events.count("evaluator.prepare_run") == 1
 
     def test_a_failure_reaches_the_callbacks(self) -> None:
         events: list[str] = []

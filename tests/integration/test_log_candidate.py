@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 
 import pytest
 
@@ -14,17 +13,7 @@ from mlflow.tracking import MlflowClient  # noqa: E402
 from evolve.experiment.tracking import log_candidate  # noqa: E402
 
 
-@pytest.fixture
-def store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
-    monkeypatch.chdir(tmp_path)  # an sqlite store writes artifacts under ./mlruns
-    uri = f"sqlite:///{tmp_path / 'mlflow.db'}"
-    mlflow.set_tracking_uri(uri)
-    yield uri
-    while mlflow.active_run() is not None:
-        mlflow.end_run()
-
-
-@pytest.mark.usefixtures("store")
+@pytest.mark.usefixtures("mlflow_store")
 def test_logs_a_nested_run_in_the_parents_experiment() -> None:
     # The parent's experiment is named by id only, never made current
     experiment = mlflow.create_experiment("search")
@@ -47,7 +36,7 @@ def test_logs_a_nested_run_in_the_parents_experiment() -> None:
     assert [a.path for a in client.list_artifacts(child.info.run_id)] == ["spec.json"]
 
 
-@pytest.mark.usefixtures("store")
+@pytest.mark.usefixtures("mlflow_store")
 def test_without_an_active_run_it_does_nothing() -> None:
     assert log_candidate("candidate-x", metrics={"m": 1.0}) is False
     assert len(MlflowClient().search_experiments()) == 1  # only the default, untouched
@@ -59,13 +48,12 @@ def test_without_mlflow_it_does_nothing(monkeypatch: pytest.MonkeyPatch) -> None
     assert log_candidate("candidate-x", metrics={"m": 1.0}) is False
 
 
-@pytest.mark.usefixtures("store")
+@pytest.mark.usefixtures("mlflow_store")
 def test_a_failure_is_a_warning_and_the_run_goes_on(monkeypatch: pytest.MonkeyPatch) -> None:
     def broken(_metrics: object) -> None:
         raise OSError("disk full")
 
-    # An explicit experiment: the current one may be a tracker's from an earlier test
-    with mlflow.start_run(experiment_id=mlflow.create_experiment("search")) as parent:
+    with mlflow.start_run() as parent:
         monkeypatch.setattr(mlflow, "log_metrics", broken)
         with pytest.warns(RuntimeWarning, match="candidate-x.*disk full"):
             assert log_candidate("candidate-x", metrics={"m": 1.0}) is False

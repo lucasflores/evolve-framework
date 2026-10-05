@@ -267,8 +267,8 @@ class EvolutionEngine(Generic[G]):
         """
         Execute full evolution run.
 
-        The evaluator's ``on_run_start()``, if it has one, runs once after the
-        callbacks' own ``on_run_start`` (so tracking is live) and before the
+        The evaluator's ``prepare_run()``, if it has one, runs once after the
+        callbacks' ``on_run_start`` (so tracking is live) and before the
         first evaluation, in this thread: the place for work a run must do
         once every component is built and checked, such as opening a search
         that can't be undone. If anything fails from the callbacks'
@@ -307,9 +307,9 @@ class EvolutionEngine(Generic[G]):
             if hasattr(cb, "on_run_start"):
                 cb.on_run_start(self.config)
 
-        start = getattr(self.evaluator, "on_run_start", None)
-        if callable(start):
-            start()
+        prepare = getattr(self.evaluator, "prepare_run", None)
+        if callable(prepare):
+            prepare()
 
         # Evaluate initial population
         population = self._evaluate_population(initial_population)

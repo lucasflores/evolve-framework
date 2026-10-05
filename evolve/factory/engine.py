@@ -434,12 +434,11 @@ def _check_parameter_genome(config: UnifiedConfig, decoder: Any) -> None:
     the config must say what the run used. Refused before the evaluator is
     built.
     """
-    from evolve.meta.codec import parameter_decoder_of
+    from evolve.meta.codec import find_parameter_decoder
 
-    try:
-        parameters = parameter_decoder_of(decoder, "")
-    except ValueError:
-        return  # not a parameter decoder
+    parameters = find_parameter_decoder(decoder)
+    if parameters is None:
+        return
     bounds = config.genome_params.get("bounds")
     try:
         unit = bounds is not None and [float(b) for b in bounds] == [0.0, 1.0]

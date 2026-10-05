@@ -191,11 +191,11 @@ class FunctionEvaluator(Generic[G]):
         """Return evaluator capabilities."""
         return self._capabilities
 
-    def on_run_start(self) -> None:
-        """The wrapped function's own ``on_run_start()``, if it has one."""
-        start = getattr(self._fitness_fn, "on_run_start", None)
-        if callable(start):
-            start()
+    def prepare_run(self) -> None:
+        """The wrapped function's own ``prepare_run()``, if it has one."""
+        prepare = getattr(self._fitness_fn, "prepare_run", None)
+        if callable(prepare):
+            prepare()
 
     def evaluate(
         self,
